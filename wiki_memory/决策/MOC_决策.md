@@ -12,6 +12,10 @@ sources: []
 
 ## 当前有效
 
-- [ADR-001 原生双链作为唯一关联数据源](ADR-001-原生双链作为唯一关联数据源.md) — active · marginlink-link-persistence
+- [ADR-002 v0.2 可清除的相对布局偏好](ADR-002-v0.2可清除的相对布局偏好.md) — active · marginlink-spatial-ui-persistence
+
+## 历史与替代
+
+- [ADR-001 原生双链作为唯一关联数据源](ADR-001-原生双链作为唯一关联数据源.md) — superseded · marginlink-link-persistence
 
 <!-- wiki-memory:auto:end -->

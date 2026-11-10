@@ -38,7 +38,7 @@ export class DragController {
     if (!bridge || this.view.getMode() !== 'source' || !(bridge.cm.hasFocus || this.handle === this.root.ownerDocument.activeElement)) return;
     const selection = bridge.cm.state.selection;
     const { from, to } = selection.main;
-    if (from === to || validateSelection(bridge.cm.state.doc.toString(), from, to, selection.ranges.length, bridge.parsed)) return;
+    if (from === to || validateSelection(bridge.text, from, to, selection.ranges.length, bridge.parsed)) return;
     const rect = bridge.rangeRects(from, to).at(-1);
     if (!rect || rect.top < host.top + viewport.top || rect.bottom > host.top + viewport.bottom - 30) return;
     const x = Math.max(4, Math.min(host.width - 32, rect.right - host.left + 6));

@@ -1,178 +1,190 @@
 # MarginLink
 
-把 **Obsidian 原生 Wikilink** 显示成正文两侧的文件卡片。选中文字、拖动链接手柄到边缘、选择已有文件，即生成 `[[目标路径|原文字]]`。插件关闭后，原生双链照常使用。
+**Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-Windows 桌面 MVP · v0.1.0 · 最低版本 **Obsidian 1.10.6**。已在本机安装包内置的 1.10.6，以及用户已有更新包 1.15.0 的隔离实例中进行桌面自动验收。声明最低版本采用实际运行过的版本，不承诺更早版本。公开 API 类型使用锁文件中的 `obsidian@1.14.4`；插件只调用其中已公开的接口。
+**v0.2.0 · Spatial Layout & Personalization**，Windows 桌面，最低 Obsidian **1.10.6**。本轮四项核心能力：可调连线、可保存的卡片自由布局、三种卡片形状、分组设置与快捷控制。具体客户端版本、检查结果和未覆盖范围见 [VALIDATION.md](VALIDATION.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-## 安装
+## 安装与升级
 
-已经生成的发布目录是 `dist/margin-link/`，压缩包是 `dist/margin-link-0.1.0.zip`。将其中 **margin-link 文件夹**复制到要启用插件的笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.0.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
-<你的 Vault>/.obsidian/plugins/margin-link/
+<Vault>/.obsidian/plugins/margin-link/
 ├── manifest.json
 ├── main.js
-└── styles.css
+├── styles.css
+├── LICENSE
+└── THIRD_PARTY_NOTICES.txt
 ```
 
-发布目录还附有许可证及依赖许可证，可以一起复制。不要在 `D:\SoftWare\Obsidian` 程序目录里安装插件。应用安装目录与笔记库的插件目录是两件事。
+进入“设置 → 第三方插件”，按需关闭受限模式，启用 MarginLink。**不要安装到 `D:\SoftWare\Obsidian` 程序目录**；程序安装位置与笔记库插件位置不同。本项目的独立演示库是 `test-vault/`，可用 Obsidian 仓库管理器打开；开发测试不写入你的正式 Vault。
 
-进入 Obsidian → 设置 → 第三方插件，按需要关闭受限模式，启用 **MarginLink**。复制时应用已开着但列表没有更新，可以重新加载应用。无需 npm，也无需构建源码，便可安装发布文件。
+从 v0.1 升级时只替换发布文件，保留原 `data.json`。读取白名单将原来的 `enabled / lines / density / layout` 安全迁移，新增选项补默认值，布局默认仍为 `auto`，避免旧用户突然变更排版。`layout` 继续代表左右优先，新布局模式单独使用 `placementMode`。
 
-本项目已准备独立演示库：`C:\Users\Administrator\Desktop\ObExrension\test-vault`，其中已装好当前插件。通过 Obsidian 的仓库管理器选择“打开本地仓库”，打开该目录即可。首次打开会显示信任插件提示；这是本项目自己生成的测试库。所有测试夹具均在此库，开发过程没有向你的正式 Vault 写入测试文件或安装插件。
+Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码后运行 `npm ci`、`npm run package` 生成安装目录；ZIP 命令见开发章节。此版本没有代替用户发布 GitHub Release 或提交 Obsidian 社区目录。
 
-## 使用
+## 创建和打开原生双链
 
-1. 打开带有 `[[Note A|关键观点]]` 等原生双链的笔记，已有链接自动出现卡片。每次引用单独显示；标题和块子路径保留。
-2. 在 Live Preview 或源码模式中，选取一段普通行内文字。选区末端下方会显示小型链接手柄。用手柄拖到正文左侧或右侧空白，放下后搜索文件名或路径，选择已存在文件。
-3. 只会替换原选区，例如 `Early Access` → `[[References/stages.html|Early Access]]`。普通软折行可以，硬换行和复杂结构不可以。空格、标点、中文和完整 Unicode 字符按原文保留。
-4. Esc、取消弹窗、拖到正文或其他非法区域，都不会写入。选文件期间原文被改动、选区改变、切换文件/活动 leaf、关闭编辑器或窗口失焦时，本次操作取消或在提交时拒绝。
-5. 拖拽不方便时，打开命令面板，搜索 **MarginLink** → **将选中文字链接到文件 / Link selected text to file**。也可让手柄获得键盘焦点后按 Enter。
-6. 悬停正文双链或卡片，会高亮相应文字、节点与连线。卡片支持 Tab 聚焦和 Enter/Space 激活。Ctrl/Cmd 点击在新标签打开。正文原生点击和悬停预览没有被截获。
-7. 在插件设置里可切换连线常显/悬停、卡片自动/紧凑、左右优先模式。宽卡片显示路径，紧凑图标通过 tooltip 和 aria-label 提供完整路径。
+1. 在 Live Preview 或源码模式选取普通行内文字。选区末端出现**链接手柄**；拖到正文左/右空白带，松手后搜索已有文件。也可用命令“将选中文字链接到文件 / Link selected text to file”，或聚焦手柄后按 Enter。
+2. 例如 `Early Access` → `[[References/stages.html|Early Access]]`。只替换原选区，保留空格、中文与 Unicode；一次撤销/重做对应一次创建。
+3. Esc、取消弹窗、非法放置、选区/文档版本/活动笔记变化都拒绝提交。不会错误包裹另一段文字。
+4. 点击卡片打开实际目标；Ctrl/Cmd 点击新标签，Tab/Enter 操作卡片。原生双链的点击与悬停预览不被截获。未解析卡片显示明确状态，不创建文件。
 
-命令面板提供三个命令，不分配全局快捷键：
+创建仍限一个连续的普通行内选区：允许软折行，拒绝硬换行、代码、属性、公式、嵌入、已有链接内部、多选区和不安全别名/文件名。**表格内创建暂不支持**，避免别名 `|` 破坏表格。含 `\|` 的转义 Wikilink 保守跳过。普通 Markdown 链接、外部 URL、`![[嵌入]]` 不生成卡片。
 
-| ID | 命令 |
+## 移动已有卡片
+
+这是独立于“选中文字建链”的操作：从**卡片右上角握柄**开始，不会编辑笔记。
+
+| 模式 | 行为 |
 | --- | --- |
-| `margin-link:toggle` | 切换边缘关联显示 / Toggle margin links |
-| `margin-link:link-selection` | 将选中文字链接到文件 / Link selected text to file |
-| `margin-link:refresh` | 刷新边缘关联 / Refresh margin links |
+| `auto` 自动 | 确定性排列、左右平衡或优先；不写自由坐标，握柄隐藏；已保存的位置保留，切回手动模式可恢复 |
+| `free` 自由 | 在当前 MarkdownView 的左右空白带进行二维放置，可跨侧移动；冲突时就近避让，空间不足则省略 |
+| `snap` 吸附 | 自由放置加栅格/邻近卡片对齐、边界提示和碰撞避让 |
 
-默认只在悬停、选中或聚焦时显示高亮连线。没有看到连线时，可以悬停一张卡片，或将设置改为“始终显示”。
+拖动达到 5px 才进入移动状态；单击握柄不会打开文件。正文上可以显示提示，最终位置必须落在本 leaf 的空白带内。松手保存，**Esc、pointercancel、失焦、焦点进入其他控件、滚动、窗口 resize、切换笔记/模式、文档变化或卸载会取消**。非法或无空间的放置恢复原位置。
 
-## 布局和模式
+键盘操作：Tab 聚焦握柄，方向键移动，Shift+左右键换侧，Delete/Backspace 恢复此卡片自动位置。右键卡片也可恢复单个位置。设置、快捷面板及命令提供“整理/清除当前笔记布局”和“清除所有布局”，清除需确认，双链不受影响。
 
-- **Live Preview**：从当前未保存的编辑器文档解析 Wikilink，用 CM6 的可见范围和实际 DOM Range 定位；支持手柄创建。
-- **源码模式**：使用真实 token/别名的 DOM 坐标定位；正常显示 Markdown 控制字符，支持创建。
-- **阅读模式**：用官方 Markdown 后处理器、section 源码范围和 DOM 顺序映射，不提供编辑手柄。普通 Markdown 链接和参考式链接参与消歧，但不会生成卡片。重复目标/别名按每次源码出现分别对应。
-- 每个 MarkdownView 有独立 overlay、SVG 和 observer；支持分屏、多个标签和同一笔记的独立视图。滚动、resize、字体重排、CSS 变化会合并到下一帧更新。
-- 按真实正文宽度选择左右边缘；足够宽时用卡片，较窄时用图标，空白不足约 60px 时隐藏该侧。可用高度不足时省略超额卡片，优先保证不重叠、不越界。隐藏不会删除任何双链。
-- 只渲染可见锚点，避免离屏连线。正文滚轮和选区保持原生行为。插件不强制开启“限制行宽”；打开该选项、放大窗口或关闭一侧边栏通常能提供更多空间。
+同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。字体/窗口变化后重新合法化；锚点离屏时卡片和连线移除，可见锚点的超界位置安全裁剪。侧栏动画中短暂隐藏，几何稳定后重现，不用 `position: fixed` 挂在无关段落上。
 
-**双链关系永久保存，卡片的空间布局不承诺跨会话固定。** 拖到左/右边后，新卡片在当前编辑器版本里优先放在对应侧；下一次编辑、重新打开文件或重启插件，就重新运行确定性的自动布局。不会为了记住位置写入任何数据。
+## 连线与卡片外观
 
-## 文件类型、HTML 和特殊格式
+原生“设置 → MarginLink”保留完整设置，按基础、连线、布局、卡片、交互与辅助功能分组。顶部有不修改笔记的实时 DOM/SVG 预览。
 
-解析使用 `MetadataCache.getFirstLinkpathDest()`，文件选择器只使用 `Vault.getFiles()`。不会扫描磁盘寻找替身，不会把未解析名称猜成某个文件。创建时使用原生解析器核对精确目标，Markdown 文件也保留 `.md` 扩展名，以便区分同名文件；不受“使用 Wikilinks”开关影响，最终始终是 `[[...|...]]`。
+- **连线**：隐藏/悬停聚焦/始终显示；曲线/直线/直角折线；1–5px、步长 0.5；常驻透明度 10–100%、默认 65%；主题强调色或紫/蓝/绿/灰预设。激活状态更清晰，`none` 保留卡片与跳转。
+- **卡片**：横向、正方形、极简图标；小/中/大。正方形 76/84/92px，图标 32/36/44px；横向按实际空白宽度缩放。可调圆角、边框、阴影和路径显示。窄边距退化到图标，无空间则隐藏；tooltip 与 aria-label 始终保留完整名称、路径和解析状态。
+- **布局**：三种模式、左右优先、正文边缘留白、吸附栅格/范围；可清除当前或全部笔记的位置。
+- **辅助**：高亮反馈、移动提示、减少动画。系统 `prefers-reduced-motion` 始终生效；不禁止全局文字选择。
 
-Markdown、Canvas、Bases、PDF、原生图片/音视频格式通过官方 `WorkspaceLeaf.openFile(TFile)` 打开。标题和块引用作为子路径传给原生视图。不同格式本身的编辑/预览能力由 Obsidian 决定。
+命令“打开快捷控制 / Open quick controls”提供显示、连线常驻、模式、形状、当前笔记整理及完整设置入口。完整设置入口用公开 Modal 呈现与原生设置页共用的表单；两处共用同一状态并即时同步，没有私有设置 API 或额外框架。快捷入口不占侧栏，也不强制增加 Ribbon 图标。
 
-`.html/.htm` 和一些思维导图扩展名不属于默认内置查看格式。**能被 Vault 找到不等于有查看器**：
-
-1. 在测试库放入 `References/stages.html`，在正文写 `[[References/stages.html|Early Access]]`。
-2. 打开插件文件选择器搜索完整路径：找不到时，本机 Vault 没有把它作为可选择文件暴露；不要推断磁盘文件不存在。已有双链仍保留，解析失败时卡片显示“未解析”。
-3. 若能被选择和解析，卡片会显示真实文件路径。本机 1.10.6/1.15.0 都暴露了该测试 HTML，但没有内置 HTML 查看器。
-4. 特殊类型的卡片会先检查公开 `FileView.canAcceptExtension()`。若无法确认支持，只显示能力提示，不启动系统应用、执行 HTML 或生成笔记。
-5. 安装合适的文件类型处理插件，**先通过该插件/原生入口打开一个该类型文件，并保留它的标签**。已有 FileView 能确认支持后，MarginLink 才用标准接口打开相应目标。
-
-公开 API 无法枚举尚未打开的第三方类型注册表，因此“已装插件但从未打开该类视图”也会触发上述保守提示。这是首版明确的降级。没有读取私有注册表，也没有实现 HTML 查看器；不把 HTML 变成 Markdown 替身。第三方类型插件的具体兼容性还需要你在自己的插件组合中手工验证。
-
-## 数据与安全
-
-运行时只从 Markdown 双链派生 occurrence、偏移量、目标文件和布局；它们全在内存中。源码写入只有 `src/editor/selection-action.ts` 中的一次公开 `Editor.transaction()`，只替换用户选区，支持单步撤销/重做。没有覆写整篇文件的 `vault.modify()`。
-
-插件唯一的持久化入口是 `saveData(readPreferences(...))`，白名单只含四项：`enabled`、`lines`、`density`、`layout`。Obsidian 可以为这些 UI 偏好生成正常的 `.obsidian/plugins/margin-link/data.json`；该文件没有文件路径、每条链接的 ID、坐标、关系表或笔记内容。删除它只会重置显示偏好。
-
-没有关系数据库、sidecar、frontmatter 关联字段、隐藏注释、隐藏 ID、自定义关系格式、localStorage、IndexedDB、遥测或网络请求。读取 DOM 里 Obsidian 原有的 `data-href` 只用于定位，不会将任何 `data-*` 写回笔记。文件名和别名以文本节点显示，不使用 `innerHTML` 或内嵌执行目标内容。
-
-## 当前边界
-
-- 创建只支持一个连续的普通行内选区。跨硬换行、代码、属性、公式、已有链接/嵌入、块标记、多选区，以及含 `|`、方括号、反斜杠等不能安全表示的别名，都会被拒绝。
-- **表格内创建暂不支持**，避免新双链里的别名管道字符破坏表格。已存在的常规 Wikilink 可解析，但使用 `\|` 等转义写法的 Wikilink 首版保守跳过。目标文件名含 `#`、`^`、`|`、方括号等特殊字符时，创建会拒绝且不改原文。
-- 阅读模式依赖原生后处理 section 信息。HTML 或其他插件增删链接，导致同一目标的源码出现次数与真实 DOM 数量不一致时，省略该目标组的卡片，避免挂错文字。不会把“取第一个同名节点”当作可靠映射。
-- 超密集链接会省略部分卡片；窄窗会隐藏。不存在永久坐标、自定义展开侧栏或任意拖动卡片的能力。
-- 已验证默认主题和 Windows 桌面，尚未验证 macOS/Linux、移动端、RTL、复杂自定义主题、大量第三方 DOM 改写和独立 popout 编辑窗口。分屏及独立设置窗口在实际桌面中已测试。原生悬停预览不受接管，但不同预览插件组合仍需手工验收。
-- 当前 1.15.0 更新包配合 1.10.6 安装程序，在 CDP 自动切换主题并关闭独立设置窗口时，会记录无堆栈的 `illegal access` 宿主告警。在卸载所有社区插件并重新加载的对照测试中同样复现。功能断言通过，日志不会隐瞒；详细记录与人工复核范围见 `VALIDATION.md`。此现象不能归因为插件，也不宣称已经修复宿主。
-
-## 源码结构
-
-| 文件/目录 | 职责 |
+| 命令 ID | 用途 |
 | --- | --- |
-| `src/main.ts`、`src/types.ts` | 官方生命周期、命令、事件、纯 UI 偏好白名单 |
-| `src/core/` | 排除 Markdown 保护区域、原生链接解析、精确路径与安全格式化、文件打开能力 |
-| `src/editor/` | CM6 可见坐标、原文版本快照、单事务编辑、手柄与拖拽取消状态 |
-| `src/reading/` | 官方后处理器与子组件生命周期、section 内源位置/DOM 顺序消歧 |
-| `src/view/` | 每视图 overlay、SVG 曲线、主题卡片、确定性防重叠布局 |
-| `src/ui/` | 原生 FuzzySuggestModal 文件选择器、设置页 |
-| `tests/` | 核心逻辑测试和仓库内夹具 |
-| `scripts/` | 打包、独立测试库准备、隔离实例启动、Playwright 桌面验收 |
+| `margin-link:toggle` | 切换边缘关联显示 |
+| `margin-link:link-selection` | 将选中文字链接到已有文件 |
+| `margin-link:refresh` | 刷新当前视图 |
+| `margin-link:quick-controls` | 打开快捷控制 |
+| `margin-link:reset-note-layout` | 确认后清除当前笔记布局 |
+| `margin-link:reset-all-layouts` | 确认后清除全部布局 |
 
-## 开发与自动验证
+不预设全局快捷键，可在 Obsidian 热键设置中自行分配。
 
-源码仓库：[DewMysimple/MarginLink](https://github.com/DewMysimple/MarginLink)。仓库保存源码、锁文件、测试夹具，以及本文引用的截图与验证报告；`node_modules/`、`main.js`、`dist/` 和隔离 `test-profile/` 不纳入 Git。克隆源码后先运行 `npm ci`，再运行 `npm run package` 生成安装文件夹；ZIP 按下方命令生成。本机原有的发布文件仍保留在 `dist/`。
+## UI 数据与位置恢复边界
 
-项目采用 [standard 工程记忆](wiki_memory/README.md)，协作规则见 [AGENTS.md](AGENTS.md)。后续每次完整对话有项目修改时，都要完成相应验证、同步持久状态、提交并推送已核实的 upstream；无文件变化不创建空提交。
+**链接关系只在原生双链中；仅外观与个性化布局是插件数据。** 唯一持久化接口是官方 `loadData()/saveData()`，使用版本化 schema 2：
 
-Node.js 24 / npm 12 已实际执行：
+```text
+data.json
+  schemaVersion: 2
+  preferences: 明确白名单中的全局外观与交互选项
+  layouts: [{ source, key, side, xNormalized, yOffset, updated }]
+```
+
+`source` 是源笔记的 Vault 相对路径；`key` 是原生双链原文、前后各最多 48 字符上下文、相同原文链接数量的组合散列。不保存正文副本、明文别名、目标关系表或稳定 ID，也不向 Markdown 写 ID。散列只用于弱匹配，不是唯一性或隐私加密保证。
+
+恢复前必须重新解析当前双链，并且该上下文散列在整篇文档中唯一，才能应用位置。删除链接不会从旧记录产生卡片。重复完全相同上下文无法区分时拒绝保存；局部上下文、同原文链接数量改变或大幅编辑会使位置失效，宁可自动排布也不猜测另一条链接。远离锚点的前文插入通常不影响匹配。
+
+首版采用保守策略：**任何 Vault 文件/文件夹重命名或删除都会失效全部自定义位置**，避免在缺少可靠迁移依据时错配；不会自行改写 Markdown。普通编辑仅清理当前笔记不再匹配的记录。布局最多 500 条、每笔记 100 条，90 天过期；容错读取、去重和限额，记录缺失或损坏时回退。drop 后约 250ms 合并保存，不在每个 pointermove 写盘；关闭时提交待保存 UI 数据。
+
+清除位置仅回到自动布局；恢复默认外观不删除位置。删除整个 `data.json` 或使用旧版会丢失/重置个性化显示与位置，**原生关联及笔记内容完全保留**。从 v0.1 恢复到 v0.2 时也不能依赖旧程序保留新 schema。
+
+插件没有关系数据库、笔记 sidecar、关联 frontmatter、隐藏标记、localStorage、IndexedDB、遥测或网络请求。关系写入仍只有 `src/editor/selection-action.ts` 的一次安全 `Editor.transaction()`；不使用 `vault.modify()` 覆写笔记。卡片用文本节点，不用 `innerHTML` 执行内容。
+
+## 三种笔记模式、文件类型与兼容性
+
+Live Preview / 源码用 CM6 可见范围和真实 DOM 坐标，解析缓存只在文档变化时更新；阅读模式用官方 Markdown 后处理器、section 源范围与 DOM 顺序映射。重复引用各有独立锚点和卡片；普通 Markdown/参考式链接参与消歧。第三方 DOM 改写使数量不一致时省略该目标组。
+
+每个 MarkdownView 有独立 overlay、SVG、观察器及坐标系。滚动、字体和主题变化合并到 rAF；只显示可见锚点，自己的 DOM/CSS 更新不触发无限重绘。窄窗或密集区域允许省略卡片，不挤压正文、不强制修改“限制行宽”。
+
+文件选择仅来自 `Vault.getFiles()`，目标使用原生 `getFirstLinkpathDest()`，创建时验证精确完整路径以区分同名文件。标题/块子路径保留。Markdown、Canvas、Bases、PDF、原生图片/音视频通过 `WorkspaceLeaf.openFile(TFile)` 打开。
+
+**HTML/思维导图能解析不等于有查看器**：
+
+1. 在独立库添加 `References/stages.html`，写 `[[References/stages.html|Early Access]]`。
+2. 在文件选择器搜索路径；找不到只表示 Vault 未暴露，不能推断磁盘文件不存在。卡片未解析时不创建替身。
+3. 若可解析而无已确认查看器，卡片只提示，不启动系统应用、不执行 HTML、不转换 Markdown。
+4. 安装相应类型插件后，先用它打开一个同类文件并**保留兼容 FileView 标签**，公开 `canAcceptExtension()` 确认后再从卡片打开。
+
+公开 API 无法枚举尚未打开的第三方处理器，这一降级继续保留。用户主题、第三方 DOM/悬停预览插件、popout 编辑窗口、macOS/Linux、移动端、RTL 及全部媒体格式组合仍需人工验收。1.15.0 更新包与旧安装程序的独立设置窗口在 CDP 下会有宿主告警；无插件对照和未确认的具体原因见验证报告。
+
+## 源码与开发
+
+| 入口 | 职责 |
+| --- | --- |
+| `src/main.ts`, `src/types.ts` | 生命周期、命令、共享偏好、迁移读取和串行保存 |
+| `src/core/layout-identity.ts`, `layout-store.ts` | 弱身份、UI 位置白名单、限额、过期和失效 |
+| `src/core/` 其余文件 | Markdown 保护区域、精确原生目标、安全格式化、文件能力 |
+| `src/editor/`, `src/reading/` | 安全选区创建、CM6/阅读锚点与各自生命周期 |
+| `src/view/layout-engine.ts` | 相对坐标、形状尺寸、碰撞/吸附与裁剪纯函数 |
+| `src/view/card-drag-controller.ts` | 已有卡片移动及取消，独立于建链手柄 |
+| `src/view/margin-overlay.ts`, `appearance.ts` | 每视图协调、局部几何与主题变量 |
+| `src/ui/settings-tab.ts`, `quick-controls.ts` | 共享原生表单、实时预览、快捷 Modal 与确认 |
+| `scripts/desktop-test.mjs`, `desktop-v2.mjs` | 隔离库客户端回归与 v0.2 场景 |
+
+Node 24 / npm 12，安装与常规检查：
 
 ```powershell
-npm install
-npm run build
+npm ci
 npm test
 npm run lint
+npm run build
 npm run package
-# 可选：更新 ZIP 安装包（PowerShell）
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.1.0.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.0.zip -Force
 ```
 
-`build` 包含严格 TypeScript 检查与浏览器目标的 CJS 构建；Obsidian 和 CM6 由宿主提供，不重复打包。`npm run dev` 启动构建监听。发布安装不依赖 Node、Electron 模块或第三方前端框架。
+构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。
 
-桌面验收仅针对本项目的独立测试库，会重写测试夹具，勿改成正式库路径：
+真实桌面验收会重写测试笔记、测试偏好及工作区，只能在本项目独立库执行：
 
 ```powershell
 npm run build
 node scripts/setup-test-vault.mjs
 powershell -ExecutionPolicy Bypass -File scripts/launch-test.ps1
-# 首次信任自己生成的测试库，然后运行：
+# 首次信任自己生成的隔离库后运行
 npm run test:desktop
 ```
 
-若更改了源码，重新构建后把三个发布文件复制到测试插件目录，再重新加载测试实例。`setup-test-vault.mjs` 会重置演示笔记、测试设置和测试工作区，适合关闭测试实例后运行。
+更改源码后重建并把三个插件文件复制到测试目录，重新加载实例。准备脚本包含 v0.1 偏好夹具，以验证迁移；不要在隔离实例仍运行时重置夹具。启动脚本默认 `D:\SoftWare\Obsidian\Obsidian.exe`，可传 `-ObsidianExe`；profile 为 `test-profile/`，CDP 端口本机 9223，完成后关闭该实例。
 
-`launch-test.ps1` 默认使用 `D:\SoftWare\Obsidian\Obsidian.exe`，可传 `-ObsidianExe` 改路径。隔离 profile 在 `test-profile/`，调试端口为本机 9223。开发完成后关闭该测试实例即可。默认新 profile 用安装包内置的版本；本次为了验证 1.15.0，只复制了本机现有更新包到隔离 profile，没有复制用户笔记或账户数据。
+`node scripts/host-window-control.mjs` 是编辑器设置窗口的卸载插件对照；`node scripts/restart-layout-check.mjs prepare` → 完全关闭并重新启动隔离实例 → `verify`，检查实际卡片恢复和所有 Markdown 哈希。上述脚本都有独立库校验，不运行于正式库。
 
-**实际结果**详见 [VALIDATION.md](VALIDATION.md)。自动化结果 JSON、布局截图在 `artifacts/`。截图来自真实 Obsidian Electron 渲染器，通过 CDP 设置 1680px/2600px 测试视口；不是静态 HTML 或设计稿。
+协作规则见 [AGENTS.md](AGENTS.md)，[standard 工程记忆](wiki_memory/README.md) 保存状态与决策。每轮有项目修改均验证、同步必要记忆、提交并推送已核实 upstream；无变化不造空提交。源码仓库为 [DewMysimple/MarginLink](https://github.com/DewMysimple/MarginLink)。
 
-## 人工验收清单
+## 人工验收
 
-以下步骤供你在自己的屏幕、主题及文件类型插件组合下复核。前述默认环境的核心流程已做自动桌面测试，这份清单用于用户环境验收，不代表所有组合都已验证。
+1. 打开独立库，切 Live Preview / 源码 / 阅读模式，已有双链逐次显示；代码、嵌入、普通链接不显示卡片。
+2. 原生选区手柄与命令都只生成精确 `[[...|原文字]]`，检查取消、过期快照、撤销/重做、中文与同名文件。
+3. 在三种模式调节线型、宽度、透明度、颜色，`none` 留下卡片，设置预览与实际页面同步。
+4. 在 free/snap 中拖卡片跨侧、上下及横向移动；确认正文/其他 pane 无遮挡，Esc、失焦和界外放置恢复。
+5. 完全退出再启动，在足够宽的视图恢复位置；缩窄后安全隐藏，放宽后恢复；滚动时跟随正确锚点，离屏没有漂浮连线。
+6. 切三形状与小中大尺寸、明暗主题、字体、缩放、侧栏、限制行宽、不同文件分屏及同文件多个 leaf。
+7. 重复同目标/同别名分别移动；远处编辑前文，删除/增加同原文链接、改变周围文字、重命名文件，确认不会把旧位置套给别的锚点。
+8. 键盘打开卡片、操作握柄、恢复单卡/当前笔记/全部位置；确认其他笔记仅在全局清理或明确的重命名/删除失效策略下变化。
+9. 在自己的 HTML/思维导图处理器、Page Preview/主题组合下验证特殊格式提示及原生打开。
+10. 清除布局、删除 data.json、禁用/卸载：Markdown 字节和双链保留，无幽灵关系、overlay、pointer capture、监听或附加类。
 
-1. 用仓库管理器打开 `test-vault`；启用“限制行宽”和 MarginLink。打开 `MarginLink Demo.md`，确认 `[[Note A|关键观点]]` 的卡片和悬停曲线。
-2. 切到 Live Preview，选取普通句子中的 `Early Access`，将小链接手柄拖到右边空白，搜索选择已有文件。源码应只多出 `[[目标路径|Early Access]]`。
-3. 撤销后，用命令面板“将选中文字链接到文件”再做一次，确认相同结果；检查原始空格、中文和标点未丢。
-4. 点击卡片打开真实目标；Tab 聚焦/Enter 激活；正文双链和卡片互相悬停高亮。正文原生点击与页面预览仍可用。
-5. 切换源码和阅读模式；锚点对齐实际文字，每次引用分别显示。阅读模式没有编辑手柄。
-6. 开关侧边栏、调窗口宽度、可读行宽和字体，滚动长文，切明暗主题。卡片可缩小/隐藏，但不能压住正文或横向溢出。
-7. 分屏打开不同文件，观察各自卡片，切标签再返回。窄分屏允许安全隐藏。
-8. 在某条双链前插入很多文字，确认锚点重排；改双链目标，卡片应变化。
-9. 新增双链后执行一次撤销、一次重做，检查卡片消失/恢复，正文其余字符不变。
-10. 在测试库内重命名/删除目标，观察原生链接更新和未解析状态；插件不执行自己的全库重命名引擎。
-11. 试 `.canvas`、图片、PDF/音视频及 `.html`。对 HTML 按“文件类型”章节，分别验证无查看器、有已打开的兼容 FileView 时的不同结果；思维导图扩展同理。
-12. Esc 取消拖拽/弹窗、拖回正文、跨段落/表格/代码选区、选文件时改原文或换活动笔记，确认没有意外包裹别的文字。
-13. 禁用或卸载插件，确认图层/高亮消失，原生双链仍在；检查没有新增关系数据库、注释、frontmatter 字段或 sidecar。
+自动化已测范围和剩余人工环境缺口以验证报告为准，不把这份清单视为全部平台通过。
 
 ## 实际截图
 
-深色模式与悬停连线：
+以下来自隔离 Obsidian 的实际 Electron 渲染，不是设计稿：
 
-![Obsidian 1.15.0 中的 MarginLink](artifacts/final-preview.png)
+![正方形卡片与自由布局](artifacts/v2-square.png)
 
-浅色模式：
+![吸附拖动反馈](artifacts/v2-dragging.png)
 
-![浅色主题](artifacts/light.png)
+![浅色主题](artifacts/v2-light.png)
 
-拖动手柄到右侧：
+![极简图标](artifacts/v2-icon.png)
 
-![真实拖拽反馈](artifacts/dragging.png)
+另有阅读、源码、分屏和窄窗截图及版本化 JSON 结果。当前没有操作动图。
 
-另有 `artifacts/reading.png`、`source.png`、`split.png`、`narrow.png`、`scroll.png`。当前提供实际静态截图，尚未录制操作动图。
+## 参考
 
-## 参考资料
+- [官方插件样板](https://github.com/obsidianmd/obsidian-sample-plugin)
+- [官方 TypeScript API](https://github.com/obsidianmd/obsidian-api)
+- [Manifest 规范](https://docs.obsidian.md/Reference/Manifest)
+- [支持的文件格式](https://obsidian.md/help/Files%20and%20folders/Accepted%20file%20formats)
 
-- [Obsidian 官方插件样板](https://github.com/obsidianmd/obsidian-sample-plugin)
-- [Obsidian 官方 TypeScript API 定义](https://github.com/obsidianmd/obsidian-api)
-- [插件 Manifest 规范](https://docs.obsidian.md/Reference/Manifest)
-- [官方支持的文件格式](https://obsidian.md/help/Files%20and%20folders/Accepted%20file%20formats)
-
-MIT License；打包依赖许可证随发布目录附带。
+MIT License；依赖许可证随发布文件附带。

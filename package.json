@@ -1,6 +1,6 @@
 {
   "name": "margin-link",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Native Wikilinks visualized in the margins of each Obsidian note.",

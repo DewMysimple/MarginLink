@@ -3,8 +3,6 @@
 .margin-link-overlay[hidden], .margin-link-handle[hidden] { display: none; }
 .margin-link-connectors { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .margin-link-connector { fill: none; stroke: var(--interactive-accent); stroke-width: 1.4; opacity: 0; transition: opacity 120ms ease; }
-.margin-link-lines-always .margin-link-connector { opacity: .28; }
-.margin-link-connector.margin-link-active { opacity: .85; stroke-width: 1.8; }
 .margin-link-card { position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: flex-start; gap: 9px; padding: 7px 9px; margin: 0; box-sizing: border-box; overflow: hidden; pointer-events: auto; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-normal); box-shadow: 0 2px 7px var(--background-modifier-box-shadow); text-align: left; cursor: pointer; font: inherit; font-size: var(--font-ui-small); }
 .margin-link-card:hover, .margin-link-card.margin-link-active { border-color: var(--interactive-accent); background: var(--background-secondary); }
 .margin-link-card:focus-visible, .margin-link-handle:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
@@ -27,3 +25,32 @@
 .margin-link-drag-ghost { display: none; position: absolute; top: 0; left: 0; max-width: 145px; padding: 7px 9px; border: 1px solid var(--interactive-accent); border-radius: 7px; color: var(--text-normal); background: var(--background-primary); font-size: var(--font-ui-smaller); box-shadow: var(--shadow-s); }
 .margin-link-dragging .margin-link-drag-ghost { display: block; }
 @media (prefers-reduced-motion: reduce) { .margin-link-connector { transition: none; } }
+.margin-link-card-shell { position: absolute; top: 0; left: 0; pointer-events: none; }
+.margin-link-card-shell .margin-link-card { width: 100%; height: 100%; border-radius: var(--margin-link-radius, 8px); border-width: var(--margin-link-border, 1px); box-shadow: var(--margin-link-shadow); }
+.margin-link-card-shell[data-shape="square"] .margin-link-card { flex-direction: column; justify-content: center; text-align: center; gap: 6px; padding: 10px 5px; }
+.margin-link-card-shell[data-shape="square"] .margin-link-card-icon { flex-basis: auto; }
+.margin-link-card-shell[data-shape="square"] .margin-link-card-icon svg { width: 25px; height: 25px; }
+.margin-link-card-shell[data-shape="square"] .margin-link-card-text { width: 100%; }
+.margin-link-card-shell[data-shape="square"] .margin-link-card-path, .margin-link-no-path .margin-link-card-path { display: none; }
+.margin-link-card-grip { position: absolute; right: 1px; top: 1px; z-index: 2; width: 17px; height: 18px; padding: 1px; margin: 0; color: var(--text-muted); background: var(--background-secondary); box-shadow: none; border: none; border-radius: 4px; cursor: grab; pointer-events: auto; touch-action: none; opacity: .72; }
+.margin-link-card-grip svg { width: 14px; height: 14px; }
+.margin-link-card-grip:hover, .margin-link-card-grip:focus-visible { opacity: 1; color: var(--text-accent); outline: 2px solid var(--interactive-accent); }
+.margin-link-card-grip[hidden] { display: none; }
+.margin-link-card-dragging .margin-link-card-grip { cursor: grabbing; }
+.margin-link-position-ghost { display: none; position: absolute; top: 0; left: 0; max-width: 160px; padding: 5px 8px; color: var(--text-normal); background: var(--background-primary); border: 1px solid var(--interactive-accent); border-radius: 6px; font-size: var(--font-ui-smaller); z-index: 5; }
+.margin-link-position-band { display: none; position: absolute; box-sizing: border-box; border: 1px dashed var(--interactive-accent); background: var(--background-modifier-hover); opacity: .35; border-radius: 5px; }
+.margin-link-card-dragging .margin-link-position-ghost, .margin-link-card-dragging .margin-link-position-band { display: block; }
+.margin-link-drop-valid .margin-link-position-band { border-style: solid; }
+.margin-link-snapped .margin-link-position-ghost { border-width: 2px; }
+.margin-link-hide-drag-hints .margin-link-position-ghost, .margin-link-hide-drag-hints .margin-link-position-band { display: none; }
+.margin-link-connector { stroke: var(--margin-link-color, var(--interactive-accent)); stroke-width: var(--margin-link-line-width, 1.5); }
+.margin-link-lines-always .margin-link-connector { opacity: var(--margin-link-opacity, .65); }
+.margin-link-connector.margin-link-active { opacity: 1; stroke-width: calc(var(--margin-link-line-width, 1.5) + .5); }
+.margin-link-lines-none .margin-link-connector, .margin-link-lines-none .margin-link-connector.margin-link-active { opacity: 0; }
+.margin-link-reduce-motion .margin-link-connector { transition: none; }
+.margin-link-no-hover .margin-link-card:hover { background: var(--background-primary); border-color: var(--background-modifier-border); }
+.margin-link-settings-preview { position: relative; width: 400px; max-width: 100%; height: 150px; overflow: hidden; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-secondary); margin: 12px 0 20px; }
+.margin-link-preview-anchor { position: absolute; left: 16px; top: 58px; color: var(--text-accent); text-decoration: underline; }
+.margin-link-settings h3 { margin-top: 28px; padding-bottom: 8px; border-bottom: 1px solid var(--background-modifier-border); }
+.margin-link-full-controls { width: min(780px, 90vw); max-height: 90vh; }
+.margin-link-full-controls .modal-content { overflow-y: auto; }

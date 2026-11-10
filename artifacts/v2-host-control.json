@@ -1,0 +1,135 @@
+{
+  "title": "MarginLink Demo - test-vault - Obsidian 1.15.0",
+  "pluginLoaded": false,
+  "action": "native editor settings toggle/close twice",
+  "errors": [
+    {
+      "phase": "closing editor",
+      "message": "illegal access",
+      "stack": ""
+    },
+    {
+      "phase": "closing editor",
+      "message": "illegal access",
+      "stack": ""
+    },
+    {
+      "phase": "closing editor",
+      "message": "illegal access",
+      "stack": ""
+    },
+    {
+      "phase": "closing editor",
+      "message": "illegal access",
+      "stack": ""
+    },
+    {
+      "phase": "closing editor",
+      "message": "illegal access",
+      "stack": ""
+    },
+    {
+      "phase": "closing editor",
+      "message": "illegal access",
+      "stack": ""
+    }
+  ],
+  "runtime": [
+    {
+      "phase": "closing editor",
+      "details": {
+        "exceptionId": 105,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 347
+      }
+    },
+    {
+      "phase": "closing editor",
+      "details": {
+        "exceptionId": 106,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 347
+      }
+    },
+    {
+      "phase": "closing editor",
+      "details": {
+        "exceptionId": 107,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 347
+      }
+    },
+    {
+      "phase": "closing editor",
+      "details": {
+        "exceptionId": 108,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 347
+      }
+    },
+    {
+      "phase": "closing editor",
+      "details": {
+        "exceptionId": 109,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 347
+      }
+    },
+    {
+      "phase": "closing editor",
+      "details": {
+        "exceptionId": 110,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 347
+      }
+    }
+  ]
+}

@@ -11,7 +11,7 @@
 
 ## 开发与验证
 
-- 产品约束以 `prompt/Obsidian_MarginLink_Codex_开发提示词.md`、后续用户要求及实际源码为依据。关系仅存于原生 Wikilink；记忆体系是工程文档，不能成为插件运行时关系数据。
+- 产品约束以 `prompt/Obsidian_MarginLink_Codex_开发提示词.md`、增量任务 `prompt/MarginLink_v0.2_Codex_完整开发提示词.md`、后续用户要求及实际源码为依据；v0.2 明确允许在原有插件 data.json 保存可清除的纯 UI 布局偏好。关系仍仅存于原生 Wikilink；记忆体系是工程文档，不能成为插件运行时关系数据。
 - 只在项目内 `test-vault/` 和隔离 `test-profile/` 验证；不向正式 Vault 写入夹具。`scripts/setup-test-vault.mjs` 会重置测试内容。
 - 源码行为变化按范围运行 `npm test`、`npm run lint`、`npm run build`；涉及渲染/交互时补充实际 Obsidian 验收。单纯文档或记忆维护不为刷新日期重跑业务测试。
 - 不把已有报告说成本轮重测结果；桌面宿主告警与插件错误分开记录，保留未验证范围。

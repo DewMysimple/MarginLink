@@ -2,14 +2,18 @@
 /* global app */
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { runV2Scenarios } from './desktop-v2.mjs';
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
 const page = browser.contexts().flatMap(c => c.pages()).find(p => p.url().startsWith('app://obsidian.md/'));
 assert(page, 'Isolated Obsidian is not running');
+await page.waitForFunction(() => typeof app !== 'undefined' && app.workspace && app.workspace.getLeavesOfType('markdown').length > 0);
 assert.equal(await page.evaluate(() => app.vault.getName()), 'test-vault', 'Never run this suite in a real vault');
 await mkdir('artifacts', { recursive: true });
 const errors = [];
 const results = [];
+const hostVersion = /Obsidian v?([\d.]+)/.exec(await page.title())?.[1] ?? 'unknown';
+const pluginVersion = JSON.parse(await readFile('manifest.json', 'utf8')).version;
 let currentScenario = 'setup';
 page.on('pageerror', error => errors.push({ message: String(error), stack: error.stack, scenario: currentScenario }));
 const cdp = await page.context().newCDPSession(page);
@@ -59,7 +63,7 @@ const settings = async tab => {
     if (!owner) await new Promise(resolve => setTimeout(resolve, 40));
   }
   assert(owner, 'Native settings did not open');
-  const name = tab === 'Appearance' ? /^(Appearance|外观)$/ : /^(Community plugins|第三方插件)$/;
+  const name = tab === 'Appearance' ? /^(Appearance|外观)$/ : tab === 'MarginLink' ? /^MarginLink$/ : tab === 'Editor' ? /^(Editor|编辑器)$/ : /^(Community plugins|第三方插件)$/;
   await owner.locator('.vertical-tab-nav-item').filter({ hasText: name }).first().click();
   return owner;
 };
@@ -67,6 +71,10 @@ const persist = async () => page.evaluate(async () => {
   await Promise.all(app.workspace.getLeavesOfType('markdown').map(leaf => leaf.view.save()));
   await app.workspace.requestSaveLayout().run();
 });
+const flipToggle = async (owner, toggle) => {
+  const input = toggle.locator('input[type=checkbox]');
+  await (await input.count() ? input : toggle).focus(); await owner.keyboard.press('Space');
+};
 const closeSettings = async owner => {
   // Let native dropdown fitting and theme/layout observers finish before destroying
   // the detached document. Closing it in the same task as selectOption races Obsidian.
@@ -87,6 +95,7 @@ const closeSettings = async owner => {
 const check = async (name, run) => { currentScenario = name; await run(); results.push({ name, passed: true }); console.log(`PASS ${name}`); };
 try {
   await persist();
+  await writeFile('test-vault/.obsidian/plugins/margin-link/data.json', JSON.stringify({ enabled: true, lines: 'hover', density: 'auto', layout: 'balanced' }));
   await page.reload(); await page.waitForSelector('.margin-link-overlay');
   await page.keyboard.press('Escape');
   await viewport(1680);
@@ -319,18 +328,19 @@ try {
   await check('disable/enable cleans every overlay and highlight, then restores existing reading links', async () => {
     await mode('preview'); const owner = await settings('Community plugins');
     const toggle = owner.locator('.setting-item').filter({ hasText: 'MarginLink contributors' }).locator('.checkbox-container');
-    await toggle.focus(); await owner.keyboard.press('Space');
+    await flipToggle(owner, toggle);
     await page.waitForFunction(() => !document.querySelector('.margin-link-overlay, .margin-link-host, .margin-link-anchor-active'));
-    await toggle.focus(); await owner.keyboard.press('Space'); await closeSettings(owner);
+    await flipToggle(owner, toggle); await closeSettings(owner);
     await page.waitForFunction(() => document.querySelectorAll('.margin-link-overlay').length === 1 && document.querySelectorAll('.margin-link-card').length === 7);
     await mode('source', false); assert.equal(await text(), original);
   });
+  await runV2Scenarios({ page, cdp, viewport, check, command, mode, persist, settings, closeSettings, flipToggle, phase: name => { currentScenario = name; } });
   // This exact native Electron/CDP diagnostic is also reproduced after removing
   // ALL community plugins and reloading (MARGINLINK_THEME_CONTROL=1). Keep it visible
   // in the report, but do not mislabel it as a failure of plugin behavior assertions.
   // Every other uncaught error remains fatal.
   const isKnownHostWarning = error => error.message === 'illegal access' && error.stack === ''
-    && ['theme: closing light settings', 'theme: closing dark settings'].includes(error.scenario)
+    && ['theme: closing light settings', 'theme: closing dark settings', 'settings: closing editor'].includes(error.scenario)
     && runtimeErrors.some(event => event.scenario === error.scenario
       && event.details.scriptId === '1' && event.details.lineNumber === 0
       && event.details.url === 'app://obsidian.md/index.html'
@@ -343,9 +353,13 @@ try {
   await page.locator('.margin-link-card').first().hover();
   await page.screenshot({ path: 'artifacts/final-preview.png' });
   await persist();
-  await writeFile('artifacts/desktop-results.json', JSON.stringify({ results, errors: unexpectedErrors, hostWarnings, controlRun: process.env.MARGINLINK_THEME_CONTROL === '1' }, null, 2));
+  const report = JSON.stringify({ pluginVersion, hostVersion, results, errors: unexpectedErrors, hostWarnings, controlRun: process.env.MARGINLINK_THEME_CONTROL === '1' }, null, 2);
+  await writeFile('artifacts/desktop-results.json', report);
+  await writeFile(`artifacts/desktop-v2-${hostVersion}.json`, report);
   console.log(`${results.length} desktop scenarios passed; ${hostWarnings.length} known host/CDP warnings (also reproduced without the plugin).`);
 } finally {
-  if (errors.length) await writeFile('artifacts/desktop-diagnostics.json', JSON.stringify({ errors, runtimeErrors }, null, 2));
+  const diagnostics = JSON.stringify({ pluginVersion, hostVersion, errors, runtimeErrors }, null, 2);
+  await writeFile('artifacts/desktop-diagnostics.json', diagnostics);
+  await writeFile(`artifacts/desktop-v2-diagnostics-${hostVersion}.json`, diagnostics);
   await browser.close();
 }

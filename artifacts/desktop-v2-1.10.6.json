@@ -1,0 +1,185 @@
+{
+  "pluginVersion": "0.2.0",
+  "hostVersion": "1.10.6",
+  "results": [
+    {
+      "name": "Live Preview: seven native occurrences; embeds/code/Markdown links excluded",
+      "passed": true
+    },
+    {
+      "name": "hover highlights exactly one connector and its source",
+      "passed": true
+    },
+    {
+      "name": "command creates an exact native Wikilink and preserves surrounding text",
+      "passed": true
+    },
+    {
+      "name": "single transaction undo/redo also removes/restores the derived card",
+      "passed": true
+    },
+    {
+      "name": "Esc from picker never changes a character",
+      "passed": true
+    },
+    {
+      "name": "changed source while choosing is rejected without wrapping another range",
+      "passed": true
+    },
+    {
+      "name": "drag handle → right margin → picker creates lossless Chinese alias",
+      "passed": true
+    },
+    {
+      "name": "drag onto body is canceled without a modal or write",
+      "passed": true
+    },
+    {
+      "name": "Reading view maps each source occurrence once and never shows an edit handle",
+      "passed": true
+    },
+    {
+      "name": "Source mode uses actual visible source token positions",
+      "passed": true
+    },
+    {
+      "name": "unresolved card does not create or open a missing file",
+      "passed": true
+    },
+    {
+      "name": "resolved card opens its exact existing target",
+      "passed": true
+    },
+    {
+      "name": "split panes stay scoped to their own files",
+      "passed": true
+    },
+    {
+      "name": "narrow panes safely hide cards without horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "unhandled HTML is recognized but never launched externally by the card",
+      "passed": true
+    },
+    {
+      "name": "switching the active file cancels a pending picker without a write",
+      "passed": true
+    },
+    {
+      "name": "multiple editor selections are rejected without opening a picker",
+      "passed": true
+    },
+    {
+      "name": "left-margin drag temporarily places the new card on the left",
+      "passed": true
+    },
+    {
+      "name": "keyboard focus and Enter open an existing card target",
+      "passed": true
+    },
+    {
+      "name": "Reading view distinguishes identical aliases in Markdown, references and Wikilinks",
+      "passed": true
+    },
+    {
+      "name": "long-note scrolling renders only visible anchors and no floating old links",
+      "passed": true
+    },
+    {
+      "name": "rename/delete events refresh resolution without rewriting source",
+      "passed": true
+    },
+    {
+      "name": "native light/dark theme switching keeps cards readable",
+      "passed": true
+    },
+    {
+      "name": "table selections are refused rather than writing an unescaped alias pipe",
+      "passed": true
+    },
+    {
+      "name": "display toggle only saves UI preferences and never changes Markdown",
+      "passed": true
+    },
+    {
+      "name": "disable/enable cleans every overlay and highlight, then restores existing reading links",
+      "passed": true
+    },
+    {
+      "name": "v2: native grouped settings, quick/full controls share migrated preferences and preview",
+      "passed": true
+    },
+    {
+      "name": "v2: all line modes/styles, widths, opacity and preset color render immediately",
+      "passed": true
+    },
+    {
+      "name": "v2: horizontal/square/icon in all sizes match actual model geometry",
+      "passed": true
+    },
+    {
+      "name": "v2: real 2D card drag updates its connector, saves UI only and survives refresh/reload",
+      "passed": true
+    },
+    {
+      "name": "v2: Esc, pointercancel, blur, invalid drop and grip click cancel without writes",
+      "passed": true
+    },
+    {
+      "name": "v2: reading mode moves across margins; keyboard restore returns to auto",
+      "passed": true
+    },
+    {
+      "name": "v2: snap grid/collision feedback and moving links have independent records",
+      "passed": true
+    },
+    {
+      "name": "v2: narrow/wide, font changes and device scaling preserve records safely",
+      "passed": true
+    },
+    {
+      "name": "v2: same note in two leaves calculates bounds independently",
+      "passed": true
+    },
+    {
+      "name": "v2: note-only and global resets require confirmation and preserve other notes",
+      "passed": true
+    },
+    {
+      "name": "v2: free-mode card positioning does not interfere with selection-handle linking",
+      "passed": true
+    },
+    {
+      "name": "v2: sidebars, readable line length and dragged cards stay inside their own margins",
+      "passed": true
+    },
+    {
+      "name": "v2: repeated aliases survive distant edits and invalidate safely on deletion",
+      "passed": true
+    },
+    {
+      "name": "v2: rename invalidation, active-view and document changes cancel drag safely",
+      "passed": true
+    },
+    {
+      "name": "v2: 120 links are viewport clipped and no self-triggered render loop remains",
+      "passed": true
+    },
+    {
+      "name": "v2: square and icon cards follow native light/dark themes and reduced motion",
+      "passed": true
+    },
+    {
+      "name": "v2: disabling mid-drag and closing quick controls cleans captured UI state",
+      "passed": true
+    },
+    {
+      "name": "v2: UI-only data clearing/reload rebuilds links and resets appearance",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "hostWarnings": [],
+  "controlRun": false
+}

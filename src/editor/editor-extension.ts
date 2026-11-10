@@ -1,6 +1,7 @@
 import { ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { parseDocument, type ParsedDocument } from '../core/wikilink-parser';
 import type { Anchor } from '../types';
+import { layoutIdentities } from '../core/layout-identity';
 
 export interface EditorHost {
   bridges: Set<EditorBridge>;
@@ -10,16 +11,22 @@ export class EditorBridge {
   parsed: ParsedDocument;
   revision = 0;
   alive = true;
+  text: string;
+  identities = new Map<number, string>();
   private hint?: { from: number; target: string; side: 'left' | 'right'; revision: number };
   constructor(readonly cm: EditorView, readonly host: EditorHost) {
-    this.parsed = parseDocument(cm.state.doc.toString());
+    this.text = cm.state.doc.toString();
+    this.parsed = parseDocument(this.text);
+    this.identities = layoutIdentities(this.text, this.parsed.links);
     host.bridges.add(this);
     host.refresh();
   }
   update(update: ViewUpdate): void {
     if (update.docChanged) {
       this.revision++;
-      this.parsed = parseDocument(update.state.doc.toString());
+      this.text = update.state.doc.toString();
+      this.parsed = parseDocument(this.text);
+      this.identities = layoutIdentities(this.text, this.parsed.links);
       this.hint = undefined;
     }
     if (update.docChanged || update.selectionSet || update.viewportChanged || update.geometryChanged || update.focusChanged) this.host.refresh();
@@ -53,7 +60,7 @@ export class EditorBridge {
       const rects = this.rangeRects(from, occurrence.end - 2);
       // Last rendered line provides a real anchor for soft-wrapped aliases.
       const rect = rects.at(-1);
-      if (rect) result.push({ key: String(occurrence.start), occurrence, rect });
+      if (rect) result.push({ key: String(occurrence.start), occurrence, rect, layoutKey: this.identities.get(occurrence.start) });
     }
     return result;
   }

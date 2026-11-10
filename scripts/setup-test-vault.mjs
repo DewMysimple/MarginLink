@@ -11,6 +11,7 @@ const fixtures = {
   'References/stages.html': '<!doctype html><title>Stages</title><p>This fixture is not executed by MarginLink.</p>',
   'pixel.svg': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg>',
   '.obsidian/community-plugins.json': '["margin-link"]',
+  '.obsidian/plugins/margin-link/data.json': JSON.stringify({ enabled: true, lines: 'hover', density: 'auto', layout: 'balanced' }),
   '.obsidian/app.json': JSON.stringify({ readableLineLength: true, livePreview: true, defaultViewMode: 'source', useMarkdownLinks: false }),
   '.obsidian/appearance.json': JSON.stringify({ theme: 'obsidian', cssTheme: '' }),
   '.obsidian/core-plugins.json': '["file-explorer","switcher","command-palette"]',
