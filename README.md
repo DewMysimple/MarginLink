@@ -102,6 +102,8 @@ Markdown、Canvas、Bases、PDF、原生图片/音视频格式通过官方 `Work
 
 源码仓库：[DewMysimple/MarginLink](https://github.com/DewMysimple/MarginLink)。仓库保存源码、锁文件、测试夹具，以及本文引用的截图与验证报告；`node_modules/`、`main.js`、`dist/` 和隔离 `test-profile/` 不纳入 Git。克隆源码后先运行 `npm ci`，再运行 `npm run package` 生成安装文件夹；ZIP 按下方命令生成。本机原有的发布文件仍保留在 `dist/`。
 
+项目采用 [standard 工程记忆](wiki_memory/README.md)，协作规则见 [AGENTS.md](AGENTS.md)。后续每次完整对话有项目修改时，都要完成相应验证、同步持久状态、提交并推送已核实的 upstream；无文件变化不创建空提交。
+
 Node.js 24 / npm 12 已实际执行：
 
 ```powershell
