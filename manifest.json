@@ -1,0 +1,9 @@
+{
+  "id": "margin-link",
+  "name": "MarginLink",
+  "version": "0.1.0",
+  "minAppVersion": "1.10.6",
+  "description": "Show native Wikilinks as connected file cards in your note margins. Drag a selection handle to create a Wikilink.",
+  "author": "MarginLink contributors",
+  "isDesktopOnly": true
+}

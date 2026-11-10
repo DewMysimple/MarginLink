@@ -1,0 +1,198 @@
+{
+  "errors": [
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing light settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing light settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing light settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing dark settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing dark settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing dark settings"
+    }
+  ],
+  "runtimeErrors": [
+    {
+      "scenario": "theme: closing light settings",
+      "details": {
+        "exceptionId": 118,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 738
+      },
+      "context": {
+        "id": 738,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-3821362305582566812.-2197493729065467856",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      }
+    },
+    {
+      "scenario": "theme: closing light settings",
+      "details": {
+        "exceptionId": 119,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 738
+      },
+      "context": {
+        "id": 738,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-3821362305582566812.-2197493729065467856",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      }
+    },
+    {
+      "scenario": "theme: closing light settings",
+      "details": {
+        "exceptionId": 120,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 738
+      },
+      "context": {
+        "id": 738,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-3821362305582566812.-2197493729065467856",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      }
+    },
+    {
+      "scenario": "theme: closing dark settings",
+      "details": {
+        "exceptionId": 121,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 738
+      },
+      "context": {
+        "id": 738,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-3821362305582566812.-2197493729065467856",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      }
+    },
+    {
+      "scenario": "theme: closing dark settings",
+      "details": {
+        "exceptionId": 122,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 738
+      },
+      "context": {
+        "id": 738,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-3821362305582566812.-2197493729065467856",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      }
+    },
+    {
+      "scenario": "theme: closing dark settings",
+      "details": {
+        "exceptionId": 123,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 738
+      },
+      "context": {
+        "id": 738,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-3821362305582566812.-2197493729065467856",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      }
+    }
+  ]
+}

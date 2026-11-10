@@ -1,0 +1,105 @@
+{
+  "results": [
+    {
+      "name": "Live Preview: seven native occurrences; embeds/code/Markdown links excluded",
+      "passed": true
+    },
+    {
+      "name": "hover highlights exactly one connector and its source",
+      "passed": true
+    },
+    {
+      "name": "command creates an exact native Wikilink and preserves surrounding text",
+      "passed": true
+    },
+    {
+      "name": "single transaction undo/redo also removes/restores the derived card",
+      "passed": true
+    },
+    {
+      "name": "Esc from picker never changes a character",
+      "passed": true
+    },
+    {
+      "name": "changed source while choosing is rejected without wrapping another range",
+      "passed": true
+    },
+    {
+      "name": "drag handle → right margin → picker creates lossless Chinese alias",
+      "passed": true
+    },
+    {
+      "name": "drag onto body is canceled without a modal or write",
+      "passed": true
+    },
+    {
+      "name": "Reading view maps each source occurrence once and never shows an edit handle",
+      "passed": true
+    },
+    {
+      "name": "Source mode uses actual visible source token positions",
+      "passed": true
+    },
+    {
+      "name": "unresolved card does not create or open a missing file",
+      "passed": true
+    },
+    {
+      "name": "resolved card opens its exact existing target",
+      "passed": true
+    },
+    {
+      "name": "split panes stay scoped to their own files",
+      "passed": true
+    },
+    {
+      "name": "narrow panes safely hide cards without horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "unhandled HTML is recognized but never launched externally by the card",
+      "passed": true
+    },
+    {
+      "name": "switching the active file cancels a pending picker without a write",
+      "passed": true
+    },
+    {
+      "name": "multiple editor selections are rejected without opening a picker",
+      "passed": true
+    },
+    {
+      "name": "left-margin drag temporarily places the new card on the left",
+      "passed": true
+    },
+    {
+      "name": "keyboard focus and Enter open an existing card target",
+      "passed": true
+    },
+    {
+      "name": "Reading view distinguishes identical aliases in Markdown, references and Wikilinks",
+      "passed": true
+    },
+    {
+      "name": "long-note scrolling renders only visible anchors and no floating old links",
+      "passed": true
+    },
+    {
+      "name": "rename/delete events refresh resolution without rewriting source",
+      "passed": true
+    },
+    {
+      "name": "native light/dark theme switching keeps cards readable",
+      "passed": true
+    },
+    {
+      "name": "display toggle only saves UI preferences and never changes Markdown",
+      "passed": true
+    },
+    {
+      "name": "disable/enable cleans every overlay and highlight, then restores existing reading links",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

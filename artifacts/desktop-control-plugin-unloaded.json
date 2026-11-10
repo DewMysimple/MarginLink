@@ -1,0 +1,304 @@
+{
+  "errors": [
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing light settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing light settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing light settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing dark settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing dark settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "theme: closing dark settings"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "disable/enable cleans every overlay and highlight, then restores existing reading links"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "disable/enable cleans every overlay and highlight, then restores existing reading links"
+    },
+    {
+      "message": "illegal access",
+      "stack": "",
+      "scenario": "disable/enable cleans every overlay and highlight, then restores existing reading links"
+    }
+  ],
+  "runtimeErrors": [
+    {
+      "scenario": "theme: closing light settings",
+      "details": {
+        "exceptionId": 109,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 688
+      },
+      "context": {
+        "id": 688,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-2777110687807874309.-4972890165889828961",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "theme: closing light settings",
+      "details": {
+        "exceptionId": 110,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 688
+      },
+      "context": {
+        "id": 688,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-2777110687807874309.-4972890165889828961",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "theme: closing light settings",
+      "details": {
+        "exceptionId": 111,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 688
+      },
+      "context": {
+        "id": 688,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-2777110687807874309.-4972890165889828961",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "theme: closing dark settings",
+      "details": {
+        "exceptionId": 112,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 688
+      },
+      "context": {
+        "id": 688,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-2777110687807874309.-4972890165889828961",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "theme: closing dark settings",
+      "details": {
+        "exceptionId": 113,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 688
+      },
+      "context": {
+        "id": 688,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-2777110687807874309.-4972890165889828961",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "theme: closing dark settings",
+      "details": {
+        "exceptionId": 114,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 688
+      },
+      "context": {
+        "id": 688,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "-2777110687807874309.-4972890165889828961",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "disable/enable cleans every overlay and highlight, then restores existing reading links",
+      "details": {
+        "exceptionId": 115,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 714
+      },
+      "context": {
+        "id": 714,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "4846471333495827658.-450063126051255628",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "disable/enable cleans every overlay and highlight, then restores existing reading links",
+      "details": {
+        "exceptionId": 116,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 714
+      },
+      "context": {
+        "id": 714,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "4846471333495827658.-450063126051255628",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    },
+    {
+      "scenario": "disable/enable cleans every overlay and highlight, then restores existing reading links",
+      "details": {
+        "exceptionId": 117,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "app://obsidian.md/index.html",
+        "exception": {
+          "type": "string",
+          "value": "illegal access"
+        },
+        "executionContextId": 714
+      },
+      "context": {
+        "id": 714,
+        "origin": "app://obsidian.md",
+        "name": "",
+        "uniqueId": "4846471333495827658.-450063126051255628",
+        "auxData": {
+          "isDefault": true,
+          "type": "default",
+          "frameId": "87A215F5B5A3F20CF4C5C37860D176E9"
+        }
+      },
+      "sourceError": "Error: cdpSession.send: Protocol error (Debugger.getScriptSource): No script for id: 1"
+    }
+  ],
+  "pauses": []
+}

@@ -1,0 +1,29 @@
+.margin-link-host { position: relative; }
+.margin-link-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; contain: layout style; }
+.margin-link-overlay[hidden], .margin-link-handle[hidden] { display: none; }
+.margin-link-connectors { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.margin-link-connector { fill: none; stroke: var(--interactive-accent); stroke-width: 1.4; opacity: 0; transition: opacity 120ms ease; }
+.margin-link-lines-always .margin-link-connector { opacity: .28; }
+.margin-link-connector.margin-link-active { opacity: .85; stroke-width: 1.8; }
+.margin-link-card { position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: flex-start; gap: 9px; padding: 7px 9px; margin: 0; box-sizing: border-box; overflow: hidden; pointer-events: auto; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-normal); box-shadow: 0 2px 7px var(--background-modifier-box-shadow); text-align: left; cursor: pointer; font: inherit; font-size: var(--font-ui-small); }
+.margin-link-card:hover, .margin-link-card.margin-link-active { border-color: var(--interactive-accent); background: var(--background-secondary); }
+.margin-link-card:focus-visible, .margin-link-handle:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.margin-link-card-icon { display: flex; flex: 0 0 17px; color: var(--text-muted); }
+.margin-link-card-icon svg { width: 17px; height: 17px; }
+.margin-link-card-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.margin-link-card-label, .margin-link-card-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.margin-link-card-label { font-weight: var(--font-medium); }
+.margin-link-card-path { color: var(--text-muted); font-size: 10px; }
+.margin-link-unresolved { border-style: dashed; }
+.margin-link-unresolved .margin-link-card-icon { color: var(--text-warning); }
+.margin-link-compact { padding: 7px; justify-content: center; gap: 0; border-radius: 7px; }
+.margin-link-compact .margin-link-card-text { display: none; }
+.margin-link-anchor-active { border-radius: 3px; background-color: var(--text-selection) !important; text-decoration-color: var(--interactive-accent); }
+.margin-link-handle { position: absolute; top: 0; left: 0; width: 26px; height: 25px; padding: 5px; margin: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--background-modifier-border); border-radius: 6px; color: var(--text-on-accent); background: var(--interactive-accent); pointer-events: auto; cursor: grab; z-index: 3; touch-action: none; }
+.margin-link-handle svg { width: 15px; height: 15px; }
+.margin-link-drop-zone { display: none; position: absolute; box-sizing: border-box; border: 1px dashed var(--interactive-accent); border-radius: 9px; background: var(--background-secondary); opacity: .65; color: var(--text-muted); font-size: var(--font-ui-smaller); align-items: center; justify-content: center; text-align: center; padding: 5px; overflow: hidden; }
+.margin-link-dragging .margin-link-drop-available { display: flex; }
+.margin-link-drop-zone.margin-link-drop-active { opacity: .95; background: var(--background-modifier-hover); color: var(--text-accent); border-style: solid; }
+.margin-link-drag-ghost { display: none; position: absolute; top: 0; left: 0; max-width: 145px; padding: 7px 9px; border: 1px solid var(--interactive-accent); border-radius: 7px; color: var(--text-normal); background: var(--background-primary); font-size: var(--font-ui-smaller); box-shadow: var(--shadow-s); }
+.margin-link-dragging .margin-link-drag-ghost { display: block; }
+@media (prefers-reduced-motion: reduce) { .margin-link-connector { transition: none; } }

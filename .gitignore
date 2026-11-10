@@ -1,0 +1,26 @@
+node_modules/
+main.js
+dist/
+artifacts/*
+# Retain the screenshots and reports referenced by README/VALIDATION.
+!artifacts/final-preview.png
+!artifacts/light.png
+!artifacts/dragging.png
+!artifacts/reading.png
+!artifacts/source.png
+!artifacts/split.png
+!artifacts/narrow.png
+!artifacts/scroll.png
+!artifacts/desktop-control-plugin-unloaded.json
+!artifacts/desktop-diagnostics.json
+!artifacts/desktop-results-1.10.6.json
+!artifacts/desktop-results-1.15.0.json
+test-vault/.obsidian/workspace*.json
+test-vault/.obsidian/plugins/
+test-profile/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+*.log
