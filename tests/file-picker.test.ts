@@ -1,0 +1,162 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { App, TFile } from 'obsidian';
+import { FilePicker, type PickerActions } from '../src/ui/file-picker';
+import { readPreferences } from '../src/types';
+import type { ImportHost, LocalFileInspection } from '../src/core/local-file-import';
+
+class Element {
+  children: Element[] = [];
+  parent?: Element;
+  value = '';
+  textContent = '';
+  disabled = false;
+  hidden = false;
+  isConnected = true;
+  tagName = '';
+  cls = '';
+  onclick?: (event?: object) => void;
+  oninput?: () => void;
+  onchange?: () => void;
+  onkeydown?: (event: object) => void;
+  classList = { toggle() {} };
+  ownerDocument = { defaultView: { addEventListener() {}, removeEventListener() {} }, createDocumentFragment: () => new Element() };
+  createEl(tag: string, options: { text?: string; value?: string; cls?: string; attr?: Record<string, string> } = {}): Element {
+    const child = new Element(); child.tagName = tag; child.textContent = options.text ?? ''; child.cls = options.cls ?? '';
+    child.value = options.value ?? ''; child.parent = this; this.children.push(child); return child;
+  }
+  createDiv(options = {}): Element { return this.createEl('div', options); }
+  addClass() {}
+  setAttribute() {}
+  setText(value: string) { this.textContent = value; }
+  empty() { for (const child of this.children) child.parent = undefined; this.children = []; }
+  contains(child: Element): boolean { return child === this || this.children.some(item => item.contains(child)); }
+  scrollIntoView() {}
+  focus() {}
+  select() {}
+  remove() { if (this.parent) this.parent.children = this.parent.children.filter(item => item !== this); }
+  all(): Element[] { return [this, ...this.children.flatMap(child => child.all())]; }
+  text(): string { return this.all().map(child => child.textContent).join('\n'); }
+}
+const state = vi.hoisted(() => ({ inspect: vi.fn(), move: vi.fn(), notices: [] as unknown[] }));
+vi.mock('obsidian', () => ({
+  Modal: class {
+    contentEl = new Element(); modalEl = new Element(); containerEl = new Element();
+    constructor(public app: App) {}
+    setTitle() {}
+    close() { this.containerEl.isConnected = false; (this as unknown as FilePicker).onClose(); }
+  },
+  Notice: class { constructor(message: unknown) { state.notices.push(message); } },
+  prepareFuzzySearch: (query: string) => (candidate: string) => candidate.toLowerCase().includes(query.toLowerCase()) ? { score: 0 } : null,
+  sortSearchResults() {}
+}));
+vi.mock('../src/core/local-file-import', async importOriginal => ({
+  ...await importOriginal<typeof import('../src/core/local-file-import')>(),
+  desktopFileRuntime: () => ({}),
+  LocalFileImporter: class { inspect = state.inspect; move = state.move; }
+}));
+const settle = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+const nativePath = 'C:\\Downloads\\中文 streams.html';
+const inspection = (source = nativePath): LocalFileInspection => ({ source, canonical: source, name: '中文 streams.html', size: 5 } as LocalFileInspection);
+function fixture(files: string[] = []) {
+  const indexed = new Map(files.map(path => [path, { path } as TFile]));
+  const actions: PickerActions = { existing: vi.fn(), create: vi.fn(async () => {}), closed: vi.fn(), validate: vi.fn() };
+  const app = { vault: { adapter: { getBasePath: () => 'C:\\Vault' }, getFiles: () => [...indexed.values()], getFileByPath: (p: string) => indexed.get(p) ?? null,
+    getFolderByPath: (p: string) => p === '资料' ? { path: p } : null, getAbstractFileByPath: (p: string) => indexed.get(p) ?? null } } as unknown as App;
+  const picker = new FilePicker(app, 'streams', readPreferences({ newNoteFolders: ['资料'] }), actions, { currentTarget: 'old.html' });
+  picker.onOpen();
+  const content = picker.contentEl as unknown as Element;
+  const input = content.all().find(e => e.tagName === 'input')!;
+  const button = (text: string) => content.all().find(e => e.tagName === 'button' && e.textContent === text)!;
+  const query = (text: string) => { input.value = text; input.oninput!(); };
+  return { picker, actions, content, input, button, query, indexed };
+}
+beforeEach(() => { state.inspect.mockReset(); state.move.mockReset(); state.notices.length = 0; });
+
+describe('one file picker for name search and local import', () => {
+  it('keeps normal keywords on vault search and displays current relink target', async () => {
+    const f = fixture(['A/streams.md', 'B/other.md']);
+    f.query('streams');
+    expect(f.content.text()).toContain('当前目标：old.html');
+    expect(f.content.text()).toContain('A/streams.md');
+    expect(f.content.text()).not.toContain('B/other.md');
+    expect(state.inspect).not.toHaveBeenCalled();
+    f.button('A/streams.md').onclick!(); await settle();
+    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get('A/streams.md'));
+  });
+  it('ignores late path results after a later paste or ordinary keyword', async () => {
+    let resolveFirst!: (value: LocalFileInspection) => void;
+    state.inspect.mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; })).mockResolvedValueOnce(inspection('C:\\Downloads\\second.html'));
+    const f = fixture(['keyword.md']);
+    f.query(nativePath); f.query('C:\\Downloads\\second.html'); await settle();
+    expect(f.content.text()).toContain('second.html');
+    resolveFirst(inspection(nativePath)); await settle();
+    expect(f.content.text()).not.toContain('来源路径：' + nativePath);
+    f.query('keyword'); await settle();
+    expect(f.content.text()).toContain('keyword.md');
+    expect(f.content.text()).not.toContain('来源路径');
+  });
+  it('ignores path results after changing tabs or closing', async () => {
+    let resolve!: (value: LocalFileInspection) => void;
+    state.inspect.mockImplementation(() => new Promise(r => { resolve = r; }));
+    const f = fixture(); f.query(nativePath); f.button('新建文件').onclick!();
+    resolve(inspection()); await settle();
+    expect(f.content.text()).not.toContain('来源路径');
+    f.button('已有文件').onclick!(); f.query(nativePath); f.picker.onClose();
+    resolve(inspection()); await settle();
+    expect(f.content.text()).toBe('');
+    expect(state.move).not.toHaveBeenCalled();
+  });
+  it('shows source, shared default folder and exact extension, and never mutates before explicit confirmation', async () => {
+    state.inspect.mockResolvedValue(inspection());
+    const f = fixture(); f.query('"' + nativePath + '"'); await settle();
+    expect(f.content.text()).toContain('来源路径：' + nativePath);
+    expect(f.content.text()).toContain('最终库内路径：资料/中文 streams.html');
+    expect(f.button('移动到仓库并关联').disabled).toBe(false);
+    expect(state.move).not.toHaveBeenCalled();
+    expect(f.actions.existing).not.toHaveBeenCalled();
+  });
+  it('associates an exact in-vault absolute path without import or fuzzy matching', async () => {
+    state.inspect.mockResolvedValue({ ...inspection(), vaultPath: '资料/exact.html' });
+    const f = fixture(['资料/exact.html', 'other/exact.html']); f.query(nativePath); await settle();
+    f.button('关联此文件').onclick!(); await settle();
+    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get('资料/exact.html'));
+    expect(state.move).not.toHaveBeenCalled();
+  });
+  it('offers an explicit existing-file branch for collisions and preserves the external source', async () => {
+    state.inspect.mockResolvedValue(inspection());
+    const f = fixture(['资料/中文 streams.html']); f.query(nativePath); await settle();
+    expect(f.button('移动到仓库并关联').disabled).toBe(true);
+    const existing = f.button('使用已有文件（保留原件）');
+    expect(existing.hidden).toBe(false); existing.onclick!(); await settle();
+    expect(state.move).not.toHaveBeenCalled();
+    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get('资料/中文 streams.html'));
+  });
+  it('deduplicates rapid confirms and awaits source commit before completing import', async () => {
+    state.inspect.mockResolvedValue(inspection());
+    let complete!: () => void;
+    state.move.mockImplementation(async (_source: LocalFileInspection, target: string, host: ImportHost<TFile>) => {
+      await new Promise<void>(resolve => { complete = resolve; });
+      await host.commit({ path: target } as TFile);
+      return { sourceRemoved: true, targetPath: target };
+    });
+    const f = fixture(); f.query(nativePath); await settle();
+    const move = f.button('移动到仓库并关联'); move.onclick!(); move.onclick!();
+    expect(state.move).toHaveBeenCalledOnce();
+    expect(f.actions.existing).not.toHaveBeenCalled();
+    complete(); await settle();
+    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith({ path: '资料/中文 streams.html' });
+  });
+  it('aborts a pending import on picker close and reports the importer phase result', async () => {
+    state.inspect.mockResolvedValue(inspection());
+    let signal!: AbortSignal;
+    state.move.mockImplementation((_source: unknown, _target: string, _host: unknown, pendingSignal: AbortSignal) => {
+      signal = pendingSignal;
+      return new Promise((_resolve, reject) => pendingSignal.addEventListener('abort', () => reject(new Error('原文件保留'))));
+    });
+    const f = fixture(); f.query(nativePath); await settle();
+    f.button('移动到仓库并关联').onclick!(); f.picker.close(); await settle();
+    expect(signal.aborted).toBe(true);
+    expect(f.actions.existing).not.toHaveBeenCalled();
+    expect(state.notices).toContain('原文件保留');
+  });
+});

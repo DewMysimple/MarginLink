@@ -11,7 +11,7 @@ type Actions = {
   closed(): void;
 };
 const picker = vi.hoisted(() => ({ actions: undefined as Actions | undefined }));
-vi.mock('obsidian', () => ({ MarkdownView: class {}, Notice: class {} }));
+vi.mock('obsidian', () => ({ MarkdownView: class {}, Modal: class {}, Notice: class {} }));
 vi.mock('../src/ui/file-picker', () => ({
   FilePicker: class {
     constructor(_app: unknown, _alias: string, _settings: unknown, readonly actions: Actions) { picker.actions = actions; }
@@ -46,13 +46,16 @@ function fixture() {
   const openFile = vi.fn(async () => {});
   const focusWindow = vi.fn();
   const leaf = { openFile, view: { containerEl: { ownerDocument: { defaultView: { focus: focusWindow } } } } };
+  let text = alias;
   const editor = {
-    getValue: () => alias,
+    getValue: () => text,
     offsetToPos: (ch: number) => ({ line: 0, ch }),
-    focus: vi.fn(), transaction: vi.fn()
+    focus: vi.fn(), transaction: vi.fn((tx: { changes: { from: { ch: number }; to: { ch: number }; text: string }[] }) => {
+      for (const change of tx.changes) text = text.slice(0, change.from.ch) + change.text + text.slice(change.to.ch);
+    })
   };
   const source = { editor, getMode: () => 'source', file: { path: 'Original.md' } } as unknown as MarkdownView;
-  const workspace = { getActiveViewOfType: () => source, getLeaf: vi.fn(() => leaf), setActiveLeaf: vi.fn() };
+  const workspace = { getActiveViewOfType: () => source, getLeaf: vi.fn(() => leaf), setActiveLeaf: vi.fn(), iterateAllLeaves: vi.fn() };
   const vault = {
     getFolderByPath: (p: string) => p === folder ? { path: folder } : null,
     getFileByPath: (p: string) => files.get(p) ?? null,

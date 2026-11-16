@@ -43,6 +43,8 @@ export class SelectionAction {
       const to = view.editor.offsetToPos(snapshot.to);
       const caret = { line: from.line, ch: from.ch + link.length };
       view.editor.transaction({ changes: [{ from, to, text: link }], selection: { from: caret } }, 'margin-link');
+      const expected = snapshot.text.slice(0, snapshot.from) + link + snapshot.text.slice(snapshot.to);
+      if (view.editor.getValue() !== expected) throw new Error('未能确认原文事务成功；外部原件会保留，请检查笔记。');
       // Closing must not restore the selection captured before the transaction.
       picker.shouldRestoreSelection = false;
       picker.close();
@@ -50,6 +52,7 @@ export class SelectionAction {
       this.changed();
     };
     const picker = new FilePicker(this.app, snapshot.selected, this.preferences(), {
+      validate,
       existing: file => {
         write(file, exactTarget(this.app, file, snapshot.sourcePath));
         view.editor.focus();
