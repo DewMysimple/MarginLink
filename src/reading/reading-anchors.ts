@@ -1,6 +1,7 @@
 import { MarkdownRenderChild, parseLinktext, type App, type MarkdownPostProcessorContext, type MarkdownView } from 'obsidian';
 import { parseDocument, type ParsedDocument } from '../core/wikilink-parser';
 import type { Anchor, WikilinkOccurrence } from '../types';
+import { textFragments } from '../view/text-fragments';
 import { mapReadingLinks } from './source-mapping';
 import { layoutIdentities } from '../core/layout-identity';
 
@@ -61,7 +62,11 @@ export class ReadingAnchors {
         seen.add(element);
         const rects = Array.from(element.getClientRects());
         const rect = rects.at(-1);
-        if (rect) result.push({ key: String(occurrence.start), occurrence, rect, element, layoutKey: entry.identities.get(occurrence.start) });
+        if (!rect) continue;
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        const fragments = textFragments(range);
+        if (fragments.length) result.push({ key: String(occurrence.start), occurrence, rect, fragments, element, layoutKey: entry.identities.get(occurrence.start) });
       }
     }
     return result;

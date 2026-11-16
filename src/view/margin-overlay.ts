@@ -11,12 +11,12 @@ import { canOpenInObsidian } from '../core/file-capabilities';
 import { layoutCards, positionFromDrop, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
-import { connectorPath } from './connector-renderer';
+import { connectorRoute, type PortChoice } from './connector-renderer';
 import { applyAppearance } from './appearance';
 import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
 
-interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement }
+interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice }
 export interface OverlayHost {
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
   reading: ReadingAnchors; selection: SelectionAction; layouts: LayoutStore;
@@ -137,7 +137,13 @@ export class MarginOverlay {
     if (geometry !== this.geometrySignature) {
       this.geometrySignature = geometry; cardTooltip.hideWithin(this.root); this.schedule();
     }
-    this.anchors = (bridge ? bridge.anchors() : this.host.reading.anchors(this.view)).filter(a => a.rect.width > 0 && a.rect.top >= hostRect.top + viewport.top && a.rect.bottom <= hostRect.top + viewport.bottom);
+    const visible = (r: Box) => r.right > hostRect.left + viewport.left && r.left < hostRect.left + viewport.right &&
+      r.top >= hostRect.top + viewport.top && r.bottom <= hostRect.top + viewport.bottom;
+    this.anchors = [];
+    for (const anchor of bridge ? bridge.anchors() : this.host.reading.anchors(this.view)) {
+      const fragments = anchor.fragments.filter(visible);
+      if (fragments.length) this.anchors.push({ ...anchor, fragments, rect: visible(anchor.rect) ? anchor.rect : fragments[fragments.length - 1] });
+    }
     this.svg.setAttribute('width', String(hostRect.width)); this.svg.setAttribute('height', String(hostRect.height));
     this.svg.style.clipPath = `inset(${viewport.top}px ${hostRect.width - viewport.right}px ${hostRect.height - viewport.bottom}px ${viewport.left}px)`;
     applyAppearance(this.root, prefs);
@@ -218,8 +224,12 @@ export class MarginOverlay {
     card.shell.dataset.shape = p.shape ?? 'horizontal'; card.button.classList.toggle('margin-link-compact', p.compact);
     card.shell.dataset.manual = String(!!p.manual);
     Object.assign(card.shell.style, { width: `${p.width}px`, height: `${p.height}px`, transform: `translate(${p.x}px, ${p.y}px)` });
-    const x = (p.side === 'left' ? card.anchor.rect.left : card.anchor.rect.right) - rect.left;
-    card.path.setAttribute('d', connectorPath(x, card.anchor.rect.bottom + 2 - rect.top, p, this.host.preferences.lineStyle));
+    const fragments = card.anchor.fragments.map(f => ({
+      left: f.left - rect.left, right: f.right - rect.left, top: f.top - rect.top, bottom: f.bottom - rect.top
+    }));
+    const route = connectorRoute(fragments, p, this.host.preferences.lineStyle, card.ports);
+    card.ports = route?.choice;
+    card.path.setAttribute('d', route?.path ?? '');
   }
   private dragContext(key: string): CardDragContext | undefined {
     const card = this.cards.get(key), input = this.layoutInput;

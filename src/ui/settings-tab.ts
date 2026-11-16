@@ -1,7 +1,7 @@
 import { PluginSettingTab, Setting, setIcon, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
 import { DEFAULT_PREFERENCES, type Preferences } from '../types';
-import { connectorPath } from '../view/connector-renderer';
+import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
 import { ConfirmAction } from './quick-controls';
@@ -27,7 +27,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   const preview = container.createDiv({ cls: 'margin-link-settings-preview', attr: { 'aria-label': '实时外观预览，不修改笔记' } });
   const refreshPreview = () => {
     preview.empty(); const p = plugin.preferences; applyAppearance(preview, p);
-    preview.createSpan({ cls: 'margin-link-preview-anchor', text: '原生双链' });
+    const anchor = preview.createSpan({ cls: 'margin-link-preview-anchor', text: '原生双链' });
     const input: LayoutInput = { width: 400, height: 150, body: { left: 0, right: 180, top: 0, bottom: 150 }, viewport: { left: 0, right: 400, top: 0, bottom: 150 }, anchors: [], density: p.density, layout: p.layout, preferences: p };
     const dim = dimensions(input, 'right')!;
     const placement = { key: 'preview', side: 'right' as const, x: 192, y: (150 - dim.height) / 2, ...dim, compact: dim.shape === 'icon' };
@@ -37,8 +37,11 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
     card.classList.toggle('margin-link-compact', placement.compact);
     setIcon(card.createSpan({ cls: 'margin-link-card-icon' }), 'file-text');
     const label = card.createSpan({ cls: 'margin-link-card-text' }); label.createSpan({ cls: 'margin-link-card-label', text: '示例笔记' }); label.createSpan({ cls: 'margin-link-card-path', text: 'Notes/示例笔记.md' });
-    const svg = preview.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('margin-link-connectors'); svg.setAttribute('viewBox', '0 0 400 150');
-    const path = preview.ownerDocument.createElementNS(svg.namespaceURI, 'path'); path.setAttribute('class', 'margin-link-connector margin-link-active'); path.setAttribute('d', connectorPath(115, 75, placement, p.lineStyle)); svg.appendChild(path); preview.prepend(svg);
+    const svg = preview.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('margin-link-connectors'); svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
+    const bounds = { left: anchor.offsetLeft, right: anchor.offsetLeft + anchor.offsetWidth, top: anchor.offsetTop, bottom: anchor.offsetTop + anchor.offsetHeight };
+    const path = preview.ownerDocument.createElementNS(svg.namespaceURI, 'path');
+    path.setAttribute('class', 'margin-link-connector margin-link-active'); path.setAttribute('d', connectorRoute([bounds], placement, p.lineStyle)?.path ?? '');
+    svg.appendChild(path); preview.prepend(svg);
   };
   const heading = (text: string) => container.createEl('h3', { text });
   heading('基础'); toggle('enabled', '启用边缘关联（打开笔记自动显示）');

@@ -1,6 +1,7 @@
 import type { TFile } from 'obsidian';
 
 export type Side = 'left' | 'right';
+export interface Box { left: number; right: number; top: number; bottom: number }
 export interface WikilinkOccurrence {
   raw: string;
   start: number;
@@ -14,7 +15,8 @@ export interface ResolvedLink { file: TFile | null; subpath: string; target: str
 export interface Anchor {
   key: string;
   occurrence: WikilinkOccurrence;
-  rect: DOMRect;
+  rect: Box;
+  fragments: Box[];
   element?: HTMLElement;
   layoutKey?: string;
 }

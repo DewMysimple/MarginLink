@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_PREFERENCES, type CardShape } from '../src/types';
 import { layoutCards, positionFromDrop, overlapsCard, lane, type LayoutInput } from '../src/view/layout-engine';
-import { connectorPath } from '../src/view/connector-renderer';
+import { connectorRoute } from '../src/view/connector-renderer';
 const input: LayoutInput = { width: 1400, height: 800, body: { left: 360, right: 1040, top: 0, bottom: 800 },
   viewport: { left: 0, right: 1400, top: 40, bottom: 760 }, density: 'auto', layout: 'balanced',
   preferences: { ...DEFAULT_PREFERENCES, placementMode: 'free' }, lineHeight: 24, anchors: [{ key: 'a', x: 700, y: 300 }] };
@@ -105,11 +105,42 @@ describe('relative spatial layout', () => {
   });
 });
 describe('connector geometry', () => {
-  const card = layoutCards(input)[0];
-  it.each(['curve', 'straight', 'elbow'] as const)('uses final card edge for %s', style => {
-    const d = connectorPath(700, 302, card, style);
-    expect(d).toContain('M 700 302'); expect(d).not.toMatch(/NaN|Infinity/);
-    expect(d).toContain(style === 'curve' ? ' C ' : style === 'straight' ? ' L ' : ' H ');
+  const text = { left: 90, top: 40, right: 150, bottom: 60 };
+  it.each([
+    ['left', 'right', 0, 40, 'M 90 50', '20 50'],
+    ['right', 'left', 200, 40, 'M 150 50', '200 50'],
+    ['top', 'bottom', 110, 0, 'M 120 40', '120 20'],
+    ['bottom', 'top', 110, 100, 'M 120 60', '120 100']
+  ] as const)('connects the %s midpoint of the text to the %s midpoint of the card', (source, target, x, y, start, end) => {
+    const card = { x, y, width: 20, height: 20 };
+    for (const style of ['curve', 'straight', 'elbow'] as const) {
+      const route = connectorRoute([text], card, style)!;
+      expect(route.choice).toEqual({ source, target, fragment: 0 });
+      expect(route.path.startsWith(start)).toBe(true);
+      if (style !== 'elbow') expect(route.path.endsWith(end)).toBe(true);
+    }
   });
-  it('rejects invalid anchor coordinates', () => expect(connectorPath(NaN, 0, card)).toBe(''));
+  it('has vertical outgoing and incoming segments for vertical curves and elbows', () => {
+    const card = { x: 110, y: 0, width: 20, height: 20 };
+    expect(connectorRoute([text], card)?.path).toBe('M 120 40 C 120 30, 120 30, 120 20');
+    expect(connectorRoute([text], card, 'elbow')?.path).toBe('M 120 40 V 30 H 120 V 20');
+  });
+  it('selects a reachable wrapped fragment independently of the layout reference', () => {
+    const lines = [text, { left: 10, top: 66, right: 50, bottom: 86 }];
+    const right = connectorRoute(lines, { x: 180, y: 40, width: 20, height: 20 })!;
+    const left = connectorRoute(lines, { x: -40, y: 66, width: 20, height: 20 })!;
+    expect(right.choice.fragment).toBe(0);
+    expect(left.choice.fragment).toBe(1);
+    expect(right.path.startsWith('M 150 50')).toBe(true);
+    expect(left.path.startsWith('M 10 76')).toBe(true);
+  });
+  it('keeps the chosen facing ports when an equivalent route only improves slightly', () => {
+    const square = { left: 0, right: 20, top: 0, bottom: 20 };
+    const diagonal = { x: 100, y: 100, width: 20, height: 20 };
+    const route = connectorRoute([square], diagonal)!;
+    expect(connectorRoute([square], { ...diagonal, y: 101 }, 'curve', route.choice)?.choice).toEqual(route.choice);
+  });
+  it('rejects invalid anchor coordinates', () => {
+    expect(connectorRoute([{ ...text, left: NaN, right: NaN }], { x: 0, y: 0, width: 20, height: 20 })).toBeUndefined();
+  });
 });

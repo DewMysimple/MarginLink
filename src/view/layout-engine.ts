@@ -1,5 +1,5 @@
-import type { CardShape, Preferences, RelativePosition, Side } from '../types';
-export interface Box { left: number; right: number; top: number; bottom: number }
+import type { Box, CardShape, Preferences, RelativePosition, Side } from '../types';
+export type { Box } from '../types';
 export interface LayoutAnchor { key: string; x: number; y: number; preferred?: Side; manual?: RelativePosition }
 export interface LayoutInput {
   width: number; height: number; body: Box; viewport: Box;

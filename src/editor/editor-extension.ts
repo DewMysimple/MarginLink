@@ -1,5 +1,6 @@
 import { ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { parseDocument, type ParsedDocument } from '../core/wikilink-parser';
+import { textFragments } from '../view/text-fragments';
 import type { Anchor } from '../types';
 import { layoutIdentities } from '../core/layout-identity';
 
@@ -37,13 +38,20 @@ export class EditorBridge {
   preferred(from: number, target: string): 'left' | 'right' | undefined {
     return this.hint?.from === from && this.hint.target === target && this.hint.revision === this.revision ? this.hint.side : undefined;
   }
-  rangeRects(from: number, to: number): DOMRect[] {
+  private range(from: number, to: number): Range | undefined {
     try {
       const start = this.cm.domAtPos(from);
       const end = this.cm.domAtPos(to);
       const range = this.cm.dom.ownerDocument.createRange();
       range.setStart(start.node, start.offset);
       range.setEnd(end.node, end.offset);
+      return range;
+    } catch { return; }
+  }
+  rangeRects(from: number, to: number): DOMRect[] {
+    try {
+      const range = this.range(from, to);
+      if (!range) return [];
       const rects = Array.from(range.getClientRects()).filter(r => r.width > 0.5 && r.height > 0);
       if (rects.length) return rects;
       const coord = this.cm.coordsAtPos(from);
@@ -57,10 +65,12 @@ export class EditorBridge {
       if (!this.cm.visibleRanges.some(r => occurrence.start < r.to && occurrence.end > r.from)) continue;
       const aliasAt = occurrence.raw.indexOf('|');
       const from = occurrence.start + (aliasAt >= 0 ? aliasAt + 1 : 2);
-      const rects = this.rangeRects(from, occurrence.end - 2);
-      // Last rendered line provides a real anchor for soft-wrapped aliases.
-      const rect = rects.at(-1);
-      if (rect) result.push({ key: String(occurrence.start), occurrence, rect, layoutKey: this.identities.get(occurrence.start) });
+      const range = this.range(from, occurrence.end - 2);
+      if (!range) continue;
+      const fragments = textFragments(range);
+      // Preserve the original layout reference independently of the chosen port.
+      const rect = Array.from(range.getClientRects()).filter(r => r.width > 0.5 && r.height > 0).at(-1);
+      if (rect && fragments.length) result.push({ key: String(occurrence.start), occurrence, rect, fragments, layoutKey: this.identities.get(occurrence.start) });
     }
     return result;
   }
