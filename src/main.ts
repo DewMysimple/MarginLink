@@ -146,7 +146,12 @@ export default class MarginLinkPlugin extends Plugin {
     return this.openingSettings;
   }
   confirmReset(source?: string): void {
-    new ConfirmAction(this.app, this, source ? '清除当前笔记布局' : '清除所有笔记布局', '只删除自定义卡片位置，原生双链与笔记内容完全保留。', () => this.layouts.clear(source)).open();
+    new ConfirmAction(this.app, this, source ? '清除当前笔记布局' : '清除所有笔记布局', '只删除自定义卡片位置，原生双链与笔记内容完全保留。', () => {
+      this.layouts.clear(source);
+      // Whole-note/all reset is an explicit request to repack automatic slots.
+      // Per-card reset uses LayoutStore.clear directly and stays local.
+      for (const [view, overlay] of this.overlays) if (source === undefined || view.file?.path === source) overlay.resetLayout();
+    }).open();
   }
   private cancelInteractions(except?: MarkdownView): void { this.selection?.cancel(); for (const [view, overlay] of this.overlays) if (view !== except) overlay.cancelInteractions(); }
   private queueSave(): void {

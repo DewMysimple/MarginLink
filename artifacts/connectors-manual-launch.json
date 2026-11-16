@@ -1,0 +1,6 @@
+{
+  "status": "blocked",
+  "returncode": -5,
+  "scenarioPasses": 0,
+  "output": "[6:1116/171846.072315:ERROR:dbus/bus.cc:408] Failed to connect to the bus: Failed to open socket: Operation not permitted\n2026-11-16 09:18:46 Loading main app package /workspace/scratch/99c9e44e4ea9/MarginLink/artifacts/runtime/obsidian-1.10.6/resources/obsidian.asar\n[6:1116/171846.421426:FATAL:chrome/browser/process_singleton_posix.cc:294] Check failed: . socket() failed: Operation not permitted (1)\n"
+}

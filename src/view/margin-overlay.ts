@@ -12,7 +12,8 @@ import { canOpenInObsidian } from '../core/file-capabilities';
 import { positionFromDrop, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
-import { connectorRoute, type PortChoice } from './connector-renderer';
+import { type PortChoice } from './connector-renderer';
+import { connectorBatch, type ConnectorBatch, type BatchRelationInput } from './connector-batch';
 import { applyAppearance } from './appearance';
 import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
@@ -34,6 +35,9 @@ export class MarginOverlay {
   private cards = new Map<string, Card>();
   private continuationNumbers = new Map<string, number>();
   private routePlacements: Placement[] = [];
+  private batch?: ConnectorBatch;
+  private batchSignature = '';
+  private sharedPaths = new Map<string, SVGPathElement>();
   private menus = new Set<Menu>();
   private anchors: Anchor[] = [];
   private resize: ResizeObserver;
@@ -79,6 +83,7 @@ export class MarginOverlay {
         this.routePlacements = this.routePlacements.map(c => c.key === key ? p : c);
         this.place(card, p);
         for (const [id, other] of this.cards) if (id !== key) this.place(other, other.placement);
+        this.paintConnectors();
         this.updateContinuations();
       }
       else this.schedule();
@@ -115,6 +120,9 @@ export class MarginOverlay {
     this.win.cancelAnimationFrame(this.frame); this.frame = 0; this.render();
   };
   cancelInteractions(): void { cardTooltip.hideWithin(this.root); this.cardDrag.cancel(); this.drag.cancel(); }
+  resetLayout(): void {
+    this.cancelInteractions(); this.stableLayout.clear(); this.schedule();
+  }
   private render(): void {
     const container = this.view.contentEl;
     const mode = this.view.getMode();
@@ -207,7 +215,7 @@ export class MarginOverlay {
     };
     const placements = this.stableLayout.update(this.layoutInput, scrollTop, geometryKey)
       .filter(p => p.x + p.width > viewport.left && p.x < viewport.right && p.y + p.height > viewport.top && p.y < viewport.bottom);
-    this.routePlacements = placements;
+    this.routePlacements = placements.map(p => this.cardDrag.placement(p.key) ?? p);
     const keep = new Set(placements.map(p => p.key));
     for (const [key, card] of this.cards) if (!keep.has(key)) { cardTooltip.hideWithin(card.button); card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); this.cards.delete(key); }
     const anchorMap = new Map(this.anchors.map(a => [a.key, a]));
@@ -220,7 +228,7 @@ export class MarginOverlay {
         const shell = this.root.createDiv({ cls: 'margin-link-card-shell' });
         const button = shell.createEl('button');
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.classList.add('margin-link-connector'); path.dataset.members = JSON.stringify([p.key]); this.svg.appendChild(path);
+        path.classList.add('margin-link-connector'); path.dataset.members = JSON.stringify([p.key]); path.dataset.logical = 'true'; path.style.display = 'none'; shell.dataset.relation = p.key; this.svg.appendChild(path);
         card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
         shell.addEventListener('pointerenter', e => { this.highlight(p.key); if (!e.buttons && !this.cardDrag.dragging) cardTooltip.show(button); });
         shell.addEventListener('pointerleave', () => { this.highlight(undefined); cardTooltip.hideWithin(button); });
@@ -242,6 +250,7 @@ export class MarginOverlay {
       else card.button.removeAttribute('aria-description');
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
+    this.paintConnectors();
     this.updateContinuations();
     const selected = bridge?.cm.state.selection.main;
     this.highlight(this.highlighted ?? (selected ? this.anchors.find(a => selected.from < a.occurrence.end && selected.to > a.occurrence.start)?.key : undefined));
@@ -281,39 +290,57 @@ export class MarginOverlay {
     card.shell.dataset.shape = p.shape ?? 'horizontal'; card.button.classList.toggle('margin-link-compact', p.compact);
     card.shell.dataset.manual = String(!!p.manual);
     Object.assign(card.shell.style, { width: `${p.width}px`, height: `${p.height}px`, transform: `translate(${p.x}px, ${p.y}px)` });
-    // Route in content coordinates. A pure scroll translates the completed SVG
-    // path and reuses its collision result, rather than solving each card again.
-    const fragments = card.anchor.fragments.map(f => ({
-      left: f.left - rect.left, right: f.right - rect.left,
-      top: f.top - rect.top + this.scrollTop, bottom: f.bottom - rect.top + this.scrollTop
-    }));
-    const contentPlacement = { ...p, y: p.y + this.scrollTop };
-    const prefs = this.host.preferences;
-    const otherCards = this.routePlacements.filter(c => c.key !== p.key).map(c => ({
-      left: c.x, right: c.x + c.width, top: c.y + this.scrollTop, bottom: c.y + c.height + this.scrollTop
-    }));
-    const view = this.layoutInput!.viewport;
+  }
+  private paintConnectors(): void {
+    const rect = this.hostRect, input = this.layoutInput;
+    if (!rect || !input) return;
+    const prefs = this.host.preferences, view = input.viewport;
     const bounds = { ...view, top: view.top + this.scrollTop, bottom: view.bottom + this.scrollTop };
-    const endpointsVisible = fragments.some(f => containsBox(bounds, f)) && containsBox(bounds, {
-      left: p.x, right: p.x + p.width, top: contentPlacement.y, bottom: contentPlacement.y + p.height
+    const visible = new Map<string, boolean>();
+    const relations: BatchRelationInput[] = [...this.cards].map(([key, card]) => {
+      const p = card.placement;
+      const fragments = card.anchor.fragments.map(f => ({ left: f.left - rect.left, right: f.right - rect.left,
+        top: f.top - rect.top + this.scrollTop, bottom: f.bottom - rect.top + this.scrollTop }));
+      const box = { left: p.x, right: p.x + p.width, top: p.y + this.scrollTop, bottom: p.y + p.height + this.scrollTop };
+      const both = fragments.some(f => containsBox(bounds, f)) && containsBox(bounds, box); visible.set(key, both);
+      return { key, fragments, card: { ...p, y: p.y + this.scrollTop }, previous: card.ports, bounds: both ? bounds : undefined };
     });
-    const restricted = !card.path.getAttribute('d') || (card.routeBounds && !containsBox(bounds, card.routeBounds));
-    const signature = JSON.stringify([fragments, contentPlacement.x, contentPlacement.y, p.width, p.height,
-      prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision, otherCards, endpointsVisible && restricted ? bounds : null]);
-    if (card.routeSignature !== signature) {
-      const route = connectorRoute(fragments, contentPlacement, prefs.lineStyle, card.ports, {
-        obstacles: this.obstacles, body: this.layoutInput?.body, lineWidth: prefs.lineWidth + 0.5, cardObstacles: otherCards, bounds: endpointsVisible ? bounds : undefined
-      });
-      card.ports = route?.choice; card.routeSignature = signature;
-      card.path.setAttribute('d', route?.path ?? '');
-      const points = route?.segments.flatMap(s => [s.from, s.to, ...(s.control ? [s.control] : []), ...(s.control2 ? [s.control2] : [])]);
-      card.routeBounds = points?.length ? {
-        left: Math.min(...points.map(pt => pt.x)), right: Math.max(...points.map(pt => pt.x)),
-        top: Math.min(...points.map(pt => pt.y)), bottom: Math.max(...points.map(pt => pt.y))
-      } : undefined;
+    const restricted = relations.some(r => visible.get(r.key) && (!this.batch?.relations.has(r.key) ||
+      (this.cards.get(r.key)?.routeBounds && !containsBox(bounds, this.cards.get(r.key)!.routeBounds!))));
+    const signatureFor = (constrained: boolean) => JSON.stringify([relations.map(r => [r.key, r.fragments, r.card]), prefs.lineStyle, prefs.lineWidth,
+      input.body.left, input.body.right, this.textObstacles.revision, constrained ? bounds : null]);
+    const signature = signatureFor(!!restricted);
+    if (signature !== this.batchSignature) {
+      this.batch = connectorBatch(relations, prefs.lineStyle, { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5 }, this.batch);
+      this.batchSignature = signature;
     }
-    card.path.setAttribute('transform', `translate(0 ${-this.scrollTop})`);
-    card.shell.dataset.routeState = !fragments.length ? 'pending' : !endpointsVisible ? 'offscreen' : card.path.getAttribute('d') ? 'complete' : 'blocked';
+    const keep = new Set(this.batch!.segments.map(s => s.id));
+    for (const [id, path] of this.sharedPaths) if (!keep.has(id)) { path.remove(); this.sharedPaths.delete(id); }
+    for (const stroke of this.batch!.segments) {
+      let path = this.sharedPaths.get(stroke.id);
+      if (!path) {
+        path = this.svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.classList.add('margin-link-connector'); path.dataset.segment = stroke.id;
+        this.svg.appendChild(path); this.sharedPaths.set(stroke.id, path);
+      }
+      path.dataset.members = JSON.stringify(stroke.members); path.dataset.shared = String(stroke.shared);
+      path.setAttribute('d', stroke.path); path.setAttribute('transform', `translate(0 ${-this.scrollTop})`);
+      path.classList.toggle('margin-link-active', stroke.members.includes(this.highlighted ?? ''));
+    }
+    for (const [key, card] of this.cards) {
+      const relation = this.batch!.relations.get(key);
+      card.ports = relation?.choice; card.path.setAttribute('d', relation?.path ?? '');
+      card.path.setAttribute('transform', `translate(0 ${-this.scrollTop})`);
+      card.shell.dataset.routeSegments = JSON.stringify(relation?.segments ?? []);
+      card.shell.dataset.routeState = !card.anchor.fragments.length ? 'pending' : !visible.get(key) ? 'offscreen' : relation ? 'complete' : 'blocked';
+      const points = relation?.connector.segments.flatMap(s => [s.from, s.to, ...(s.control ? [s.control] : []), ...(s.control2 ? [s.control2] : [])]);
+      card.routeBounds = points?.length ? { left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) } : undefined;
+    }
+    // Normalize immediately after a successful solve: the first actual scroll
+    // must project cached content geometry, not re-solve a startup-only signature.
+    const constrained = relations.some(r => visible.get(r.key) && (!this.batch!.relations.has(r.key) ||
+      (this.cards.get(r.key)?.routeBounds && !containsBox(bounds, this.cards.get(r.key)!.routeBounds!))));
+    this.batchSignature = signatureFor(!!constrained);
   }
   private updateContinuations(): void {
     const input = this.layoutInput, rect = this.hostRect;
@@ -396,6 +423,7 @@ export class MarginOverlay {
   private onLeave = (): void => this.highlight(undefined);
   private highlight(key: string | undefined): void {
     this.highlighted = key;
+    this.sharedPaths?.forEach(path => path.classList.toggle('margin-link-active', (JSON.parse(path.dataset.members ?? '[]') as string[]).includes(key ?? '')));
     this.highlightedElements.forEach(el => el.classList.remove('margin-link-anchor-active')); this.highlightedElements = [];
     for (const [id, card] of this.cards) {
       card.button.classList.toggle('margin-link-active', id === key && this.host.preferences.hoverFeedback);
@@ -417,6 +445,7 @@ export class MarginOverlay {
   private clearCards(): void {
     cardTooltip.hideWithin(this.root);
     this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
+    this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
     this.cards.clear(); this.continuationNumbers?.clear(); this.routePlacements = []; this.anchors = []; this.layoutInput = undefined;
     this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear(); this.textObstacles?.invalidate();
   }

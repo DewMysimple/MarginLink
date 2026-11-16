@@ -144,6 +144,9 @@ function safe(parts: Segment[], source: Port, obstacles: readonly Box[], protect
       p.x < bounds.left || p.x > bounds.right || p.y < bounds.top || p.y > bounds.bottom)) return false;
     if (!clearPart(part, cards)) return false;
     if (!i) {
+      // Only the initial straight normal lead may touch the padded source.
+      // A curve's chord cannot establish that its actual arc leaves the glyph.
+      if (part.control || part.control2) return false;
       if (obstacles.some((box, j) => crosses(part.from, part.to, protectedBoxes[j]) && !sourceContact(source, part.to, box))) return false;
     } else if (!clearPart(part, protectedBoxes)) return false;
     // Do not take a shortcut through the card to arrive at its far edge.

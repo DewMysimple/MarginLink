@@ -34,12 +34,15 @@ const open = async (mode, source = false, newLeaf = false) => {
     await leaf.setViewState({ type: 'markdown', state: { file: fixture, mode, source } });
     app.workspace.setActiveLeaf(leaf, { focus: true }); return leaf.id;
   }, { fixture, mode, source, newLeaf });
-  await page.waitForFunction(id => [...app.plugins.plugins['margin-link'].overlays].some(([view, overlay]) => view.leaf.id === id && overlay.cards.size > 0), id);
+  await page.waitForFunction(({ id, fixture }) => [...app.plugins.plugins['margin-link'].overlays].some(([view]) => view.leaf.id === id && view.file?.path === fixture && (view.getMode() === 'source' ? view.editor.getValue() : view.data).startsWith('# Scroll and connector regression')), { id, fixture });
+  // No cards may exist above a virtualized paragraph. Scroll to its source
+  // before requiring rendered card DOM, rather than waiting forever at the top.
+  await center(id); await page.waitForFunction(id => [...app.plugins.plugins['margin-link'].overlays].some(([view, overlay]) => view.leaf.id === id && overlay.cards.size > 0), id);
   await frames(8); return id;
 };
 const snapshot = id => page.evaluate(id => window.marginScrollProbe(id), id);
 const center = async id => {
-  await page.evaluate(id => {
+  await page.evaluate(async id => {
     const pair = [...app.plugins.plugins['margin-link'].overlays].find(([v]) => v.leaf.id === id);
     const view = pair[0], bridge = [...app.plugins.plugins['margin-link'].bridges].find(b => view.contentEl.contains(b.cm.dom));
     const scroller = view.getMode() === 'source' ? bridge.cm.scrollDOM : view.previewMode.containerEl;
@@ -48,7 +51,10 @@ const center = async id => {
       const position = view.editor.offsetToPos(at);
       view.editor.scrollIntoView({ from: position, to: position }, true);
     } else {
-      const anchor = [...view.contentEl.querySelectorAll('a.internal-link')].find(a => a.textContent === 'Early Access');
+      let anchor = [...view.contentEl.querySelectorAll('a.internal-link')].find(a => a.textContent === 'Early Access');
+      if (!anchor) scroller.scrollTop = scroller.scrollHeight * view.data.indexOf('Early Access') / view.data.length;
+      for (let i = 0; i < 12 && !anchor; i++) { await new Promise(resolve => requestAnimationFrame(resolve)); anchor = [...view.contentEl.querySelectorAll('a.internal-link')].find(a => a.textContent === 'Early Access'); }
+      if (!anchor) throw Error('Reading section did not render source');
       scroller.scrollTop += anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientHeight / 2;
     }
   }, id); await frames(6);
@@ -153,19 +159,35 @@ try {
         const rect = card.shell.getBoundingClientRect(), reference = referenceFor(card.anchor.occurrence);
         const visible = rect.bottom > viewport.top && rect.top < viewport.bottom;
         const clipped = !visible ? 'outside' : rect.top < viewport.top || rect.bottom > viewport.bottom ? 'partial' : 'inside';
-        const path = card.path, matrix = path.getScreenCTM(), d = path.getAttribute('d');
-        const route = { drawn: !!d, portError: null, collisions: [], endpointError: null };
-        if (d && matrix) {
-          const length = path.getTotalLength(), start = path.getPointAtLength(0).matrixTransform(matrix), end = path.getPointAtLength(length).matrixTransform(matrix);
+        // 0.2.15 stores a hidden logical path for compatibility. Only real,
+        // normally drawn segments can prove a relation visible and connected.
+        let refs = []; try { refs = JSON.parse(card.shell.dataset.routeSegments ?? '[]'); } catch { /* Invalid metadata must not count as a complete route. */ }
+        const segmentMap = new Map([...overlay.svg.querySelectorAll('path[data-segment]')].map(path => [path.dataset.segment, path]));
+        const parts = refs.length ? refs.map(ref => ({ path: segmentMap.get(typeof ref === 'string' ? ref : ref.id), reversed: !!ref.reversed }))
+          : card.path.dataset.logical === 'true' ? [] : [{ path: card.path, reversed: false }];
+        const route = { drawn: !!parts.length, portError: null, collisions: [], endpointError: null, jointError: 0, segmentCount: parts.length };
+        let start, end, previousEnd, travelled = 0;
+        const pad = plugin.preferences.lineWidth / 2 + 0.25;
+        for (const part of parts) {
+          const path = part.path, css = path && getComputedStyle(path), matrix = path?.getScreenCTM();
+          if (!path?.getAttribute('d') || !matrix || css.display === 'none' || css.visibility === 'hidden' || Number(css.opacity) <= .01) { route.drawn = false; continue; }
+          const length = path.getTotalLength();
+          const pointAt = distance => path.getPointAtLength(part.reversed ? length - distance : distance).matrixTransform(matrix);
+          const first = pointAt(0), last = pointAt(length); start ??= first; end = last;
+          if (previousEnd) route.jointError = Math.max(route.jointError, Math.hypot(first.x - previousEnd.x, first.y - previousEnd.y));
+          previousEnd = last;
+          for (let distance = 0; distance <= length; distance += .5) {
+            if (travelled + distance < Math.max(4, pad + 2)) continue;
+            const point = pointAt(distance); if (point.y < viewport.top || point.y > viewport.bottom) continue;
+            if (protectedText.some(r => point.x > r.left - pad && point.x < r.right + pad && point.y > r.top - pad && point.y < r.bottom + pad)) { route.collisions.push({ distance: travelled + distance, x: point.x, y: point.y }); break; }
+          }
+          travelled += length;
+        }
+        route.drawn &&= route.jointError <= 1;
+        if (start && end) {
           const mids = [[rect.left, rect.top + rect.height / 2], [rect.right, rect.top + rect.height / 2], [rect.left + rect.width / 2, rect.top], [rect.left + rect.width / 2, rect.bottom]];
           route.endpointError = Math.min(...mids.map(([x, y]) => Math.hypot(end.x - x, end.y - y)));
           if (reference) route.portError = Math.min(...reference.fragments.flatMap(r => [r.top, r.bottom].map(y => Math.hypot(start.x - (r.left + r.right) / 2, start.y - y))));
-          const pad = plugin.preferences.lineWidth / 2 + 0.25;
-          for (let distance = Math.max(4, pad + 2); distance < length; distance += 0.5) {
-            const point = path.getPointAtLength(distance).matrixTransform(matrix);
-            if (point.y < viewport.top || point.y > viewport.bottom) continue;
-            if (protectedText.some(r => point.x > r.left - pad && point.x < r.right + pad && point.y > r.top - pad && point.y < r.bottom + pad)) { route.collisions.push({ distance, x: point.x, y: point.y }); break; }
-          }
         }
         const outsidePoints = [[rect.left + rect.width / 2, Math.min(rect.bottom - 1, viewport.top - 1)], [rect.left + rect.width / 2, Math.max(rect.top + 1, viewport.bottom + 1)]];
         const blocksOutsideClip = outsidePoints.some(([x, y]) => y > rect.top && y < rect.bottom && (y < viewport.top || y > viewport.bottom) && card.shell.contains(document.elementFromPoint(x, y)));

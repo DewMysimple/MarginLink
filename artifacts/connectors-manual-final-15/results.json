@@ -1,0 +1,11 @@
+{
+  "phase": "final",
+  "through": 15,
+  "status": "blocked",
+  "scenariosPassed": 0,
+  "scenarios": [],
+  "observations": [],
+  "errors": [],
+  "error": "Error: browserType.connectOverCDP: connect ECONNREFUSED 127.0.0.1:9223\nCall log:\n\u001b[2m  - <ws preparing> retrieving websocket url from http://127.0.0.1:9223\u001b[22m\n",
+  "stack": "browserType.connectOverCDP: connect ECONNREFUSED 127.0.0.1:9223\nCall log:\n\u001b[2m  - <ws preparing> retrieving websocket url from http://127.0.0.1:9223\u001b[22m\n\n    at /workspace/scratch/99c9e44e4ea9/MarginLink/scripts/desktop-connectors-manual.mjs:92:28"
+}

@@ -82,4 +82,29 @@ describe('independent user-directed card placement', () => {
     const alone = positionFromDrop(data, target, 1158, 342, [])!;
     expect(positionFromDrop(data, target, 1158, 342, occupied)).toEqual(alone);
   });
+  it('reopens a six-link note without changing any unedited automatic card after ship moves across sides', () => {
+    const cache = new StableLayout(), original = cache.update(input, 0, 'fixed');
+    const ship = input.anchors.find(a => a.key === 'ship')!;
+    const drop = positionFromDrop(input, ship, 200, 600, original.filter(p => p.key !== ship.key))!;
+    expect(drop.placement.side).toBe('left');
+    const saved = { ...input, anchors: input.anchors.map(a => a.key === 'ship' ? { ...a, manual: drop.relative } : a) };
+    unchangedOthers(original, cache.update(saved, 0, 'fixed'));
+    const reopened = new StableLayout().update(saved, 0, 'fixed');
+    unchangedOthers(original, reopened);
+    expect(reopened.find(a => a.key === 'ship')).toEqual(drop.placement);
+    // The pure layout function used for restoration follows the same contract.
+    unchangedOthers(original, layoutCards(saved));
+  });
+  it('newly measured automatic cards use canonical slots rather than a dragged card position', () => {
+    const originalData = { ...input, anchors: input.anchors.slice(0, 4) };
+    const edited = new StableLayout(), control = new StableLayout();
+    const original = edited.update(originalData, 0, 'fixed'); control.update(originalData, 0, 'fixed');
+    const target = input.anchors[0], drop = positionFromDrop(input, target, 1200, 650, original.filter(p => p.key !== target.key))!;
+    const manualData = { ...originalData, anchors: originalData.anchors.map(a => a.key === target.key ? { ...a, manual: drop.relative } : a) };
+    edited.update(manualData, 0, 'fixed');
+    const expanded = edited.update({ ...input, anchors: [...manualData.anchors, ...input.anchors.slice(4)] }, 0, 'fixed');
+    const canonical = control.update(input, 0, 'fixed');
+    for (const anchor of input.anchors.slice(4)) expect(expanded.find(p => p.key === anchor.key)).toEqual(canonical.find(p => p.key === anchor.key));
+  });
+
 });

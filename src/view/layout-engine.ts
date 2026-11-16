@@ -94,6 +94,23 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
   if (![input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport)].every(Number.isFinite) || input.width <= 0 || input.height < 36) return [];
   const p = input.preferences;
   const manualMode = p && p.placementMode !== 'auto';
+  if (manualMode && input.anchors.some(a => a.manual)) {
+    // Derive every automatic slot from the same occurrence set first. A saved
+    // manual card must not change unedited cards' initial sides or ordering.
+    const automatic = layoutCards({ ...input, preferences: { ...p!, placementMode: 'auto' } }, occupied);
+    const anchors = new Map(input.anchors.map(a => [a.key, a]));
+    return automatic.flatMap(card => {
+      const anchor = anchors.get(card.key)!, saved = anchor.manual;
+      if (!saved) return [card];
+      const dim = dimensions(input, saved.side);
+      if (!dim) return []; // Retain the saved record while its lane is unavailable.
+      const band = lane(input, saved.side);
+      return [{ ...card, ...dim, side: saved.side,
+        x: band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width),
+        y: anchor.y + saved.yOffset * (input.lineHeight ?? 24) - dim.height / 2,
+        compact: dim.shape === 'icon', manual: true }];
+    });
+  }
   const output: Placement[] = [];
   const ordered = [...input.anchors].filter(a => Number.isFinite(a.x) && Number.isFinite(a.y))
     .sort((a, b) => Number(!!(manualMode && b.manual)) - Number(!!(manualMode && a.manual)) || a.y - b.y || a.key.localeCompare(b.key));

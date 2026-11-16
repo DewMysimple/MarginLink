@@ -59,7 +59,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   dropdown('lineColor', '连线颜色', { theme: '主题强调色', purple: '紫色', blue: '蓝色', green: '绿色', gray: '灰色' });
   heading('布局'); dropdown('placementMode', '卡片布局模式', { auto: '自动排列', free: '自由拖动', snap: '智能吸附' });
   dropdown('layout', '左右优先', { balanced: '自动平衡', left: '优先左侧', right: '优先右侧' });
-  slider('edgePadding', '正文边缘留白（px）', 8, 32, 2); slider('snapGrid', '吸附栅格与对齐范围（px）', 4, 32, 2);
+  slider('edgePadding', '正文边缘留白（px）', 8, 32, 2); slider('snapGrid', '吸附栅格间距（px）', 4, 32, 2);
   const noteReset = new Setting(container).setName('一键整理 / 清除当前笔记布局');
   noteReset.addButton(b => {
     b.setButtonText('整理当前笔记').onClick(() => { const source = plugin.activeSource(); if (source) plugin.confirmReset(source); });

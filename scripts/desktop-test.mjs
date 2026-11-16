@@ -112,9 +112,23 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.margin-link-card').length === 7);
     assert.equal(await page.locator('.margin-link-unresolved').count(), 1);
   });
-  await check('hover highlights exactly one connector and its source', async () => {
+  await check('hover highlights only the current relation segments and source', async () => {
     await page.locator('.margin-link-card').first().hover();
-    assert.equal(await page.locator('.margin-link-connector.margin-link-active').count(), 1);
+    const relation = await page.evaluate(() => {
+      const button = document.querySelector('.margin-link-card'), plugin = app.plugins.plugins['margin-link'];
+      const pair = [...plugin.overlays].find(([, overlay]) => overlay.root.contains(button));
+      const overlay = pair[1], [key] = [...overlay.cards].find(([, card]) => card.button === button);
+      const paths = [...overlay.svg.querySelectorAll('path.margin-link-connector')].filter(path => path.dataset.logical !== 'true' && path.getAttribute('d'));
+      const members = path => { if (path.dataset.members) return JSON.parse(path.dataset.members); return [...overlay.cards].filter(([, card]) => card.path === path).map(([id]) => id); };
+      const expected = paths.filter(path => members(path).includes(key));
+      const active = paths.filter(path => path.classList.contains('margin-link-active'));
+      const markers = [...overlay.root.querySelectorAll('[data-relation][data-end]')].filter(marker => marker.dataset.relation === key);
+      return { expected: expected.length, active: active.length, unrelated: active.some(path => !members(path).includes(key)),
+        complete: expected.every(path => path.classList.contains('margin-link-active') && Number(getComputedStyle(path).opacity) > .01),
+        continued: markers.length === 2 && markers.every(marker => marker.classList.contains('margin-link-active') && Number(getComputedStyle(marker).opacity) > .01) };
+    });
+    assert.equal(relation.unrelated, false);
+    assert(relation.expected > 0 ? relation.complete && relation.active === relation.expected : relation.continued, 'Hovered relation has no complete visible highlight');
     assert.equal(await page.locator('.margin-link-anchor-active').count(), 1);
     await page.screenshot({ path: `${screenshotPrefix}-live-preview-hover.png` });
   });

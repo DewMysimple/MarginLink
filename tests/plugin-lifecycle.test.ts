@@ -6,6 +6,15 @@ import { layoutIdentities } from '../src/core/layout-identity';
 import { parseWikilinks } from '../src/core/wikilink-parser';
 import { MarginOverlay } from '../src/view/margin-overlay';
 
+const confirmations = vi.hoisted(() => ({ actions: [] as (() => void)[] }));
+vi.mock('../src/ui/quick-controls', () => ({
+  QuickControls: class {},
+  ConfirmAction: class {
+    constructor(_app: unknown, _plugin: unknown, _title: string, _description: string, action: () => void) { confirmations.actions.push(action); }
+    open() {}
+  }
+}));
+
 vi.mock('obsidian', () => ({
   Plugin: class {
     constructor(readonly app: unknown) {}
@@ -16,7 +25,7 @@ vi.mock('obsidian', () => ({
   },
   MarkdownView: class {}, Modal: class {}, Notice: class {}, FileView: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {}
 }));
-vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} destroy() {} } }));
+vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} resetLayout() {} destroy() {} } }));
 vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { clear() {} } }));
 vi.mock('../src/editor/selection-action', () => ({ SelectionAction: class { cancel() {} } }));
 vi.mock('../src/editor/editor-extension', () => ({ editorExtension: () => undefined }));
@@ -176,5 +185,33 @@ it('serializes delayed writes so consecutive drops and pending debounce cannot o
   firstWrite.resolve(); await Promise.all([first, second, plugin.flush()]);
   const snapshots = save.mock.calls.map(([data]) => data as { layouts: { yOffset: number }[] });
   expect(snapshots.map(snapshot => snapshot.layouts[0].yOffset)).toEqual([1, 2, 3, 3]);
+  plugin.onunload();
+});
+
+it('explicit note/all reset repacks only the confirmed scope, including multiple views of the same note', async () => {
+  const a = note('A.md'), aSplit = note('A.md'), b = note('B.md');
+  const { plugin } = fixture([a, aSplit, b]); await plugin.onload();
+  const reset = vi.spyOn(MarginOverlay.prototype, 'resetLayout');
+  const position = { side: 'right' as const, xNormalized: .3, yOffset: 2 }, key = 'c'.repeat(64);
+  plugin.layouts.set('A.md', key, position); plugin.layouts.set('B.md', key, position);
+  plugin.confirmReset('A.md');
+  expect(reset).not.toHaveBeenCalled(); expect(plugin.layouts.get('A.md', key)).toEqual(position);
+  confirmations.actions.pop()!();
+  expect(reset.mock.contexts.map(overlay => (overlay as MarginOverlay).view)).toEqual([a, aSplit]);
+  expect(plugin.layouts.get('A.md', key)).toBeUndefined(); expect(plugin.layouts.get('B.md', key)).toEqual(position);
+  reset.mockClear(); plugin.confirmReset(); confirmations.actions.pop()!();
+  expect(reset.mock.contexts.map(overlay => (overlay as MarginOverlay).view)).toEqual([a, aSplit, b]);
+  expect(plugin.layouts.snapshot()).toEqual([]);
+  plugin.onunload();
+});
+
+it('a per-card clear only changes its record and never invokes whole-view repacking', async () => {
+  const { plugin } = fixture([note('A.md'), note('B.md')]); await plugin.onload();
+  const reset = vi.spyOn(MarginOverlay.prototype, 'resetLayout');
+  const position = { side: 'right' as const, xNormalized: .3, yOffset: 2 }, key = 'c'.repeat(64);
+  plugin.layouts.set('A.md', key, position); plugin.layouts.set('B.md', key, position);
+  plugin.layouts.clear('A.md', key);
+  expect(reset).not.toHaveBeenCalled();
+  expect(plugin.layouts.get('A.md', key)).toBeUndefined(); expect(plugin.layouts.get('B.md', key)).toEqual(position);
   plugin.onunload();
 });

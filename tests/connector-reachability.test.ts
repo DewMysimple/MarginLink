@@ -42,4 +42,16 @@ describe('obstacle-edge route search after cheap candidates fail', () => {
     expect(connectorRoute([source], card, 'elbow', undefined, { ...options, bounds: { left: 0, right: 600, top: 80, bottom: 140 } })).toBeUndefined();
     expect(connectorRoute([source], card, 'elbow', undefined, { ...options, bounds: { left: 0, right: 600, top: 0, bottom: 220 } })).toBeDefined();
   });
+  it('does not apply the straight source-contact exception to arbitrary curved prefixes', () => {
+    const start = { x: 120, y: 100 }, exit = { x: 200, y: 80 }, target = { x: 500, y: 112 };
+    // Both chords leave through the top, but the control points send the real
+    // arc back into the linked glyph. Actual generated curves keep an L lead.
+    for (const prefix of [
+      { from: start, control: { x: 120, y: 150 }, to: exit },
+      { from: start, control: { x: 120, y: 160 }, control2: { x: 180, y: 80 }, to: exit }
+    ]) expect(clearConnectorSegments([prefix, { from: exit, to: target }], [source], card)).toBe(false);
+    const generated = connectorRoute([source], card, 'curve')!;
+    expect(clearConnectorSegments(generated.segments, [source], card)).toBe(true);
+  });
+
 });

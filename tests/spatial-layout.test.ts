@@ -71,14 +71,16 @@ describe('relative spatial layout', () => {
     expect(manual).toEqual(moved.relative);
     expect(layoutCards(saved)).toEqual(original);
   });
-  it('ignores saved positions in auto mode and respects manually positioned cards first', () => {
+  it('ignores saved positions in auto mode and restores manual coordinates independently', () => {
     const manual = { side: 'right' as const, xNormalized: 0.3, yOffset: 5 };
     const data = { ...input, anchors: [{ ...input.anchors[0], manual }] };
     const auto = { ...DEFAULT_PREFERENCES, placementMode: 'auto' as const };
     expect(layoutCards({ ...data, preferences: auto })).toEqual(layoutCards({ ...input, preferences: auto }));
     const placed = layoutCards({ ...data, anchors: [...data.anchors, { key: 'b', x: 700, y: 420 }, { key: 'c', x: 710, y: 425, manual }] });
-    for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) expect(overlapsCard(placed[i], placed[j])).toBe(false);
-    expect(placed[0].manual).toBe(true);
+    expect(placed.find(p => p.key === 'a')).toMatchObject({ manual: true, side: 'right', y: 300 + 5 * 24 - 42 });
+    expect(placed.find(p => p.key === 'c')).toMatchObject({ manual: true, side: 'right', y: 425 + 5 * 24 - 42 });
+    const canonical = layoutCards({ ...input, anchors: [{ ...input.anchors[0] }, { key: 'b', x: 700, y: 420 }, { key: 'c', x: 710, y: 425 }] });
+    expect(placed.find(p => p.key === 'b')).toEqual(canonical.find(p => p.key === 'b'));
   });
   it.each<CardShape>(['horizontal', 'square', 'icon'])('keeps size, collision and compact fallback consistent for %s', cardShape => {
     for (const cardSize of ['small', 'medium', 'large'] as const) {
