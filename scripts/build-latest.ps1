@@ -13,6 +13,18 @@ function Invoke-BuildLatest {
         }
     }
 
+    function Get-ReleaseHash {
+        param([string]$LiteralPath)
+        $stream = [System.IO.File]::OpenRead($LiteralPath)
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '')
+        } finally {
+            $sha.Dispose()
+            $stream.Dispose()
+        }
+    }
+
     $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
     Set-Location -LiteralPath $projectRoot
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot '.git'))) {
@@ -62,7 +74,7 @@ function Invoke-BuildLatest {
     $releaseFiles = @('main.js', 'manifest.json', 'styles.css', 'LICENSE', 'THIRD_PARTY_NOTICES.txt')
     $expectedHashes = @{}
     foreach ($releaseFile in $releaseFiles) {
-        $expectedHashes[$releaseFile] = (Get-FileHash -LiteralPath (Join-Path $pluginDirectory $releaseFile) -Algorithm SHA256).Hash
+        $expectedHashes[$releaseFile] = Get-ReleaseHash -LiteralPath (Join-Path $pluginDirectory $releaseFile)
     }
     $zipPath = Join-Path $projectRoot "dist\margin-link-$pluginVersion.zip"
     $temporaryZip = Join-Path $projectRoot "dist\.margin-link-$([guid]::NewGuid().ToString('N')).zip"
@@ -78,7 +90,7 @@ function Invoke-BuildLatest {
     Write-Host '[5/5] 解压刷新安装目录并校验文件……'
     Expand-Archive -LiteralPath $zipPath -DestinationPath $distributionDirectory -Force -ErrorAction Stop
     foreach ($releaseFile in $releaseFiles) {
-        $actualHash = (Get-FileHash -LiteralPath (Join-Path $pluginDirectory $releaseFile) -Algorithm SHA256).Hash
+        $actualHash = Get-ReleaseHash -LiteralPath (Join-Path $pluginDirectory $releaseFile)
         if ($actualHash -ne $expectedHashes[$releaseFile]) {
             throw "解压后的文件校验失败：$releaseFile"
         }
