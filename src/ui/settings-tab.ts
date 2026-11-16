@@ -1,6 +1,6 @@
 import { PluginSettingTab, Setting, setIcon, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
-import { DEFAULT_PREFERENCES, type Preferences } from '../types';
+import { DEFAULT_PREFERENCES, LINE_MODE_OPTIONS, type Preferences } from '../types';
 import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
@@ -39,6 +39,14 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
     card.classList.toggle('margin-link-compact', placement.compact);
     setIcon(card.createSpan({ cls: 'margin-link-card-icon' }), 'file-text');
     const label = card.createSpan({ cls: 'margin-link-card-text' }); label.createSpan({ cls: 'margin-link-card-label', text: '示例笔记' }); label.createSpan({ cls: 'margin-link-card-path', text: 'Notes/示例笔记.md' });
+    if (p.lines === 'numbers') {
+      for (const [left, top] of [[16, 38], [placement.x + 4, placement.y + 4]]) {
+        const number = preview.createSpan({ cls: 'margin-link-continuation', text: '1' });
+        Object.assign(number.style, { left: `${left}px`, top: `${top}px`, width: '16px', height: '16px' });
+      }
+      return;
+    }
+    if (p.lines === 'none') return;
     const svg = preview.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('margin-link-connectors'); svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
     const bounds = { left: anchor.offsetLeft, right: anchor.offsetLeft + anchor.offsetWidth, top: anchor.offsetTop, bottom: anchor.offsetTop + anchor.offsetHeight };
     const path = preview.ownerDocument.createElementNS(svg.namespaceURI, 'path');
@@ -53,7 +61,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
       plugin.preferences = { ...DEFAULT_PREFERENCES, recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault };
       void plugin.savePreferences();
     }).open()));
-  heading('连线'); dropdown('lines', '连线显示', { none: '隐藏连线，保留卡片', hover: '悬停或聚焦时显示', always: '始终显示' });
+  heading('连线'); dropdown('lines', '连线显示', LINE_MODE_OPTIONS);
   dropdown('lineStyle', '线型', { curve: '平滑曲线', straight: '直线', elbow: '直角折线' });
   slider('lineWidth', '线条粗细（px）', 1, 5, 0.5); slider('lineOpacity', '常驻透明度（0.1–1）', 0.1, 1, 0.05);
   dropdown('lineColor', '连线颜色', { theme: '主题强调色', purple: '紫色', blue: '蓝色', green: '绿色', gray: '灰色' });

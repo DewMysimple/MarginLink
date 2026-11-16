@@ -135,4 +135,16 @@ describe('actual overlay shared-path drawing', () => {
     expect(f.overlay.diagnostics.routes).toBe(first.routes);
     expect(f.overlay.diagnostics.svgWrites).toBe(first.svgWrites);
   });
+  it('bypasses all connector work in numbers mode and restores the original line style when returning', () => {
+    const f = fixture();
+    Object.assign(f.host.preferences, { lines: 'numbers' });
+    f.overlay.diagnostics = { renders: 0, measurements: 0, routes: 0, svgWrites: 0, markerWrites: 0, work: [] };
+    f.overlay.paintConnectors();
+    expect(f.overlay.batch).toBeUndefined(); expect(f.overlay.sharedPaths.size).toBe(0);
+    expect(f.overlay.diagnostics.routes).toBe(0); expect(f.overlay.diagnostics.svgWrites).toBe(0);
+    expect(f.svg.style.display).toBe('none');
+    Object.assign(f.host.preferences, { lines: 'always' }); f.overlay.paintConnectors();
+    expect(f.host.preferences.lineStyle).toBe('elbow'); expect(f.svg.style.display).toBe('');
+    expect(f.overlay.batch!.relations.size).toBe(2);
+  });
 });

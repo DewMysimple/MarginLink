@@ -3,6 +3,7 @@ const colors = { theme: 'var(--interactive-accent)', purple: 'var(--color-purple
 export function applyAppearance(root: HTMLElement, p: Preferences): void {
   root.classList.toggle('margin-link-lines-always', p.lines === 'always');
   root.classList.toggle('margin-link-lines-none', p.lines === 'none');
+  root.classList.toggle('margin-link-lines-numbers', p.lines === 'numbers');
   root.classList.toggle('margin-link-reduce-motion', p.reduceMotion);
   root.classList.toggle('margin-link-no-hover', !p.hoverFeedback);
   root.classList.toggle('margin-link-no-path', !p.showPath);

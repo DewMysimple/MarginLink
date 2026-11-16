@@ -83,7 +83,7 @@ describe('continuation markers in the overlay', () => {
     f.second.continuation![1].dispatchEvent(new Event('focusout'));
     expect([...f.cards.values()].flatMap(c => c.continuation!).some(active)).toBe(false);
   });
-  it('hides existing markers and removes keyboard stops in hidden mode or when either endpoint is offscreen', () => {
+  it('hides markers in hidden mode and retains both ends for independent native clipping when one endpoint leaves the viewport', () => {
     const f = fixture(); f.overlay.updateContinuations();
     f.host.preferences.lines = 'none'; f.resetBlocked(); f.overlay.updateContinuations();
     for (const marker of f.root.children) { expect(marker.hidden).toBe(true); expect(marker.tabIndex).toBe(-1); }
@@ -91,7 +91,7 @@ describe('continuation markers in the overlay', () => {
     f.first.anchor.fragments[0].top = 10;
     f.second.placement.y = 290;
     f.overlay.updateContinuations();
-    expect(f.root.children.every(marker => marker.hidden)).toBe(true);
+    expect(f.root.children.every(marker => !marker.hidden)).toBe(true);
   });
   it('removes the fallback when a complete route returns and reuses stable pairs if the route is blocked again', () => {
     const f = fixture(); f.overlay.updateContinuations();
@@ -103,5 +103,31 @@ describe('continuation markers in the overlay', () => {
     f.resetBlocked(); f.overlay.updateContinuations();
     expect(f.root.children).toHaveLength(4); expect(f.root.children.map(marker => marker.textContent)).toEqual(numbers);
     expect(f.root.children.every(marker => !marker.hidden)).toBe(true);
+  });
+  it('shows preassigned occurrence numbers directly, independent of card creation order and route state', () => {
+    const f = fixture('numbers');
+    Object.assign(f.overlay, { continuationNumbers: new Map([['first', 3], ['second', 9]]) });
+    for (const card of f.cards.values()) card.shell.dataset.routeState = 'numbered';
+    f.overlay.updateContinuations();
+    expect(f.first.continuation!.map(button => button.textContent)).toEqual(['3', '3']);
+    expect(f.second.continuation!.map(button => button.textContent)).toEqual(['9', '9']);
+    for (const marker of f.root.children) { expect(marker.hidden).toBe(false); expect(marker.tabIndex).toBe(0); }
+    expect(f.first.continuation![0].attributes['aria-label']).toContain('文字端');
+    f.first.continuation![0].dispatchEvent(new Event('focusin'));
+    expect(f.first.continuation!.every(active)).toBe(true); expect(active(f.first.button)).toBe(true);
+  });
+  it('keeps source and card number positions in document coordinates during pure scroll', () => {
+    const f = fixture('numbers');
+    Object.assign(f.overlay, { diagnostics: { renders: 0, measurements: 0, routes: 0, svgWrites: 0, markerWrites: 0, work: [] } });
+    f.overlay.updateContinuations();
+    const positions = f.root.children.map(button => ({ ...button.style }));
+    for (const amount of [20, -40, 35]) {
+      const current = f.overlay as unknown as { scrollTop: number };
+      current.scrollTop += amount;
+      for (const card of f.cards.values()) { card.placement.y -= amount; card.anchor.fragments.forEach(fragment => { fragment.top -= amount; fragment.bottom -= amount; }); }
+      f.overlay.updateContinuations();
+      expect(f.root.children.map(button => ({ ...button.style }))).toEqual(positions);
+    }
+    expect((f.overlay as unknown as { diagnostics: { markerWrites: number } }).diagnostics.markerWrites).toBe(4);
   });
 });

@@ -20,7 +20,10 @@ export interface Anchor {
   element?: HTMLElement;
   layoutKey?: string;
 }
-export type LineMode = 'none' | 'hover' | 'always';
+export type LineMode = 'none' | 'hover' | 'always' | 'numbers';
+export const LINE_MODE_OPTIONS: Record<LineMode, string> = {
+  always: '始终显示连线', hover: '悬停或聚焦时显示', none: '隐藏连线保留卡片', numbers: '仅显示编号'
+};
 export type LineStyle = 'curve' | 'straight' | 'elbow';
 export type CardShape = 'horizontal' | 'square' | 'icon';
 export type PlacementMode = 'auto' | 'free' | 'snap';
@@ -76,7 +79,7 @@ export function readPreferences(value: unknown): Preferences {
   return {
     enabled: bool('enabled'),
     recognizeHtml: bool('recognizeHtml'), recognizeXmind: bool('recognizeXmind'),
-    lines: choice('lines', ['none', 'hover', 'always'], DEFAULT_PREFERENCES.lines),
+    lines: choice('lines', Object.keys(LINE_MODE_OPTIONS) as LineMode[], DEFAULT_PREFERENCES.lines),
     density: v.density === 'compact' ? 'compact' : 'auto',
     layout: choice('layout', ['balanced', 'left', 'right'], 'balanced'),
     placementMode: choice('placementMode', ['auto', 'free', 'snap'], DEFAULT_PREFERENCES.placementMode),

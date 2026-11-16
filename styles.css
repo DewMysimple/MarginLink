@@ -82,7 +82,8 @@
 
 .margin-link-continuation { position: absolute; box-sizing: border-box; padding: 0; margin: 0; border: 1px solid var(--margin-link-color, var(--interactive-accent)); border-radius: 4px; color: var(--text-normal); background: var(--background-primary); font-size: 10px; line-height: 14px; opacity: 0; pointer-events: none; }
 .margin-link-continuation[hidden] { display: none; }
-.margin-link-lines-always .margin-link-continuation, .margin-link-continuation.margin-link-active { opacity: 1; pointer-events: auto; }
+.margin-link-lines-always .margin-link-continuation, .margin-link-lines-numbers .margin-link-continuation, .margin-link-continuation.margin-link-active { opacity: 1; pointer-events: auto; }
 .margin-link-continuation.margin-link-active { background: var(--background-secondary); outline: 2px solid var(--interactive-accent); }
 .margin-link-lines-none .margin-link-continuation { display: none; }
+.margin-link-lines-numbers .margin-link-connectors { display: none; }
 .margin-link-card-shell:focus-within { z-index: 2; }

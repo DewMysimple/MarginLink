@@ -19,10 +19,10 @@ import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
 import { StableLayout } from './stable-layout';
 import { TextObstacles } from './text-obstacles';
-import { continuationPair, containsBox } from './continuation';
+import { relationNumberPair, containsBox } from './continuation';
 import { NativeScrollLayer } from './native-scroll-layer';
 
-interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice; routeSignature?: string; routeBounds?: Box; placementStyle?: string; continuation?: [HTMLButtonElement, HTMLButtonElement] }
+interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; placementStyle?: string; ports?: PortChoice; routeBounds?: Box; continuation?: [HTMLButtonElement, HTMLButtonElement] }
 export interface OverlayHost {
   fileRecognition: FileRecognition;
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
@@ -70,6 +70,8 @@ export class MarginOverlay {
   private highlightedElements: HTMLElement[] = [];
   private observedBody?: Element;
   private measurementsDirty = true;
+  private measuredTop = Infinity;
+  private measuredBottom = -Infinity;
   private geometryRevision = 0;
   private markerSignature = '';
   /** Enabled only by an explicit development probe; no persistent telemetry. */
@@ -199,7 +201,9 @@ export class MarginOverlay {
       bridge?.cm.dom.closest('.markdown-source-view')?.classList.contains('is-live-preview')].join(':');
     const source = bridge?.text ?? this.view.data;
     if (this.layoutSource !== source) {
-      this.validOccurrences = new Map((bridge?.parsed.links ?? parseWikilinks(source)).map(a => [String(a.start), a.raw]));
+      const occurrences = bridge?.parsed.links ?? parseWikilinks(source);
+      this.validOccurrences = new Map(occurrences.map(a => [String(a.start), a.raw]));
+      this.continuationNumbers = new Map(occurrences.map((a, index) => [String(a.start), index + 1]));
     }
     if (this.layoutGeometry !== geometryKey || this.layoutSource !== source) {
       this.stableLayout.clear(); this.contentAnchors.clear(); this.textObstacles.invalidate();
@@ -207,9 +211,15 @@ export class MarginOverlay {
       this.layoutGeometry = geometryKey; this.layoutSource = source;
     }
     this.scrollTop = scrollTop;
-    const measure = this.measurementsDirty || !this.textObstacles.covers(viewport, scrollTop);
-    if (measure) {
+    const measure = this.measurementsDirty || viewport.top + scrollTop < this.measuredTop || viewport.bottom + scrollTop > this.measuredBottom;
+    const needsRoutes = prefs.lines !== 'numbers' && prefs.lines !== 'none';
+    if (needsRoutes && !this.textObstacles.covers(viewport, scrollTop)) {
       this.obstacles = this.textObstacles.read(bodyEl, hostRect, viewport, scrollTop);
+      this.geometryRevision++;
+    }
+    if (measure) {
+      const overscan = Math.max(160, viewport.bottom - viewport.top);
+      this.measuredTop = viewport.top + scrollTop - overscan; this.measuredBottom = viewport.bottom + scrollTop + overscan;
       this.geometryRevision++; if (this.diagnostics) this.diagnostics.measurements++;
     }
     const contentBox = (r: Box): Box => ({ left: r.left - hostRect.left, right: r.right - hostRect.left,
@@ -324,6 +334,12 @@ export class MarginOverlay {
     const rect = this.hostRect, input = this.layoutInput;
     if (!rect || !input) return;
     const prefs = this.host.preferences, view = input.viewport;
+    if (prefs.lines === 'numbers' || prefs.lines === 'none') {
+      this.svg.style.display = 'none';
+      for (const card of this.cards.values()) card.shell.dataset.routeState = prefs.lines === 'numbers' ? 'numbered' : 'hidden';
+      return;
+    }
+    this.svg.style.display = '';
     const signature = [this.geometryRevision, this.cards.size, prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision].join(':');
     if (signature === this.batchSignature) return;
     const coverage = this.textObstacles.bounds;
@@ -337,10 +353,9 @@ export class MarginOverlay {
       const both = fragments.some(f => containsBox(bounds, f)) && containsBox(bounds, box); visible.set(key, both);
       return { key, fragments, card: { ...p, y: p.y + this.scrollTop }, previous: card.ports, bounds };
     });
-    if (signature !== this.batchSignature) {
-      this.batch = connectorBatch(relations, prefs.lineStyle, { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5 }, this.batch);
-      this.batchSignature = signature;
-      if (this.diagnostics) this.diagnostics.routes++;
+    this.batch = connectorBatch(relations, prefs.lineStyle, { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5 }, this.batch);
+    this.batchSignature = signature;
+    if (this.diagnostics) this.diagnostics.routes++;
     const keep = new Set(this.batch!.segments.map(s => s.id));
     for (const [id, path] of this.sharedPaths) if (!keep.has(id)) { path.remove(); this.sharedPaths.delete(id); }
     for (const stroke of this.batch!.segments) {
@@ -364,7 +379,6 @@ export class MarginOverlay {
       const points = relation?.connector.segments.flatMap(s => [s.from, s.to, ...(s.control ? [s.control] : []), ...(s.control2 ? [s.control2] : [])]);
       card.routeBounds = points?.length ? { left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) } : undefined;
     }
-    }
   }
   private writePath(path: SVGPathElement, value: string): void {
     if (path.getAttribute('d') === value) return;
@@ -373,37 +387,56 @@ export class MarginOverlay {
   private updateContinuations(): void {
     const input = this.layoutInput, rect = this.hostRect;
     if (!input || !rect) return;
-    const signature = [this.batchSignature, this.host.preferences.lines].join(':');
-    if (this.markerSignature === signature) return;
+    const mode = this.host.preferences.lines;
+    const signature = [this.geometryRevision, this.cards.size, mode === 'none' ? 'none' : 'markers'].join(':');
+    const layout = this.markerSignature !== signature;
     this.markerSignature = signature;
     const used: Box[] = [];
-    const obstacles = this.obstacles.map(b => ({ ...b, top: b.top - this.scrollTop, bottom: b.bottom - this.scrollTop }));
-    const cards = this.routePlacements.map(p => ({ left: p.x, right: p.x + p.width, top: p.y, bottom: p.y + p.height }));
-    for (const [key, card] of this.cards) {
-      card.continuation?.forEach(el => { el.hidden = true; el.tabIndex = -1; });
-      if (card.shell.dataset.routeState !== 'blocked' || this.host.preferences.lines === 'none') continue;
-      const source = card.anchor.fragments.map(b => ({ left: b.left - rect.left, right: b.right - rect.left, top: b.top - rect.top, bottom: b.bottom - rect.top })).find(b => containsBox(input.viewport, b));
-      const p = card.placement, target = { left: p.x, right: p.x + p.width, top: p.y, bottom: p.y + p.height };
-      if (!source) continue;
-      if (!this.continuationNumbers.has(key)) this.continuationNumbers.set(key, this.continuationNumbers.size + 1);
-      const number = this.continuationNumbers.get(key)!;
-      const pair = continuationPair(source, target, input.viewport, input.body, [...obstacles, ...cards], used, Math.max(20, String(number).length * 8 + 8));
-      if (!pair) continue;
-      card.shell.dataset.routeState = 'continuation'; used.push(...pair);
-      if (!card.continuation) card.continuation = ['source', 'target'].map(end => {
-        const button = (this.decorations?.canvas ?? this.root).createEl('button', { cls: 'margin-link-continuation' });
-        button.type = 'button'; button.dataset.relation = key; button.dataset.end = end;
-        button.setAttribute('aria-description', `关联续接：${card.anchor.occurrence.label}`);
-        button.addEventListener('pointerenter', () => this.highlight(key)); button.addEventListener('pointerleave', () => this.highlight(undefined));
-        button.addEventListener('focusin', () => this.highlight(key)); button.addEventListener('focusout', () => this.highlight(undefined));
-        return button;
-      }) as [HTMLButtonElement, HTMLButtonElement];
-      card.continuation.forEach((button, i) => {
-        button.textContent = String(number); button.dataset.number = String(number); button.hidden = false;
-        button.tabIndex = this.host.preferences.lines === 'always' ? 0 : -1;
-        Object.assign(button.style, { left: `${pair[i].left}px`, top: `${pair[i].top + this.scrollTop}px`, width: `${pair[i].right - pair[i].left}px`, height: '16px' });
-        if (this.diagnostics) this.diagnostics.markerWrites++;
+    const cards = this.routePlacements.map(p => ({ left: p.x, right: p.x + p.width,
+      top: p.y + this.scrollTop, bottom: p.y + p.height + this.scrollTop }));
+    const region = { ...input.viewport,
+      top: Number.isFinite(this.measuredTop) ? this.measuredTop : input.viewport.top + this.scrollTop,
+      bottom: Number.isFinite(this.measuredBottom) ? this.measuredBottom : input.viewport.bottom + this.scrollTop };
+    const viewport = { ...input.viewport, top: input.viewport.top + this.scrollTop, bottom: input.viewport.bottom + this.scrollTop };
+    const ordered = [...this.cards].sort(([a], [b]) => (this.continuationNumbers.get(a) ?? 0) - (this.continuationNumbers.get(b) ?? 0));
+    for (const [key, card] of ordered) {
+      const source = card.anchor.fragments.map(b => ({ left: b.left - rect.left, right: b.right - rect.left,
+        top: b.top - rect.top + this.scrollTop, bottom: b.bottom - rect.top + this.scrollTop })).at(-1);
+      const p = card.placement, target = { left: p.x, right: p.x + p.width, top: p.y + this.scrollTop, bottom: p.y + p.height + this.scrollTop };
+      const blocked = this.batch ? !this.batch.relations.has(key) : ['blocked', 'continuation'].includes(card.shell.dataset.routeState ?? '');
+      const clippedRoute = !!source && !!card.routeBounds && containsBox(viewport, source) && containsBox(viewport, target) && !containsBox(viewport, card.routeBounds);
+      const show = mode !== 'none' && !!source && (mode === 'numbers' || blocked || clippedRoute);
+      if (layout && mode !== 'none' && source) {
+        if (!this.continuationNumbers.has(key)) this.continuationNumbers.set(key, this.continuationNumbers.size + 1);
+        const number = this.continuationNumbers.get(key)!;
+        const pair = relationNumberPair(source, target, region, input.body, [...this.obstacles, ...cards], used, Math.max(16, String(number).length * 7 + 4));
+        used.push(...pair);
+        card.shell.dataset.number = String(number);
+        if (!card.continuation) card.continuation = ['source', 'target'].map(end => {
+          const button = (this.decorations?.canvas ?? this.root).createEl('button', { cls: 'margin-link-continuation' });
+          button.type = 'button'; button.dataset.relation = key; button.dataset.end = end;
+          button.addEventListener('pointerenter', () => this.highlight(key)); button.addEventListener('pointerleave', () => this.highlight(undefined));
+          button.addEventListener('focusin', () => this.highlight(key)); button.addEventListener('focusout', () => this.highlight(undefined));
+          return button;
+        }) as [HTMLButtonElement, HTMLButtonElement];
+        card.continuation.forEach((button, i) => {
+          button.textContent = String(number); button.dataset.number = String(number);
+          button.setAttribute('aria-label', '关联 ' + number + '：' + card.anchor.occurrence.label + (i ? '，卡片端' : '，文字端'));
+          Object.assign(button.style, { left: pair[i].left + 'px', top: pair[i].top + 'px', width: pair[i].right - pair[i].left + 'px', height: '16px' });
+          if (this.diagnostics) this.diagnostics.markerWrites++;
+        });
+      }
+      card.continuation?.forEach(button => {
+        if (button.hidden === show) button.hidden = !show;
+        const tabIndex = show && (mode === 'always' || mode === 'numbers') ? 0 : -1;
+        if (button.tabIndex !== tabIndex) button.tabIndex = tabIndex;
       });
+      if (mode === 'none') card.shell.dataset.routeState = 'hidden';
+      else if (mode === 'numbers') card.shell.dataset.routeState = 'numbered';
+      else if (show) {
+        card.shell.dataset.routeState = 'continuation';
+        card.shell.dataset.routeReason = clippedRoute ? 'route-clipped-by-viewport' : 'search-exhausted';
+      } else if (this.batch?.relations.has(key)) card.shell.dataset.routeState = 'complete';
     }
   }
   private dragContext(key: string): CardDragContext | undefined {
@@ -479,7 +512,7 @@ export class MarginOverlay {
     this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
     this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
     this.cards.clear(); this.continuationNumbers?.clear(); this.routePlacements = []; this.anchors = []; this.layoutInput = undefined;
-    this.measurementsDirty = true; this.markerSignature = ''; this.geometryRevision++;
+    this.measurementsDirty = true; this.measuredTop = Infinity; this.measuredBottom = -Infinity; this.markerSignature = ''; this.geometryRevision++;
     this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear(); this.textObstacles?.invalidate();
   }
   destroy(): void {

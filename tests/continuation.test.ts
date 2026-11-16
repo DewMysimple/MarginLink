@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { continuationPair, containsBox } from '../src/view/continuation';
+import { continuationPair, containsBox, relationNumberPair } from '../src/view/continuation';
 const viewport = { left: 0, right: 600, top: 0, bottom: 300 };
 const body = { left: 100, right: 450, top: 0, bottom: 300 };
 const source = { left: 200, right: 260, top: 120, bottom: 140 };
@@ -24,5 +24,18 @@ describe('safe paired continuation labels', () => {
   });
   it('never covers text when no label slot exists', () => {
     expect(continuationPair(source, target, viewport, body, [viewport])).toBeUndefined();
+  });
+  it('keeps dense source numbers beside their visual line and guarantees the pair when whitespace search is exhausted', () => {
+    const occupied = [];
+    for (let index = 0; index < 6; index++) {
+      const pair = relationNumberPair(source, { ...target, top: 20 + index * 40, bottom: 50 + index * 40 }, viewport, body, [], occupied, 16);
+      expect(Math.abs((pair[0].top + pair[0].bottom) / 2 - (source.top + source.bottom) / 2)).toBeLessThanOrEqual(16);
+      expect(pair[0].right <= body.left || pair[0].left >= body.right).toBe(true);
+      occupied.push(...pair);
+    }
+    const pair = relationNumberPair(source, target, viewport, body, [viewport]);
+    expect(pair).toHaveLength(2);
+    expect(pair[0].top).toBe(122);
+    expect(containsBox(target, pair[1])).toBe(true);
   });
 });

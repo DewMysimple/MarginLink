@@ -1,5 +1,6 @@
 import { Modal, Setting, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
+import { LINE_MODE_OPTIONS, type LineMode } from '../types';
 
 class ManagedModal extends Modal {
   constructor(app: App, protected plugin: MarginLinkPlugin) { super(app); plugin.dialogs.add(this); }
@@ -23,9 +24,9 @@ export class QuickControls extends ManagedModal {
       t.setValue(this.plugin.preferences.enabled).onChange(v => { this.plugin.preferences.enabled = v; void this.plugin.savePreferences(); });
       refresh.push(() => t.setValue(this.plugin.preferences.enabled));
     });
-    new Setting(this.contentEl).setName('连线始终显示').addToggle(t => {
-      t.setValue(this.plugin.preferences.lines === 'always').onChange(v => { this.plugin.preferences.lines = v ? 'always' : 'hover'; void this.plugin.savePreferences(); });
-      refresh.push(() => t.setValue(this.plugin.preferences.lines === 'always'));
+    new Setting(this.contentEl).setName('连线显示').addDropdown(d => {
+      d.addOptions(LINE_MODE_OPTIONS).setValue(this.plugin.preferences.lines).onChange(v => { this.plugin.preferences.lines = v as LineMode; void this.plugin.savePreferences(); });
+      refresh.push(() => d.setValue(this.plugin.preferences.lines));
     });
     new Setting(this.contentEl).setName('布局模式').addDropdown(d => {
       d.addOptions({ auto: '自动排列', free: '自由拖动', snap: '智能吸附' }).setValue(this.plugin.preferences.placementMode).onChange(v => { Object.assign(this.plugin.preferences, { placementMode: v }); void this.plugin.savePreferences(); });

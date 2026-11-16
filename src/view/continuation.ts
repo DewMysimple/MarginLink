@@ -6,22 +6,51 @@ export const containsBox = (outer: Box, inner: Box) => inner.left >= outer.left 
  * Labels are view-only continuation aids, never written into a note or data.json. */
 export function continuationPair(source: Box, target: Box, viewport: Box, body: Box, obstacles: readonly Box[], occupied: readonly Box[] = [], labelWidth = 20): [Box, Box] | undefined {
   if (!containsBox(viewport, source) || !containsBox(viewport, target)) return;
-  const used = [...obstacles, source, target, ...occupied];
-  const find = (endpoint: Box): Box | undefined => {
-    const cx = (endpoint.left + endpoint.right) / 2, cy = (endpoint.top + endpoint.bottom) / 2;
-    const points = [[cx - labelWidth / 2, endpoint.top - 22], [cx - labelWidth / 2, endpoint.bottom + 6],
-      [endpoint.left - labelWidth - 6, cy - 8], [endpoint.right + 6, cy - 8]];
-    for (let dy = 0; dy <= viewport.bottom - viewport.top; dy += 20) {
-      for (const y of dy ? [cy - 8 - dy, cy - 8 + dy] : [cy - 8]) {
-        points.push([body.left - labelWidth - 6, y], [body.right + 6, y]);
+  const pair = relationNumberPair(source, target, viewport, body, obstacles, occupied, labelWidth);
+  return pair.every(box => containsBox(viewport, box) && ![...obstacles, source, target, ...occupied].some(o => intersects(box, o)))
+    && !intersects(pair[0], pair[1]) ? pair : undefined;
+}
+
+/** Plan view-only badges in document coordinates. Native clipping handles the
+ * two ends independently. When ordinary whitespace is full, reserve a source
+ * gutter beside the same line and badge the target's own corner; never silently
+ * drop a normal relationship because a decorative slot search failed. */
+export function relationNumberPair(source: Box, target: Box, region: Box, body: Box,
+  obstacles: readonly Box[], occupied: readonly Box[] = [], labelWidth = 16): [Box, Box] {
+  const width = Math.min(labelWidth, Math.max(1, region.right - region.left));
+  const cy = (source.top + source.bottom) / 2, sourceRight = (source.left + source.right) / 2 > (body.left + body.right) / 2;
+  const bands = sourceRight ? ['right', 'left'] : ['left', 'right'];
+  const sourceSlot = (): Box => {
+    for (const side of bands) for (const dy of [0, -16, 16]) {
+      for (let offset = 0; offset < region.right - region.left; offset += width + 2) {
+        const left = side === 'right' ? body.right + 1 + offset : body.left - 1 - width - offset;
+        const box = { left, right: left + width, top: cy - 8 + dy, bottom: cy + 8 + dy };
+        if (!containsBox(region, box)) continue;
+        if (![...obstacles, target, ...occupied].some(o => intersects(box, o, 0))) return box;
       }
     }
-    for (const [x, y] of points) {
-      const box = { left: x, right: x + labelWidth, top: y, bottom: y + 16 };
-      if (containsBox(viewport, box) && !used.some(o => intersects(box, o))) return box;
-    }
+    // Even an intentionally overlapping card cannot erase its source badge.
+    // This fallback stays outside the text column on its own visual line.
+    const left = sourceRight ? Math.min(region.right - width, body.right + 1) : Math.max(region.left, body.left - width - 1);
+    return { left, right: left + width, top: cy - 8, bottom: cy + 8 };
   };
-  const a = find(source); if (!a) return;
-  used.push(a);
-  const b = find(target); return b ? [a, b] : undefined;
+  const a = sourceSlot();
+  const cyTarget = (target.top + target.bottom) / 2;
+  const candidates = [
+    { left: target.right + 4, right: target.right + 4 + width, top: cyTarget - 8, bottom: cyTarget + 8 },
+    { left: target.left - 4 - width, right: target.left - 4, top: cyTarget - 8, bottom: cyTarget + 8 }
+  ];
+  const b = candidates.find(box => containsBox(region, box) && (box.right <= body.left || box.left >= body.right)
+    && ![...obstacles, source, a, ...occupied].some(o => intersects(box, o)));
+  if (b) return [a, b];
+  // Intentional overlapping cards still get distinct badge slots whenever their
+  // own faces have room, without moving either card or covering body text.
+  for (let top = target.top + 2; top + 16 <= target.bottom - 2; top += 18) {
+    for (let left = target.right - width - 2; left >= target.left + 2; left -= width + 2) {
+      const box = { left, right: left + width, top, bottom: top + 16 };
+      if (![a, ...occupied].some(o => intersects(box, o, 0))) return [a, box];
+    }
+  }
+  const left = Math.max(target.left, target.right - width - 2), top = target.top + 2;
+  return [a, { left, right: left + width, top, bottom: top + 16 }];
 }
