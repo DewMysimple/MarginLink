@@ -29,8 +29,6 @@
 .margin-link-drop-zone { display: none; position: absolute; box-sizing: border-box; border: 1px dashed var(--interactive-accent); border-radius: 9px; background: var(--background-secondary); opacity: .65; color: var(--text-muted); font-size: var(--font-ui-smaller); align-items: center; justify-content: center; text-align: center; padding: 5px; overflow: hidden; }
 .margin-link-dragging .margin-link-drop-available { display: flex; }
 .margin-link-drop-zone.margin-link-drop-active { opacity: .95; background: var(--background-modifier-hover); color: var(--text-accent); border-style: solid; }
-.margin-link-drag-ghost { display: none; position: absolute; top: 0; left: 0; max-width: 145px; padding: 7px 9px; border: 1px solid var(--interactive-accent); border-radius: 7px; color: var(--text-normal); background: var(--background-primary); font-size: var(--font-ui-smaller); box-shadow: var(--shadow-s); }
-.margin-link-dragging .margin-link-drag-ghost { display: block; }
 @media (prefers-reduced-motion: reduce) { .margin-link-connector { transition: none; } }
 .margin-link-card-shell { position: absolute; top: 0; left: 0; pointer-events: none; }
 .margin-link-card-shell .margin-link-card { width: 100%; height: 100%; border-radius: var(--margin-link-radius, 8px); border-width: var(--margin-link-border, 1px); box-shadow: var(--margin-link-shadow); }

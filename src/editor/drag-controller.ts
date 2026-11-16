@@ -5,24 +5,30 @@ import type { EditorBridge } from './editor-extension';
 import type { SelectionAction } from './selection-action';
 import type { Side } from '../types';
 import type { Box } from '../view/layout-engine';
+import { cardTooltip } from '../view/card-tooltip';
 
 export class DragController {
   readonly handle: HTMLButtonElement;
   private zones: HTMLDivElement[];
-  private ghost: HTMLDivElement;
   private cleanupDrag?: () => void;
   private snapshot?: SelectionSnapshot;
   private bridge?: EditorBridge;
   private geometry?: { host: DOMRect; viewport: Box; body: Box };
   constructor(private root: HTMLElement, private view: MarkdownView, private action: SelectionAction) {
-    this.handle = root.createEl('button', { cls: 'margin-link-handle', attr: { type: 'button', 'aria-label': '拖到正文两侧以链接已有文件；也可按 Enter', title: '拖到左/右空白处以链接已有文件 · Enter 直接选择文件' } });
+    this.handle = root.createEl('button', { cls: 'margin-link-handle', attr: { type: 'button' } });
     setIcon(this.handle, 'link-2');
+    const label = '关联文件';
+    this.handle.createSpan({ cls: 'margin-link-card-accessible', text: label });
+    this.handle.dataset.tooltip = label;
+    this.handle.addEventListener('pointerenter', this.showHint);
+    this.handle.addEventListener('pointerleave', this.hideHint);
     this.handle.hidden = true;
-    this.zones = ['left', 'right'].map(side => root.createDiv({ cls: `margin-link-drop-zone margin-link-drop-${side}`, text: '放下以选择文件' }));
-    this.ghost = root.createDiv({ cls: 'margin-link-drag-ghost', text: '链接到已有文件' });
+    this.zones = ['left', 'right'].map(side => root.createDiv({ cls: `margin-link-drop-zone margin-link-drop-${side}` }));
     this.handle.addEventListener('pointerdown', this.onDown);
     this.handle.addEventListener('keydown', this.onKey);
   }
+  private showHint = () => { if (!this.cleanupDrag) cardTooltip.show(this.handle); };
+  private hideHint = () => { cardTooltip.hideWithin(this.handle); };
   private onKey = (event: KeyboardEvent) => {
     if ((event.key === 'Enter' || event.key === ' ') && this.bridge) {
       event.preventDefault();
@@ -84,9 +90,8 @@ export class DragController {
       if (!dragging || !this.geometry) return;
       e.preventDefault();
       this.root.classList.add('margin-link-dragging');
-      const { host, body, viewport } = this.geometry;
+      const { body, viewport } = this.geometry;
       const side = this.sideAt(e.clientX, e.clientY);
-      this.ghost.style.transform = `translate(${Math.min(host.width - 150, Math.max(0, e.clientX - host.left + 10))}px, ${Math.min(host.height - 32, Math.max(0, e.clientY - host.top + 10))}px)`;
       this.zones.forEach((zone, i) => {
         const left = i === 0 ? viewport.left + 4 : body.right + 12;
         const right = i === 0 ? body.left - 12 : viewport.right - 4;
@@ -113,9 +118,11 @@ export class DragController {
     doc.addEventListener('keydown', key, true);
     win?.addEventListener('blur', reset);
   };
-  cancel(): void { this.cleanupDrag?.(); this.handle.hidden = true; }
+  cancel(): void { this.cleanupDrag?.(); this.hideHint(); this.handle.hidden = true; }
   destroy(): void {
     this.cancel();
+    this.handle.removeEventListener('pointerenter', this.showHint);
+    this.handle.removeEventListener('pointerleave', this.hideHint);
     this.handle.removeEventListener('pointerdown', this.onDown);
     this.handle.removeEventListener('keydown', this.onKey);
   }
