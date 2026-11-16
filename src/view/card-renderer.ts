@@ -10,6 +10,7 @@ export function cardFileLabel(occurrence: WikilinkOccurrence, resolved: Resolved
   return `${name} · ${types[extension] ?? (resolved.file && extension ? `${extension.toUpperCase()} 文件` : '类型未知')}`;
 }
 export function fileIcon(extension?: string): string {
+  extension = extension?.toLowerCase();
   if (!extension || extension === 'md') return 'file-text';
   if (['canvas', 'base'].includes(extension)) return 'layout-dashboard';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'bmp'].includes(extension)) return 'image';
@@ -37,7 +38,21 @@ export function renderCard(button: HTMLButtonElement, occurrence: WikilinkOccurr
   const extension = resolved.file?.extension.toLowerCase();
   if (extension === 'html' || extension === 'htm') {
     icon.classList.add('margin-link-html-icon');
-    icon.textContent = 'HTML';
+    const svg = button.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('focusable', 'false');
+    // A local, theme-coloured browser swirl. The two overlapping lobes retain
+    // their depth in grayscale; the small wordmark stays outside the artwork.
+    for (const [d, opacity] of [
+      ['M3.1 14.8C.9 10.3 3 5.1 7.4 3.1a10 10 0 0 1 11.4 2.2c2.4 2.4 3.1 5.7 2 8.4-1.1-3.7-4.7-6.1-8.5-6.1-5 0-8.1 3.1-9.2 7.2Z', '.55'],
+      ['M21.7 14.7c-.8 3.5-4.2 6.1-8.1 6.1-4.5 0-8.1-2.9-8.1-6.5 0-2.9 2.7-5.2 5.9-5.2 2.3 0 4.2 1.4 4.2 3.2 0 1.2-.8 2.2-2 2.6 1 .5 2.2.7 3.4.6 1.8-.1 3.4-.4 4.7-.8Z', '1']
+    ]) {
+      const path = button.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d); path.setAttribute('fill', 'currentColor'); path.setAttribute('opacity', opacity);
+      svg.appendChild(path);
+    }
+    icon.appendChild(svg);
+    icon.createSpan({ cls: 'margin-link-html-label', text: 'HTML' });
   } else {
     setIcon(icon, resolved.file ? fileIcon(extension) : 'file-question');
   }

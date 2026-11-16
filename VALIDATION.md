@@ -8,6 +8,14 @@
 
 0.2.9 的 224 项测试、ESLint、TypeScript、构建及打包通过。新测试独立解析输出 SVG，覆盖左右同高、三线型、1/5px 线宽、长标题、行内代码、跨行别名、拥挤省略与空间恢复；5 项障碍缓存测试覆盖内容坐标、滚动复用、邻域边界、部分字形及 display: contents。真实字体加载和横向滚动会失效旧几何，当前绘制使用计入悬停增粗的安全线宽。新增 [最终桌面尝试](artifacts/scroll-routing-final.json) 为 blocked，零场景通过。
 
+0.2.10 的 232 项测试、ESLint、TypeScript、生产构建及打包通过。新增8项图标语义测试覆盖 .html/.htm 大小写、灰阶SVG及无框HTML短标、别名、单一提示、读屏隐藏和未解析/Markdown/XMind保留。使用SVG栅格器渲染并目视检查了实际矢量图形的明暗灰阶外观；这只是图形资产检查，**不等同于实际卡片CSS、32px裁切或桌面交互验收**。`node scripts/check-html-icon.mjs` 尝试启动浏览器时同样收到 socket Operation not permitted，36个真实DOM/CSS场景未运行。可在允许浏览器进程的桌面执行该脚本，另在Obsidian同屏对照Markdown/XMind卡片，检查100%与高缩放、三形状、焦点和拖动。
+
+| 安装包 | 自动化测试 | 构建与ZIP核对 |
+| --- | ---: | --- |
+| 0.2.8 | 209 | 清单版本、main.js/styles.css/许可逐项核对 |
+| 0.2.9 | 224 | 清单版本、main.js/styles.css/许可逐项核对 |
+| 0.2.10 | 232 | 清单版本、main.js/styles.css/许可逐项核对 |
+
 本轮下载官方 Obsidian 1.10.6 并校验 SHA256（`1596c81d8645ff9f6506b5b3e1a6963250d9372ceb58eb037551e53bc1b16f72`）。使用本工程 test-profile 与 test-vault 隔离启动，进程退出 133：`process_singleton_posix.cc:294 socket() failed: Operation not permitted (1)`，发生在插件加载前。Chromium 管道模式亦被同类权限阻塞。桌面基线脚本 [报告](artifacts/scroll-routing-baseline-scroll.json) 明确为 blocked、零场景通过；没有将旧截图或历史报告作为本轮实测。
 
 待桌面复做：构建后仅将 dist/margin-link 安装到本工程 test-vault/.obsidian/plugins/margin-link；按 README 启动隔离实例并开放 CDP 9223。依次运行 `node scripts/desktop-scroll-routing.mjs final --scroll-only`、`node scripts/desktop-scroll-routing.mjs final`、`node scripts/desktop-stability.mjs final` 和 `npm run test:desktop`。新增脚本独立量取正文 Range 与 SVG 屏幕路径，覆盖阅读/实时预览/源码、部分裁切与点击穿透、拖放后返回、分屏及三种线型。旧稳定性脚本完整边界断言只用于侧栏缩放/拖放，仍保留。真实逐帧滚动、连线避字和图标观感未在当前环境验收。

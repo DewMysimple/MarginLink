@@ -2,11 +2,11 @@
 
 **Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件或新建 Markdown，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.2.9**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。插件可在原生文件列表识别 HTML 网页和 XMind 思维导图。两个独立开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
+**v0.2.10**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。插件可在原生文件列表识别 HTML 网页和 XMind 思维导图。两个独立开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.9.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.10.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
@@ -113,7 +113,7 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 
 在 **MarginLink → Obsidian 能识别的文件类型** 中独立选择 HTML 文件（.html、.htm）和 XMind 文件（.xmind）。首次使用和从旧版升级时，两项都开启。改动后，在“第三方插件”中关闭再启用 MarginLink 以应用。Obsidian 的“显示所有文件类型”和其他文件查看器也会影响文件列表中的可见性。
 
-在原生文件列表或笔记双链中打开附件时，MarginLink 的只读页会显示名称和类型。若已有查看器先接管某一扩展名，沿用该查看器。需要打开文件内容时，在文件列表右键选择“在默认应用中打开”，由浏览器或关联的 XMind 应用打开。HTML 内容不会在 MarginLink 中运行。HTML 卡片带有 HTML 字样，链接使用附件本身的路径，例如 `[[导图/项目规划.xmind|项目规划]]`。
+在原生文件列表或笔记双链中打开附件时，MarginLink 的只读页会显示名称和类型。若已有查看器先接管某一扩展名，沿用该查看器。需要打开文件内容时，在文件列表右键选择“在默认应用中打开”，由浏览器或关联的 XMind 应用打开。HTML 内容不会在 MarginLink 中运行。HTML/HTM 卡片使用随主题调整的灰阶网页旋涡图标及无外框 HTML 短标，紧凑卡片仍保留四字母，链接使用附件本身的路径，例如 `[[导图/项目规划.xmind|项目规划]]`。
 
 ## 源码与开发
 
@@ -141,7 +141,7 @@ npm test
 npm run lint
 npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.9.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.10.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。
