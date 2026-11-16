@@ -89,11 +89,12 @@ describe('relative spatial layout', () => {
       const band = lane(p, c.side); expect(c.x).toBeGreaterThanOrEqual(band.left); expect(c.x + c.width).toBeLessThanOrEqual(band.right);
     }
   });
-  it('snaps to grid/neighbors and avoids occupied rectangles', () => {
+  it('snaps only the moving card to its grid and permits intentional overlap', () => {
     const p = { ...input, preferences: { ...input.preferences!, placementMode: 'snap' as const } };
     const first = positionFromDrop(p, input.anchors[0], 1200, 500, [])!;
     const second = positionFromDrop(p, { key: 'b', x: 700, y: 320 }, 1200, 500, [first.placement])!;
-    expect(second.snapped).toBe(true); expect(overlapsCard(first.placement, second.placement)).toBe(false);
+    expect(second.snapped).toBe(true); expect(overlapsCard(first.placement, second.placement)).toBe(true);
+    expect(second.placement).toMatchObject({ x: first.placement.x, y: first.placement.y });
   });
   it('scales vertical offsets with line height without clamping static display', () => {
     const manual = { side: 'left' as const, xNormalized: 1, yOffset: 2 };

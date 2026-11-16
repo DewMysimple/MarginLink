@@ -10,7 +10,12 @@ export class StableLayout {
   update(input: LayoutInput, scrollTop: number, geometry: string): Placement[] {
     if (this.geometry !== geometry) { this.clear(); this.geometry = geometry; }
     const manualKey = (a: LayoutInput['anchors'][number]) => JSON.stringify(a.manual ?? null);
-    if (input.anchors.some(a => this.entries.has(a.key) && this.entries.get(a.key)!.manual !== manualKey(a))) this.entries.clear();
+    // A drop/reset changes one occurrence, not the entire note. Keep every
+    // other automatic and manual slot, side and text-relative offset intact.
+    for (const a of input.anchors) {
+      const entry = this.entries.get(a.key);
+      if (entry && entry.manual !== manualKey(a)) this.entries.delete(a.key);
+    }
     const anchors = input.anchors.map(a => ({ ...a, y: a.y + scrollTop }));
     for (const a of anchors) {
       const old = this.entries.get(a.key);

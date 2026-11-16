@@ -82,3 +82,4 @@
 .margin-link-lines-always .margin-link-continuation, .margin-link-continuation.margin-link-active { opacity: 1; pointer-events: auto; }
 .margin-link-continuation.margin-link-active { background: var(--background-secondary); outline: 2px solid var(--interactive-accent); }
 .margin-link-lines-none .margin-link-continuation { display: none; }
+.margin-link-card-shell:focus-within { z-index: 2; }

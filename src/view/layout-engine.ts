@@ -44,6 +44,9 @@ function legalize(candidate: Placement, input: LayoutInput, occupied: Placement[
   if (candidate.height > band.bottom - band.top) return;
   const x = clamp(candidate.x, band.left, band.right - candidate.width);
   const target = clamp(candidate.y, band.top, band.bottom - candidate.height);
+  // User-directed placement may intentionally overlap another card. Only the
+  // moving card is clamped to its lane; automatic solving owns collision gaps.
+  if (input.preferences?.placementMode === 'free' || input.preferences?.placementMode === 'snap') return { ...candidate, x, y: target };
   const ys = [target, ...occupied.flatMap(c => [c.y + c.height + 10, c.y - candidate.height - 10])]
     .filter(y => y >= band.top && y + candidate.height <= band.bottom).sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b);
   for (const y of ys) {
@@ -64,8 +67,6 @@ export function positionFromDrop(input: LayoutInput, anchor: LayoutAnchor, x: nu
     const grid = input.preferences?.snapGrid ?? 12;
     left = band.left + Math.round((left - band.left) / grid) * grid;
     top = band.top + Math.round((top - band.top) / grid) * grid;
-    const aligned = occupied.find(c => c.side === side && Math.abs(c.x - left) <= grid);
-    if (aligned) left = aligned.x;
   }
   const placement = legalize({ key: anchor.key, side, x: left, y: top, ...dim, compact: dim.shape === 'icon', manual: true }, input, occupied);
   if (!placement) return;
@@ -108,7 +109,10 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
     const band = lane(input, side);
     const x = saved ? band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width) : side === 'left' ? band.right - dim.width : band.left;
     const y = a.y + (saved?.yOffset ?? 0) * (input.lineHeight ?? 24) - dim.height / 2;
-    const card = displayPosition({ key: a.key, side, x, y, ...dim, compact: dim.shape === 'icon', manual: !!saved }, input, [...occupied, ...output]);
+    const candidate = { key: a.key, side, x, y, ...dim, compact: dim.shape === 'icon', manual: !!saved };
+    // A persisted manual position is the user's exact relative placement,
+    // including deliberate overlap. Never legalize it against neighbouring UI.
+    const card = saved ? candidate : displayPosition(candidate, input, [...occupied, ...output]);
     if (card) { counts[side]++; output.push(card); }
   }
   return output;
