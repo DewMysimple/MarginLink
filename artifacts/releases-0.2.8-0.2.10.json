@@ -1,0 +1,45 @@
+{
+  "baseline": "570fad1bb674ebd2d51beffce25cd6294d122a99",
+  "branch": "codex/0.2.8-0.2.10-remediation",
+  "versions": [
+    {
+      "version": "0.2.8",
+      "automatedTestsPassed": 209,
+      "npmTest": "passed",
+      "lint": "passed",
+      "build": "passed",
+      "package": "passed",
+      "zipVerified": true,
+      "sha256": "48dd1bc0888d3a785d55b2d7408725044f0af30a104d1be7e210c1f17adecb3a",
+      "mainSha256": "f3c20a5f2e7777d418c5564716cd9a2c9ac59a38decc6d614b8f19b2a0ebcffc"
+    },
+    {
+      "version": "0.2.9",
+      "automatedTestsPassed": 224,
+      "npmTest": "passed",
+      "lint": "passed",
+      "build": "passed",
+      "package": "passed",
+      "zipVerified": true,
+      "sha256": "51758b271989d19ebf91f7306395236aca407f87af22e20a7b2569af61293828",
+      "mainSha256": "1ca67a9498c1f884389a03734fd7234034573a63f9ec1c46fa4c43d0657dcf25"
+    },
+    {
+      "version": "0.2.10",
+      "automatedTestsPassed": 232,
+      "npmTest": "passed",
+      "lint": "passed",
+      "build": "passed",
+      "package": "passed",
+      "zipVerified": true,
+      "sha256": "adeb406700aac95a08917038fe186537a7bce34b9eb2fb021b733c31c0fc6523",
+      "mainSha256": "6eade5b7ec1412f8cfeb23524234a2a354f8f46063d47045083209dd3ebafdd9"
+    }
+  ],
+  "desktop": {
+    "status": "blocked",
+    "scenariosPassed": 0,
+    "reason": "Obsidian 1.10.6 and Chromium process_singleton_posix socket() Operation not permitted"
+  },
+  "svgAssetReview": "grayscale SVG asset rasterized and visually inspected, not DOM/CSS acceptance"
+}

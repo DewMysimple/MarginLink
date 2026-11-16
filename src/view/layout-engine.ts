@@ -74,14 +74,29 @@ export function positionFromDrop(input: LayoutInput, anchor: LayoutAnchor, x: nu
     yOffset: clamp((placement.y + placement.height / 2 - anchor.y) / (input.lineHeight ?? 24), -80, 80)
   } };
 }
-export function layoutCards(input: LayoutInput): Placement[] {
+// Static display is unbounded vertically. Only a drop is constrained to the
+// viewport; scrolling must never push a card away from its text reference.
+function displayPosition(candidate: Placement, input: LayoutInput, occupied: Placement[]): Placement {
+  const band = lane(input, candidate.side);
+  const x = clamp(candidate.x, band.left, band.right - candidate.width);
+  const exact = { ...candidate, x };
+  if (!occupied.some(c => overlapsCard(exact, c))) return exact;
+  const ys = [candidate.y, ...occupied.flatMap(c => [c.y + c.height + 10, c.y - candidate.height - 10])]
+    .sort((a, b) => Math.abs(a - candidate.y) - Math.abs(b - candidate.y) || a - b);
+  for (const y of ys) {
+    const card = { ...candidate, x, y };
+    if (!occupied.some(c => overlapsCard(card, c))) return card;
+  }
+  return { ...candidate, x }; // Finite occupied rectangles always leave an outer slot.
+}
+export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Placement[] {
   if (![input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport)].every(Number.isFinite) || input.width <= 0 || input.height < 36) return [];
   const p = input.preferences;
   const manualMode = p && p.placementMode !== 'auto';
   const output: Placement[] = [];
-  const ordered = [...input.anchors].filter(a => Number.isFinite(a.x) && Number.isFinite(a.y) && a.y >= input.viewport.top && a.y <= input.viewport.bottom)
+  const ordered = [...input.anchors].filter(a => Number.isFinite(a.x) && Number.isFinite(a.y))
     .sort((a, b) => Number(!!(manualMode && b.manual)) - Number(!!(manualMode && a.manual)) || a.y - b.y || a.key.localeCompare(b.key));
-  const counts = { left: 0, right: 0 };
+  const counts = { left: occupied.filter(c => c.side === 'left').length, right: occupied.filter(c => c.side === 'right').length };
   for (const a of ordered) {
     const saved = manualMode ? a.manual : undefined;
     const sides = (['left', 'right'] as Side[]).filter(s => dimensions(input, s));
@@ -93,7 +108,7 @@ export function layoutCards(input: LayoutInput): Placement[] {
     const band = lane(input, side);
     const x = saved ? band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width) : side === 'left' ? band.right - dim.width : band.left;
     const y = a.y + (saved?.yOffset ?? 0) * (input.lineHeight ?? 24) - dim.height / 2;
-    const card = legalize({ key: a.key, side, x, y, ...dim, compact: dim.shape === 'icon', manual: !!saved }, input, output);
+    const card = displayPosition({ key: a.key, side, x, y, ...dim, compact: dim.shape === 'icon', manual: !!saved }, input, [...occupied, ...output]);
     if (card) { counts[side]++; output.push(card); }
   }
   return output;

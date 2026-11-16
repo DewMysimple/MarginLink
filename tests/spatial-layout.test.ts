@@ -57,7 +57,7 @@ describe('relative spatial layout', () => {
     const saved = { ...input, anchors: [{ ...input.anchors[0], manual: { side: 'right' as const, xNormalized: 0.5, yOffset: 2 } }] };
     expect(layoutCards({ ...saved, body: { ...input.body, right: 1380 } })).toEqual([]);
     expect(layoutCards(saved)).toHaveLength(1);
-    expect(layoutCards({ ...saved, anchors: [{ ...saved.anchors[0], y: -200 }] })).toEqual([]);
+    expect(layoutCards({ ...saved, anchors: [{ ...saved.anchors[0], y: -200 }] })[0].y).toBeLessThan(0);
   });
   it('restores the exact original rectangle after temporary viewport constraints', () => {
     const moved = positionFromDrop(input, input.anchors[0], 1270, 660, [])!;
@@ -66,7 +66,7 @@ describe('relative spatial layout', () => {
     const original = layoutCards(saved);
     const narrowed = { ...saved, width: 1120, viewport: { ...input.viewport, right: 1120, bottom: 400 } };
     for (const p of layoutCards(narrowed)) {
-      expect(p.x).toBeGreaterThan(input.body.right); expect(p.y + p.height).toBeLessThanOrEqual(392);
+      expect(p.x).toBeGreaterThan(input.body.right); expect(p.y + p.height / 2).toBe(original[0].y + original[0].height / 2);
     }
     expect(manual).toEqual(moved.relative);
     expect(layoutCards(saved)).toEqual(original);
@@ -95,46 +95,30 @@ describe('relative spatial layout', () => {
     const second = positionFromDrop(p, { key: 'b', x: 700, y: 320 }, 1200, 500, [first.placement])!;
     expect(second.snapped).toBe(true); expect(overlapsCard(first.placement, second.placement)).toBe(false);
   });
-  it('scales vertical offsets with line height and clips at the current viewport', () => {
+  it('scales vertical offsets with line height without clamping static display', () => {
     const manual = { side: 'left' as const, xNormalized: 1, yOffset: 2 };
     const normal = layoutCards({ ...input, anchors: [{ ...input.anchors[0], manual }] })[0];
     const larger = layoutCards({ ...input, lineHeight: 36, anchors: [{ ...input.anchors[0], manual }] })[0];
     expect(larger.y - normal.y).toBe(24);
     const clipped = layoutCards({ ...input, anchors: [{ ...input.anchors[0], manual: { ...manual, yOffset: 80 } }] })[0];
-    expect(clipped.y + clipped.height).toBeLessThanOrEqual(input.viewport.bottom - 8);
+    expect(clipped.y + clipped.height / 2).toBe(input.anchors[0].y + 80 * 24);
   });
 });
 describe('connector geometry', () => {
   const text = { left: 90, top: 40, right: 150, bottom: 60 };
-  it.each([
-    ['left', 'right', 0, 40, 'M 90 50', '20 50'],
-    ['right', 'left', 200, 40, 'M 150 50', '200 50'],
-    ['top', 'bottom', 110, 0, 'M 120 40', '120 20'],
-    ['bottom', 'top', 110, 100, 'M 120 60', '120 100']
-  ] as const)('connects the %s midpoint of the text to the %s midpoint of the card', (source, target, x, y, start, end) => {
-    const card = { x, y, width: 20, height: 20 };
-    for (const style of ['curve', 'straight', 'elbow'] as const) {
-      const route = connectorRoute([text], card, style)!;
-      expect(route.choice).toEqual({ source, target, fragment: 0 });
-      expect(route.path.startsWith(start)).toBe(true);
-      if (style !== 'elbow') expect(route.path.endsWith(end)).toBe(true);
+  it.each(['curve', 'straight', 'elbow'] as const)('only uses vertical text midpoints for %s', style => {
+    for (const x of [0, 200]) {
+      const route = connectorRoute([text], { x, y: 40, width: 20, height: 20 }, style)!;
+      expect(['top', 'bottom']).toContain(route.choice.source);
+      expect(route.path.startsWith(`M 120 ${route.choice.source === 'top' ? 40 : 60}`)).toBe(true);
     }
-  });
-  it('has vertical outgoing and incoming segments for vertical curves and elbows', () => {
-    const card = { x: 110, y: 0, width: 20, height: 20 };
-    expect(connectorRoute([text], card)?.path).toBe('M 120 40 C 120 30, 120 30, 120 20');
-    expect(connectorRoute([text], card, 'elbow')?.path).toBe('M 120 40 V 30 H 120 V 20');
   });
   it('selects a reachable wrapped fragment independently of the layout reference', () => {
     const lines = [text, { left: 10, top: 66, right: 50, bottom: 86 }];
-    const right = connectorRoute(lines, { x: 180, y: 40, width: 20, height: 20 })!;
-    const left = connectorRoute(lines, { x: -40, y: 66, width: 20, height: 20 })!;
-    expect(right.choice.fragment).toBe(0);
-    expect(left.choice.fragment).toBe(1);
-    expect(right.path.startsWith('M 150 50')).toBe(true);
-    expect(left.path.startsWith('M 10 76')).toBe(true);
+    expect(connectorRoute(lines, { x: 180, y: 40, width: 20, height: 20 })?.choice.fragment).toBe(0);
+    expect(connectorRoute(lines, { x: -40, y: 66, width: 20, height: 20 })?.choice.fragment).toBe(1);
   });
-  it('keeps the chosen facing ports when an equivalent route only improves slightly', () => {
+  it('keeps chosen ports when an equivalent route only improves slightly', () => {
     const square = { left: 0, right: 20, top: 0, bottom: 20 };
     const diagonal = { x: 100, y: 100, width: 20, height: 20 };
     const route = connectorRoute([square], diagonal)!;

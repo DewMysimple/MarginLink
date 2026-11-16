@@ -42,7 +42,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
     const svg = preview.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('margin-link-connectors'); svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
     const bounds = { left: anchor.offsetLeft, right: anchor.offsetLeft + anchor.offsetWidth, top: anchor.offsetTop, bottom: anchor.offsetTop + anchor.offsetHeight };
     const path = preview.ownerDocument.createElementNS(svg.namespaceURI, 'path');
-    path.setAttribute('class', 'margin-link-connector margin-link-active'); path.setAttribute('d', connectorRoute([bounds], placement, p.lineStyle)?.path ?? '');
+    path.setAttribute('class', 'margin-link-connector margin-link-active'); path.setAttribute('d', connectorRoute([bounds], placement, p.lineStyle, undefined, { obstacles: [bounds], body: input.body, lineWidth: p.lineWidth })?.path ?? '');
     svg.appendChild(path); preview.prepend(svg);
   };
   const heading = (text: string) => container.createEl('h3', { text });

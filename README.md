@@ -2,11 +2,11 @@
 
 **Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件或新建 Markdown，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.2.7**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。插件可在原生文件列表识别 HTML 网页和 XMind 思维导图。两个独立开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
+**v0.2.10**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。插件可在原生文件列表识别 HTML 网页和 XMind 思维导图。两个独立开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.7.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.10.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
@@ -21,7 +21,7 @@
 
 升级时只替换发布文件，保留原 `data.json`。旧平铺配置与当前嵌套配置中的合法选择逐项保留，包括“悬停”“自动排列”“横向卡片”；只有缺失或无效的字段采用新默认。新安装和“恢复默认外观设置”统一为 `lines=always`、`placementMode=free`、`cardShape=square`。恢复默认不删除卡片位置。`layout` 继续代表左右优先，`placementMode` 控制拖动模式。
 
-Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码后可双击 `buildStart.cmd` 一键更新并生成 ZIP，也可运行 `npm ci`、`npm run package` 生成安装目录；具体命令见开发章节。此版本没有代替用户发布 GitHub Release 或提交 Obsidian 社区目录。
+Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码后可双击 `buildStart.cmd` 一键更新并生成 ZIP，也可运行 `npm ci`、`npm run package` 生成安装目录；具体命令见开发章节。此版本没有代替用户发布 GitHub Release 或提交 Obsidian 社区目录。本轮新桌面验收受到环境套接字权限阻塞，待测范围见验证记录。
 
 ## 创建和打开原生双链
 
@@ -48,13 +48,14 @@ Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码
 
 键盘操作：Tab 聚焦卡片自身，Enter/Space 打开，方向键移动，Shift+左右键换侧，Delete/Backspace 恢复此卡片自动位置。右键卡片也可恢复单个位置。设置、快捷面板及命令提供“整理/清除当前笔记布局”和“清除所有布局”，清除需确认，双链不受影响。
 
-同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。字体/窗口变化后重新合法化；锚点离屏时卡片和连线移除，可见锚点的超界位置安全裁剪。拖动侧栏或分屏分隔线时，卡片与连线使用同一帧几何连续更新；只在该卡片确实没有空间或锚点离屏时移除，不修改保存的位置。
+同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。静态卡片保持与原文的相对距离，碰到窗格上下界时自然裁切，原文先离屏也不会将仍露出的卡片移除。纯滚动复用该窗格的内存排布，不改侧别、顺序或已保存位置；真实行宽、字体、内容与外观变化才可重排。拖动侧栏或分屏分隔线时，卡片与连线使用同一帧几何连续更新；只在该卡片横向确实没有空间或卡片完全离屏时移除，不修改保存的位置。
 
 ## 连线与卡片外观
 
 原生“设置 → MarginLink”保留完整设置，按基础、连线、布局、卡片、交互与辅助功能分组。顶部有不修改笔记的实时 DOM/SVG 预览。
 
 - **连线**：隐藏/悬停聚焦/始终显示；曲线/直线/直角折线；1–5px、步长 0.5；常驻透明度 10–100%、默认 65%；主题强调色或紫/蓝/绿/灰预设。激活状态更清晰，`none` 保留卡片与跳转。
+- 连线的正文端仅使用真实文字片段上沿或下沿中点；整条路径避开正文、标题和行内代码。保留所选线型与短引线，长纵向段放在正文列外；排版太紧时仅暂时省略受影响的线，卡片仍可点击，空隙恢复后重画。
 - **卡片**：横向、正方形、极简图标；小/中/大。正方形 76/84/92px，图标 32/36/44px；横向按实际空白宽度缩放。可调圆角、边框、阴影和路径显示。窄边距退化到图标，无空间则隐藏。悬停只显示一个“文件名称 · 文件类型”，保留扩展名；无路径、子标题、重复别名或诊断。未解析且无已知后缀显示“类型未知”；虚线状态与点击时的必要提示保留。
 - **布局**：三种模式、左右优先、正文边缘留白、吸附栅格/范围；可清除当前或全部笔记的位置。
 - **辅助**：高亮反馈、拖动边界、减少动画。系统 `prefers-reduced-motion` 始终生效；不禁止全局文字选择。
@@ -104,7 +105,7 @@ Live Preview / 源码用 CM6 可见范围和真实 DOM 坐标，解析缓存只�
 
 CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 1.10.6 自身切换编辑/阅读模式可能把 CRLF 保存为 LF，无插件对照见验证报告；单纯打开设置、拖动和导航不由本插件写回笔记。
 
-每个 MarkdownView 有独立 overlay、SVG、观察器及坐标系。滚动、字体和主题变化合并到 rAF；只显示可见锚点，自己的 DOM/CSS 更新不触发无限重绘。窄窗或密集区域允许省略卡片，不挤压正文、不强制修改“限制行宽”。
+每个 MarkdownView 有独立 overlay、SVG、观察器及坐标系。滚动、字体和主题变化合并到 rAF；卡片与原文独立判断裁切，阅读模式按视口及有限邻近范围测量，CodeMirror 虚拟化后复用已知排布；自己的 DOM/CSS 更新不触发无限重绘。窄窗或密集区域允许省略卡片，不挤压正文、不强制修改“限制行宽”。
 
 文件选择仅来自 `Vault.getFiles()`，目标使用原生 `getFirstLinkpathDest()`，创建时验证精确完整路径以区分同名文件。标题/块子路径保留。Markdown、Canvas、Bases、PDF、原生图片/音视频通过 `WorkspaceLeaf.openFile(TFile)` 打开。
 
@@ -112,7 +113,7 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 
 在 **MarginLink → Obsidian 能识别的文件类型** 中独立选择 HTML 文件（.html、.htm）和 XMind 文件（.xmind）。首次使用和从旧版升级时，两项都开启。改动后，在“第三方插件”中关闭再启用 MarginLink 以应用。Obsidian 的“显示所有文件类型”和其他文件查看器也会影响文件列表中的可见性。
 
-在原生文件列表或笔记双链中打开附件时，MarginLink 的只读页会显示名称和类型。若已有查看器先接管某一扩展名，沿用该查看器。需要打开文件内容时，在文件列表右键选择“在默认应用中打开”，由浏览器或关联的 XMind 应用打开。HTML 内容不会在 MarginLink 中运行。HTML 卡片带有 HTML 字样，链接使用附件本身的路径，例如 `[[导图/项目规划.xmind|项目规划]]`。
+在原生文件列表或笔记双链中打开附件时，MarginLink 的只读页会显示名称和类型。若已有查看器先接管某一扩展名，沿用该查看器。需要打开文件内容时，在文件列表右键选择“在默认应用中打开”，由浏览器或关联的 XMind 应用打开。HTML 内容不会在 MarginLink 中运行。HTML/HTM 卡片使用随主题调整的灰阶网页旋涡图标及无外框 HTML 短标，紧凑卡片仍保留四字母，链接使用附件本身的路径，例如 `[[导图/项目规划.xmind|项目规划]]`。
 
 ## 源码与开发
 
@@ -140,7 +141,7 @@ npm test
 npm run lint
 npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.7.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.10.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。
