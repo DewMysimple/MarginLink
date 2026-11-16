@@ -88,14 +88,14 @@ function clean(points: Point[]): Point[] {
   }
   return result;
 }
-function segments(points: Point[], radius: number): Segment[] {
+function segments(points: Point[], radius: number, minimumLead = 0): Segment[] | undefined {
   const result: Segment[] = [];
   let from = points[0];
   for (let i = 1; i < points.length; i++) {
     const corner = points[i], next = points[i + 1];
-    // Keep the complete first normal lead: its controlled contact with the
-    // source text is the sole exception to normal stroke clearance.
-    const r = i > 1 && next ? Math.min(radius, distance(from, corner) / 3, distance(corner, next) / 3) : 0;
+    let r = next ? Math.min(radius, distance(from, corner) / 3, distance(corner, next) / 3) : 0;
+    if (i === 1 && next) r = Math.min(r, Math.max(0, distance(points[0], corner) - minimumLead));
+    if (next && radius > 0 && r < 0.01) return;
     if (r > 0.01) {
       const before = toward(corner, from, r), after = toward(corner, next, r);
       result.push({ from, to: before }, { from: before, control: corner, to: after });
@@ -104,9 +104,32 @@ function segments(points: Point[], radius: number): Segment[] {
   }
   return result;
 }
+function cubicTransition(a: Port, escape: Point, approach: Point, b: Port, scale: number): Segment[] {
+  const handle = Math.min(180, Math.max(18, distance(escape, approach) * scale));
+  return [
+    { from: a, to: escape },
+    { from: escape, control: { x: escape.x + a.nx * handle, y: escape.y + a.ny * handle },
+      control2: { x: approach.x + b.nx * handle, y: approach.y + b.ny * handle }, to: approach },
+    { from: approach, to: b }
+  ];
+}
+function clearCubic(a: Point, c: Point, d: Point, b: Point, obstacles: readonly Box[], depth = 0): boolean {
+  const bounds = { left: Math.min(a.x, c.x, d.x, b.x), right: Math.max(a.x, c.x, d.x, b.x),
+    top: Math.min(a.y, c.y, d.y, b.y), bottom: Math.max(a.y, c.y, d.y, b.y) };
+  const nearby = obstacles.filter(box => box.left < bounds.right && box.right > bounds.left && box.top < bounds.bottom && box.bottom > bounds.top);
+  if (!nearby.length) return true;
+  if (depth >= 16 || Math.max(bounds.right - bounds.left, bounds.bottom - bounds.top) < 0.02) return false;
+  const ac = midpoint(a, c), cd = midpoint(c, d), db = midpoint(d, b), left = midpoint(ac, cd), right = midpoint(cd, db), middle = midpoint(left, right);
+  return clearCubic(a, ac, left, middle, nearby, depth + 1) && clearCubic(middle, right, db, b, nearby, depth + 1);
+}
+function clearPart(part: Segment, obstacles: readonly Box[]): boolean {
+  return part.control2 && part.control ? clearCubic(part.from, part.control, part.control2, part.to, obstacles)
+    : part.control ? clearCurve(part.from, part.control, part.to, obstacles) : clearLine(part.from, part.to, obstacles);
+}
 export function connectorPath(parts: Segment[]): string {
-  return `M ${parts[0].from.x} ${parts[0].from.y}` + parts.map(s => s.control
-    ? ` Q ${s.control.x} ${s.control.y} ${s.to.x} ${s.to.y}` : ` L ${s.to.x} ${s.to.y}`).join('');
+  return `M ${parts[0].from.x} ${parts[0].from.y}` + parts.map(s => s.control2 && s.control
+    ? ` C ${s.control.x} ${s.control.y} ${s.control2.x} ${s.control2.y} ${s.to.x} ${s.to.y}` : s.control
+      ? ` Q ${s.control.x} ${s.control.y} ${s.to.x} ${s.to.y}` : ` L ${s.to.x} ${s.to.y}`).join('');
 }
 function sourceContact(a: Port, to: Point, box: Box): boolean {
   const edge = a.edge === 'top' ? box.top : box.bottom;
@@ -117,14 +140,14 @@ function safe(parts: Segment[], source: Port, obstacles: readonly Box[], protect
   cards: readonly Box[] = [], bounds?: Box): boolean {
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (bounds && [part.from, part.to, ...(part.control ? [part.control] : [])].some(p =>
+    if (bounds && [part.from, part.to, ...(part.control ? [part.control] : []), ...(part.control2 ? [part.control2] : [])].some(p =>
       p.x < bounds.left || p.x > bounds.right || p.y < bounds.top || p.y > bounds.bottom)) return false;
-    if (part.control ? !clearCurve(part.from, part.control, part.to, cards) : !clearLine(part.from, part.to, cards)) return false;
+    if (!clearPart(part, cards)) return false;
     if (!i) {
       if (obstacles.some((box, j) => crosses(part.from, part.to, protectedBoxes[j]) && !sourceContact(source, part.to, box))) return false;
-    } else if (part.control ? !clearCurve(part.from, part.control, part.to, protectedBoxes) : !clearLine(part.from, part.to, protectedBoxes)) return false;
+    } else if (!clearPart(part, protectedBoxes)) return false;
     // Do not take a shortcut through the card to arrive at its far edge.
-    if (part.control ? !clearCurve(part.from, part.control, part.to, [card]) : !clearLine(part.from, part.to, [card])) return false;
+    if (!clearPart(part, [card])) return false;
   }
   return true;
 }
@@ -156,9 +179,9 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
   const corridor = options.corridorX ?? (rightSide ? body.right + padding + 2 : body.left - padding - 2);
   let best: Connector | undefined, bestScore = Infinity;
   for (const { box, fragment } of sources) for (const a of ports(box).filter(port => !!port.ny)) {
-    for (const extra of [0, 3, 7]) {
+    for (const extra of style === 'curve' ? [0, 3, 7, 16, 32] : [0, 3, 7]) {
       const escape = { x: a.x, y: a.y + a.ny * (lead + extra) };
-      for (const b of targets) for (const approachLength of [tail, lead]) {
+      for (const b of targets) for (const approachLength of style === 'curve' ? [Math.max(36, tail * 2), tail, lead] : [tail, lead]) {
         const approach = { x: b.x + b.nx * approachLength, y: b.y + b.ny * approachLength };
         const candidates = [
           [a, escape, approach, b],
@@ -169,10 +192,15 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
         if (style === 'elbow') candidates[0] = [a, escape, { x: approach.x, y: escape.y }, approach, b];
         for (const candidate of candidates) {
           const points = clean(candidate);
-          for (const radius of style === 'curve' ? [8, 3, 0] : [0]) {
-            const parts = segments(points, radius);
-            if (!safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
+          const shapes = style === 'curve'
+            ? [
+              ...(candidate === candidates[0] && points.length > 2 ? [0.35, 0.18, 0.08].map(scale => cubicTransition(a, escape, approach, b, scale)) : []),
+              ...[24, 12, 6, 3, 1, 0.2, 0.05].map(radius => segments(points, radius, padding + 0.1))
+            ] : [segments(points, 0)];
+          for (const parts of shapes) {
+            if (!parts || !safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
             let score = parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2;
+            if (parts.some(part => part.control2)) score -= 24;
             // The complete route may be long while its final decorative fold is
             // only a few pixels. Prefer a clean normal entry, not a longer detour.
             const lastLength = points.length > 2 ? distance(points[points.length - 2], points[points.length - 1]) : Infinity;
@@ -268,9 +296,9 @@ function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[],
       for (let at: SearchNode | undefined = node; at; at = at.previous) path.push(position(at.index));
       path.reverse();
       const routePoints = clean([node.start.source, ...path, goal.port]);
-      for (const radius of style === 'curve' ? [8, 3, 0] : [0]) {
-        const parts = segments(routePoints, radius);
-        if (safe(parts, node.start.source, raw, paddedText, card, cards, options.bounds)) return {
+      for (const radius of style === 'curve' ? [24, 12, 6, 3, 1, 0.2, 0.05] : [0]) {
+        const parts = segments(routePoints, radius, padding + 0.1);
+        if (parts && safe(parts, node.start.source, raw, paddedText, card, cards, options.bounds)) return {
           path: connectorPath(parts), choice: { fragment: node.start.fragment, source: node.start.source.edge, target: goal.port.edge }, segments: parts, points: routePoints
         };
       }

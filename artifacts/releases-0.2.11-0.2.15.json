@@ -18,6 +18,12 @@
       "testsPassed": 265,
       "zipSHA256": "fce08efcfbac3416300242be496761ed451dde08b27ebaf89ba5dc29f1de1419",
       "checks": "test/lint/build/package/zip verified"
+    },
+    {
+      "version": "0.2.14",
+      "testsPassed": 270,
+      "zipSHA256": "2ed3cb92610fe925d9e1ea13de47f9bb062dc0529212d5d99ea5043fdd252a55",
+      "checks": "test/lint/build/package/zip verified"
     }
   ]
 }

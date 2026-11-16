@@ -306,9 +306,10 @@ export class MarginOverlay {
       });
       card.ports = route?.choice; card.routeSignature = signature;
       card.path.setAttribute('d', route?.path ?? '');
-      card.routeBounds = route ? {
-        left: Math.min(...route.points.map(pt => pt.x)), right: Math.max(...route.points.map(pt => pt.x)),
-        top: Math.min(...route.points.map(pt => pt.y)), bottom: Math.max(...route.points.map(pt => pt.y))
+      const points = route?.segments.flatMap(s => [s.from, s.to, ...(s.control ? [s.control] : []), ...(s.control2 ? [s.control2] : [])]);
+      card.routeBounds = points?.length ? {
+        left: Math.min(...points.map(pt => pt.x)), right: Math.max(...points.map(pt => pt.x)),
+        top: Math.min(...points.map(pt => pt.y)), bottom: Math.max(...points.map(pt => pt.y))
       } : undefined;
     }
     card.path.setAttribute('transform', `translate(0 ${-this.scrollTop})`);
