@@ -22,6 +22,7 @@ class ElementStub extends EventTarget {
   };
   constructor(readonly tag = 'div') { super(); }
   setAttribute(name: string, value: string) { this.attributes[name] = value; }
+  getAttribute(name: string) { return this.attributes[name] ?? null; }
   appendChild(child: ElementStub) { child.parent = this; this.children.push(child); return child; }
   remove() { this.removed = true; if (this.parent) this.parent.children = this.parent.children.filter(c => c !== this); }
 }
@@ -40,6 +41,7 @@ interface OverlayProbe {
   batch?: ConnectorBatch;
   sharedPaths: Map<string, ElementStub>;
   scrollTop: number;
+  diagnostics?: { renders: number; measurements: number; routes: number; svgWrites: number; markerWrites: number; work: number[] };
 }
 function fixture() {
   const hostRect = { left: 40, top: 20 }, svg = new ElementStub('svg'), cards = new Map<string, CardStub>();
@@ -117,8 +119,20 @@ describe('actual overlay shared-path drawing', () => {
     f.scroll(20); f.overlay.paintConnectors();
     expect(f.overlay.batch).toBe(batch); expect(f.overlay.sharedPaths.size).toBe(paths.size);
     for (const [id, path] of f.overlay.sharedPaths) {
-      expect(path).toBe(paths.get(id)); expect(path.attributes.d).toBe(contentPaths.get(id)); expect(path.attributes.transform).toBe('translate(0 -20)');
+      expect(path).toBe(paths.get(id)); expect(path.attributes.d).toBe(contentPaths.get(id)); expect(path.attributes.transform).toBeUndefined();
     }
     for (const key of f.cards.keys()) assertOrderedGeometry(f, key);
+  });
+  it.each([false, true])('reuses successful and failed content geometry without route solves or SVG writes (blocked=%s)', blocked => {
+    const f = fixture();
+    if (blocked) Object.assign(f.overlay, { obstacles: [{ left: 0, right: 1000, top: 0, bottom: 600 }] });
+    f.overlay.diagnostics = { renders: 0, measurements: 0, routes: 0, svgWrites: 0, markerWrites: 0, work: [] };
+    f.overlay.paintConnectors();
+    const first = { ...f.overlay.diagnostics }, batch = f.overlay.batch;
+    if (blocked) expect(batch!.relations.size).toBe(0);
+    for (const amount of [5, 21, -37, 19, -4, 13, -17]) { f.scroll(amount); f.overlay.paintConnectors(); }
+    expect(f.overlay.batch).toBe(batch);
+    expect(f.overlay.diagnostics.routes).toBe(first.routes);
+    expect(f.overlay.diagnostics.svgWrites).toBe(first.svgWrites);
   });
 });

@@ -2,6 +2,9 @@
 .margin-link-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; contain: layout style; }
 .margin-link-overlay[hidden], .margin-link-handle[hidden] { display: none; }
 .margin-link-connectors { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.margin-link-decoration-layer { position: absolute; top: 0; bottom: 0; overflow: clip; contain: strict; pointer-events: none; z-index: 4; }
+.margin-link-decoration-layer[hidden] { display: none; }
+.margin-link-decoration-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
 .margin-link-connector { fill: none; stroke: var(--interactive-accent); stroke-width: 1.4; opacity: 0; transition: opacity 120ms ease; }
 .margin-link-card { position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: flex-start; gap: 9px; padding: 7px 9px; margin: 0; box-sizing: border-box; overflow: hidden; pointer-events: auto; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-normal); box-shadow: 0 2px 7px var(--background-modifier-box-shadow); text-align: left; cursor: pointer; font: inherit; font-size: var(--font-ui-small); }
 .margin-link-card:hover, .margin-link-card.margin-link-active { border-color: var(--interactive-accent); background: var(--background-secondary); }

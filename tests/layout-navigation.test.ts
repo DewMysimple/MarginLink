@@ -21,7 +21,7 @@ describe('navigation while the old editor is still mounted', () => {
       const overlay = Object.assign(Object.create(MarginOverlay.prototype) as object, {
         view: { file: { path: 'A.md' }, getMode: () => 'source', previewMode: { containerEl: { querySelector: () => undefined } }, contentEl: { contains: () => true, getBoundingClientRect: () => ({ width: 1200, height: 800 }) } },
         host: { preferences: DEFAULT_PREFERENCES, layouts: store, bridges: new Set([staleBridge]), app: { vault: { cachedRead: () => new Promise(() => {}) } } },
-        root: {}, path: 'B.md', mode: 'source', revision: 3, sourceGeneration: 0, win: { clearTimeout: vi.fn() }, legacyLayoutKeys: new Map(),
+        root: {}, decorations: { element: {} }, path: 'B.md', mode: 'source', revision: 3, sourceGeneration: 0, win: { clearTimeout: vi.fn() }, legacyLayoutKeys: new Map(),
         cancelInteractions: vi.fn(), clearCards: vi.fn(), cardDrag: { cancel: vi.fn() }
       }) as unknown as { render(): void };
       overlay.render();

@@ -48,8 +48,10 @@ function fixture(lines: LineMode = 'always') {
     layoutInput: { viewport: { left: 0, right: 600, top: 0, bottom: 300 }, body: { left: 100, right: 450, top: 0, bottom: 300 } },
     view: { contentEl: { contains: () => true } }
   }) as unknown as { updateContinuations(): void };
-  const resetBlocked = () => { for (const card of cards.values()) card.shell.dataset.routeState = 'blocked'; };
-  return { overlay, root, host, cards, first: cards.get('first')!, second: cards.get('second')!, resetBlocked };
+  let generation = 0;
+  const invalidate = () => Object.assign(overlay, { batchSignature: String(++generation) });
+  const resetBlocked = () => { invalidate(); for (const card of cards.values()) card.shell.dataset.routeState = 'blocked'; };
+  return { overlay, root, host, cards, first: cards.get('first')!, second: cards.get('second')!, resetBlocked, invalidate };
 }
 const active = (element: ElementStub) => element.classList.contains('margin-link-active');
 
@@ -95,6 +97,7 @@ describe('continuation markers in the overlay', () => {
     const f = fixture(); f.overlay.updateContinuations();
     const numbers = f.root.children.map(marker => marker.textContent);
     for (const card of f.cards.values()) card.shell.dataset.routeState = 'complete';
+    f.invalidate();
     f.overlay.updateContinuations();
     expect(f.root.children.every(marker => marker.hidden && marker.tabIndex === -1)).toBe(true);
     f.resetBlocked(); f.overlay.updateContinuations();
