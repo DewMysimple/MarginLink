@@ -30,7 +30,7 @@ export default class MarginLinkPlugin extends Plugin {
     this.preferences = data.preferences;
     this.layouts = new LayoutStore(data.layouts, () => { this.refresh(); this.queueSave(); });
     this.reading = new ReadingAnchors(this.app, () => this.refresh());
-    this.selection = new SelectionAction(this.app, () => this.refresh());
+    this.selection = new SelectionAction(this.app, () => this.refresh(), () => this.preferences);
     this.registerEditorExtension(editorExtension(this));
     this.registerMarkdownPostProcessor((el, ctx) => this.reading.process(el, ctx));
     this.addSettingTab(new MarginLinkSettings(this.app, this));

@@ -5,6 +5,7 @@ import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
 import { ConfirmAction } from './quick-controls';
+import { renderFolderSettings } from './new-note-folders';
 
 export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin): () => void {
   container.empty(); container.addClass('margin-link-settings');
@@ -45,7 +46,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   };
   const heading = (text: string) => container.createEl('h3', { text });
   heading('基础'); toggle('enabled', '启用边缘关联（打开笔记自动显示）');
-  new Setting(container).setName('恢复默认外观设置').setDesc('不删除已保存的位置；清除位置请使用布局分组。').addButton(b => b.setButtonText('恢复默认').onClick(() => new ConfirmAction(plugin.app, plugin, '恢复默认外观', '只恢复显示偏好，布局记录和原生双链均保留。', () => { plugin.preferences = { ...DEFAULT_PREFERENCES }; void plugin.savePreferences(); }).open()));
+  new Setting(container).setName('恢复默认外观设置').setDesc('不删除已保存的位置；清除位置请使用布局分组。').addButton(b => b.setButtonText('恢复默认').onClick(() => new ConfirmAction(plugin.app, plugin, '恢复默认外观', '只恢复显示偏好，布局记录和原生双链均保留。', () => { plugin.preferences = { ...DEFAULT_PREFERENCES, newNoteFolders: plugin.preferences.newNoteFolders, newNoteDefault: plugin.preferences.newNoteDefault }; void plugin.savePreferences(); }).open()));
   heading('连线'); dropdown('lines', '连线显示', { none: '隐藏连线，保留卡片', hover: '悬停或聚焦时显示', always: '始终显示' });
   dropdown('lineStyle', '线型', { curve: '平滑曲线', straight: '直线', elbow: '直角折线' });
   slider('lineWidth', '线条粗细（px）', 1, 5, 0.5); slider('lineOpacity', '常驻透明度（0.1–1）', 0.1, 1, 0.05);
@@ -65,6 +66,8 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   dropdown('density', '窄边距策略（兼容旧设置）', { auto: '按可用空间自动调整', compact: '始终紧凑图标' });
   slider('cardRadius', '卡片圆角（px）', 0, 20, 1); toggle('cardBorder', '显示卡片边框');
   dropdown('cardShadow', '阴影强度', { none: '无阴影', subtle: '轻微', strong: '明显' }); toggle('showPath', '在横向卡片显示路径');
+  heading('新建笔记存放位置');
+  sync.push(renderFolderSettings(container, plugin));
   heading('交互与辅助功能'); toggle('hoverFeedback', '悬停与焦点高亮反馈'); toggle('dragHints', '显示拖动边界'); toggle('reduceMotion', '减少动画');
   container.createEl('p', { text: '单击卡片打开文件；自由/吸附模式下，按住卡片任意位置移动即可拖动。聚焦卡片后可用方向键移动、Shift+左右键换侧、Delete 恢复自动位置；右键卡片也可恢复。Esc/失焦/滚动取消拖动。系统减少动画偏好始终优先。' });
   refreshPreview();

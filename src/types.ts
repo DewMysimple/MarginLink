@@ -45,12 +45,15 @@ export interface Preferences {
   hoverFeedback: boolean;
   dragHints: boolean;
   reduceMotion: boolean;
+  newNoteFolders: string[];
+  newNoteDefault: number;
 }
 export const DEFAULT_PREFERENCES: Preferences = {
   enabled: true, lines: 'always', density: 'auto', layout: 'balanced', placementMode: 'free',
   lineStyle: 'curve', lineWidth: 1.5, lineOpacity: 0.65, lineColor: 'theme',
   cardShape: 'square', cardSize: 'medium', cardRadius: 8, cardBorder: true,
   cardShadow: 'subtle', showPath: true, edgePadding: 16, snapGrid: 12,
+  newNoteFolders: ['', '', ''], newNoteDefault: 0,
   hoverFeedback: true, dragHints: true, reduceMotion: false
 };
 export function ownRecord(value: unknown): Record<string, unknown> {
@@ -82,6 +85,11 @@ export function readPreferences(value: unknown): Preferences {
     cardRadius: finiteNumber(v.cardRadius, 8, 0, 20), cardBorder: bool('cardBorder'),
     cardShadow: choice('cardShadow', ['none', 'subtle', 'strong'], 'subtle'), showPath: bool('showPath'),
     edgePadding: finiteNumber(v.edgePadding, 16, 8, 32), snapGrid: finiteNumber(v.snapGrid, 12, 4, 32),
+    newNoteFolders: [0, 1, 2].map(index => {
+      const folder = Array.isArray(v.newNoteFolders) ? v.newNoteFolders[index] : undefined;
+      return typeof folder === 'string' ? folder : '';
+    }),
+    newNoteDefault: [0, 1, 2].includes(v.newNoteDefault as number) ? v.newNoteDefault as number : 0,
     hoverFeedback: bool('hoverFeedback'), dragHints: bool('dragHints'), reduceMotion: bool('reduceMotion')
   };
 }

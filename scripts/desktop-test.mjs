@@ -2,6 +2,7 @@
 /* global app */
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { runV2Scenarios } from './desktop-v2.mjs';
 import { runRemediationScenarios } from './desktop-remediation.mjs';
@@ -49,10 +50,12 @@ const command = async query => {
   await page.locator('.prompt-input').fill(query);
   await page.keyboard.press('Enter');
 };
-const choose = async () => {
-  await page.locator('.prompt-input').fill('Folder/Note A.md');
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => !document.querySelector('.prompt-input'));
+const picker = page.locator('.margin-link-file-picker');
+const choose = async (expectClose = true) => {
+  const search = picker.getByRole('searchbox', { name: '搜索已有文件' });
+  await search.fill('Folder/Note A.md');
+  await search.press('Enter');
+  if (expectClose) await picker.waitFor({ state: 'hidden' });
 };
 const settings = async tab => {
   const context = page.context();
@@ -134,6 +137,57 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.margin-link-card').length === 8);
     await page.evaluate(() => app.workspace.getLeavesOfType('markdown')[0].view.editor.undo());
   });
+  for (const ctrl of [false, true]) {
+    await check(ctrl ? 'Ctrl+create immediately focuses the new note in an independent window' : 'plain create returns typing focus after the native link', async () => {
+      const name = 'MarginLink-test-' + randomUUID();
+      const path = name + '.md';
+      const alias = '中文文字';
+      const linked = original.replace(alias, `[[${path}|${alias}]]`);
+      const context = page.context();
+      const before = context.pages().length;
+      try {
+        await select(alias);
+        await command('Link selected text to file');
+        await picker.getByRole('button', { name: '新建文件', exact: true }).click();
+        await picker.getByLabel('文件名').fill(name);
+        await picker.getByLabel('存放位置').selectOption('/');
+        const confirm = picker.getByRole('button', { name: '创建并链接', exact: true });
+        let destination = page;
+        if (ctrl) {
+          [destination] = await Promise.all([
+            context.waitForEvent('page', { timeout: 10000 }),
+            confirm.click({ modifiers: ['Control'] })
+          ]);
+        } else await confirm.click();
+        await picker.waitFor({ state: 'hidden' });
+        // Neither focus() nor bringToFront() is allowed before typing here.
+        await destination.waitForFunction(() => document.hasFocus() && Boolean(document.activeElement?.closest('.cm-content')));
+        assert.equal(context.pages().length, before + Number(ctrl));
+        const sourceText = () => page.evaluate(() => app.workspace.getLeavesOfType('markdown').find(l => l.view.file?.path === 'MarginLink Demo.md').view.editor.getValue());
+        assert.equal(await sourceText(), linked);
+        await destination.keyboard.insertText('Z');
+        if (ctrl) {
+          await page.waitForFunction(path => app.workspace.getLeavesOfType('markdown').some(l => l.view.file?.path === path && l.view.editor.getValue() === 'Z'), path);
+          assert.equal(await sourceText(), linked);
+        } else {
+          assert.equal(await sourceText(), linked.replace(`[[${path}|${alias}]]`, `[[${path}|${alias}]]Z`));
+          assert.equal(await page.evaluate(path => app.vault.read(app.vault.getFileByPath(path)), path), '');
+        }
+      } finally {
+        // Only files created by this test in the verified isolated vault can match.
+        await page.evaluate(async ({ path, original }) => {
+          for (const l of app.workspace.getLeavesOfType('markdown')) {
+            if (l.view.file?.path === path) { await l.view.save(); l.detach(); }
+          }
+          const source = app.workspace.getLeavesOfType('markdown').find(l => l.view.file?.path === 'MarginLink Demo.md');
+          if (source) { source.view.editor.setValue(original); app.workspace.setActiveLeaf(source, { focus: true }); }
+          const file = app.vault.getFileByPath(path);
+          if (file) await app.vault.delete(file);
+        }, { path, original });
+        await page.bringToFront();
+      }
+    });
+  }
   await check('Esc from picker never changes a character', async () => {
     await select('中文文字'); const before = await text();
     await command('Link selected text to file'); await page.keyboard.press('Escape');
@@ -142,8 +196,10 @@ try {
   await check('changed source while choosing is rejected without wrapping another range', async () => {
     await select('中文文字'); await command('Link selected text to file');
     await page.evaluate(() => app.workspace.getLeavesOfType('markdown')[0].view.editor.replaceRange('Changed ', { line: 0, ch: 0 }));
-    const changed = await text(); await choose(); assert.equal(await text(), changed);
-    assert((await page.locator('.notice').allTextContents()).some(x => /发生变化/.test(x)));
+    const changed = await text(); await choose(false); assert.equal(await text(), changed);
+    await page.locator('.notice').filter({ hasText: /发生变化/ }).last().waitFor();
+    await page.keyboard.press('Escape');
+    await picker.waitFor({ state: 'hidden' });
     await page.evaluate(() => app.workspace.getLeavesOfType('markdown')[0].view.editor.undo());
   });
   await check('drag handle → right margin → picker creates lossless Chinese alias', async () => {
