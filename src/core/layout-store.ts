@@ -38,20 +38,59 @@ export function readStoredData(value: unknown, now = Date.now()): StoredData {
 
 export class LayoutStore {
   private records: PersistedLayout[];
+  // Bounded, session-only UI identity aliases from checked relink transactions.
+  // No source text or relationship data is stored. They let native Undo/Redo
+  // find the same manual placement before metadata reconciliation runs.
+  private relinkAliases = new Map<string, Map<string, Set<string>>>();
   constructor(records: PersistedLayout[], private changed: () => void) { this.records = readLayouts(records); }
   snapshot(): PersistedLayout[] { return readLayouts(this.records); }
   get(source: string, key?: string, legacyKey?: string): RelativePosition | undefined {
-    const e = this.records.find(e => e.source === source && (e.key === key || e.key === legacyKey) && Date.now() - e.updated <= MAX_LAYOUT_AGE);
+    const keys = this.equivalentKeys(source, key); if (legacyKey) keys.add(legacyKey);
+    const e = this.records.find(e => e.source === source && keys.has(e.key) && Date.now() - e.updated <= MAX_LAYOUT_AGE);
     return e ? { side: e.side, xNormalized: e.xNormalized, yOffset: e.yOffset } : undefined;
   }
   set(source: string, key: string, position: RelativePosition, legacyKey?: string): void {
-    this.records = readLayouts([{ source, key, ...position, updated: Date.now() }, ...this.records.filter(e => e.source !== source || (e.key !== key && e.key !== legacyKey))]);
+    const keys = this.equivalentKeys(source, key); if (legacyKey) keys.add(legacyKey);
+    this.records = readLayouts([{ source, key, ...position, updated: Date.now() }, ...this.records.filter(e => e.source !== source || !keys.has(e.key))]);
     this.changed();
   }
   clear(source?: string, key?: string, legacyKey?: string): void {
-    const next = this.records.filter(e => source !== undefined && (e.source !== source || (key !== undefined && e.key !== key && e.key !== legacyKey)));
+    const keys = source && key ? this.equivalentKeys(source, key) : new Set<string>(); if (legacyKey) keys.add(legacyKey);
+    const next = this.records.filter(e => source !== undefined && (e.source !== source || (key !== undefined && !keys.has(e.key))));
     if (next.length === this.records.length) return;
     this.records = next; this.changed();
+  }
+  private equivalentKeys(source: string, key?: string): Set<string> {
+    const keys = new Set<string>(); if (!key) return keys;
+    const graph = this.relinkAliases.get(source), pending = [key];
+    while (pending.length && keys.size < MAX_NOTE_LAYOUTS * 16) {
+      const current = pending.pop()!; if (keys.has(current)) continue;
+      keys.add(current); for (const other of graph?.get(current) ?? []) pending.push(other);
+    }
+    return keys;
+  }
+  preserveRelink(source: string, aliases: ReadonlyMap<string, string>): void {
+    let graph = this.relinkAliases.get(source);
+    if (!graph) { graph = new Map(); this.relinkAliases.set(source, graph); }
+    for (const [key, previous] of aliases) {
+      if (!graph.has(key)) graph.set(key, new Set()); graph.get(key)!.add(previous);
+      if (!graph.has(previous)) graph.set(previous, new Set()); graph.get(previous)!.add(key);
+    }
+    // Keep recent transactions useful without creating an unbounded history.
+    if (graph.size > MAX_NOTE_LAYOUTS * 16) this.relinkAliases.delete(source);
+    if (this.relinkAliases.size > MAX_LAYOUTS) this.relinkAliases.delete(this.relinkAliases.keys().next().value!);
+    this.migrateAliases(source, aliases);
+  }
+  reconcileRelink(source: string, valid: ReadonlySet<string>): void {
+    if (!this.relinkAliases.has(source)) return;
+    let changed = false;
+    const next = this.records.map(record => {
+      if (record.source !== source || valid.has(record.key)) return record;
+      const matches = [...this.equivalentKeys(source, record.key)].filter(key => valid.has(key));
+      if (matches.length !== 1) return record;
+      changed = true; return { ...record, key: matches[0] };
+    });
+    if (changed) { this.records = readLayouts(next); this.changed(); }
   }
   migrateAliases(source: string, aliases: ReadonlyMap<string, string>): void {
     const canonical = new Map<string, string>(), ambiguous = new Set<string>();
@@ -68,8 +107,12 @@ export class LayoutStore {
     this.changed();
   }
   reconcile(source: string, valid: Set<string>): void {
-    const next = this.records.filter(e => e.source !== source || valid.has(e.key));
-    if (next.length !== this.records.length) { this.records = next; this.changed(); }
+    const next = this.records.flatMap(e => {
+      if (e.source !== source || valid.has(e.key)) return [e];
+      const matches = [...this.equivalentKeys(source, e.key)].filter(key => valid.has(key));
+      return matches.length === 1 ? [{ ...e, key: matches[0] }] : [];
+    });
+    if (next.length !== this.records.length || next.some((e, index) => e.key !== this.records[index]?.key)) { this.records = readLayouts(next); this.changed(); }
   }
   // Call only with the complete source text delivered for this file by the
   // metadata cache. A view's loading editor or preview section is not evidence
@@ -86,11 +129,13 @@ export class LayoutStore {
   }
   renameSource(oldPath: string, newPath: string): void {
     const belongs = (source: string) => source === oldPath || source.startsWith(oldPath + '/');
+    for (const [source, aliases] of [...this.relinkAliases]) if (belongs(source)) { this.relinkAliases.delete(source); this.relinkAliases.set(newPath + source.slice(oldPath.length), aliases); }
     if (!this.records.some(e => belongs(e.source))) return;
     this.records = readLayouts(this.records.map(e => belongs(e.source) ? { ...e, source: newPath + e.source.slice(oldPath.length) } : e));
     this.changed();
   }
   deleteSource(path: string): void {
+    for (const source of this.relinkAliases.keys()) if (source === path || source.startsWith(path + '/')) this.relinkAliases.delete(source);
     const next = this.records.filter(e => e.source !== path && !e.source.startsWith(path + '/'));
     if (next.length === this.records.length) return;
     this.records = next; this.changed();

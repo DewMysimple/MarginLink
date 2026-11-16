@@ -271,6 +271,10 @@ export class MarginOverlay {
         button.addEventListener('keydown', e => this.onCardKey(e, p.key));
         shell.addEventListener('contextmenu', e => {
           e.preventDefault(); const menu = new Menu(); this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
+          menu.addItem(item => item.setTitle('重新链接文件…').setIcon('link-2').onClick(() => {
+            const occurrence = this.cards.get(p.key)?.anchor.occurrence;
+            if (occurrence) this.host.selection.relink(this.view, occurrence, this.bridge());
+          }));
           menu.addItem(item => item.setTitle('恢复此卡片自动位置').setIcon('rotate-ccw').onClick(() => {
             const key = this.cards.get(p.key)?.anchor.layoutKey; if (key) this.host.layouts.clear(this.path, key, this.legacyLayoutKeys.get(key));
           })); menu.showAtMouseEvent(e);
@@ -437,6 +441,7 @@ export class MarginOverlay {
         card.shell.dataset.routeState = 'continuation';
         card.shell.dataset.routeReason = clippedRoute ? 'route-clipped-by-viewport' : 'search-exhausted';
       } else if (this.batch?.relations.has(key)) card.shell.dataset.routeState = 'complete';
+      if (card.shell.dataset.routeState !== 'continuation' && card.shell.dataset.routeReason) delete card.shell.dataset.routeReason;
     }
   }
   private dragContext(key: string): CardDragContext | undefined {

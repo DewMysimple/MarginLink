@@ -5,7 +5,7 @@ import { textFragments } from '../view/text-fragments';
 import { mapReadingLinks } from './source-mapping';
 import { layoutIdentities } from '../core/layout-identity';
 
-interface Entry { sourcePath: string; element: HTMLElement; identities: Map<number, string>; links: { element: HTMLElement; occurrence: WikilinkOccurrence }[] }
+interface Entry { sourcePath: string; text: string; element: HTMLElement; identities: Map<number, string>; links: { element: HTMLElement; occurrence: WikilinkOccurrence }[] }
 export class ReadingAnchors {
   private entries = new Map<HTMLElement, Entry>();
   private children = new Set<MarkdownRenderChild>();
@@ -37,7 +37,7 @@ export class ReadingAnchors {
     };
     const links = mapReadingLinks(events, anchors.map(anchor => ({ element: anchor, target: anchor.getAttribute('data-href') ?? anchor.getAttribute('href') ?? '' })), normalize)
       .filter(link => link.element.classList.contains('internal-link'));
-    this.entries.set(element, { sourcePath: ctx.sourcePath, element, links, identities: document.identities });
+    this.entries.set(element, { sourcePath: ctx.sourcePath, text: info.text, element, links, identities: document.identities });
     document.users++;
     const child = new MarkdownRenderChild(element);
     this.children.add(child);
@@ -51,6 +51,12 @@ export class ReadingAnchors {
     });
     ctx.addChild(child);
     this.changed();
+  }
+  sourceText(view: MarkdownView, occurrence: WikilinkOccurrence): string | undefined {
+    for (const entry of this.entries.values()) {
+      if (entry.sourcePath === view.file?.path && view.previewMode.containerEl.contains(entry.element) &&
+        entry.links.some(link => link.occurrence.start === occurrence.start && link.occurrence.raw === occurrence.raw)) return entry.text;
+    }
   }
   anchors(view: MarkdownView, overscan = 2400): Anchor[] {
     const viewport = view.previewMode.containerEl.getBoundingClientRect();

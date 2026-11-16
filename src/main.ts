@@ -34,7 +34,11 @@ export default class MarginLinkPlugin extends Plugin {
     this.registerView(ATTACHMENT_VIEW_TYPE, leaf => new AttachmentView(leaf, this.fileRecognition));
     this.layouts = new LayoutStore(data.layouts, () => { this.refresh(); this.queueSave(); });
     this.reading = new ReadingAnchors(this.app, () => this.refresh());
-    this.selection = new SelectionAction(this.app, () => this.refresh(), () => this.preferences);
+    this.selection = new SelectionAction(this.app, () => this.refresh(), () => this.preferences, {
+      bridges: () => this.bridges,
+      readingSource: (view, occurrence) => this.reading.sourceText(view, occurrence),
+      layouts: () => this.layouts
+    });
     this.registerEditorExtension(editorExtension(this));
     this.registerMarkdownPostProcessor((el, ctx) => this.reading.process(el, ctx));
     this.addSettingTab(new MarginLinkSettings(this.app, this));
@@ -115,6 +119,13 @@ export default class MarginLinkPlugin extends Plugin {
     this.refresh();
   }
   refresh(): void { if (!this.unloaded) for (const overlay of this.overlays.values()) overlay.schedule(); }
+  documentChanged(bridge: EditorBridge): void {
+    // Native Undo/Redo must canonicalize known relink UI aliases before a close
+    // can flush preferences. This never prunes records during loading/navigation.
+    for (const view of this.overlays.keys()) if (view.file && view.getMode() === 'source' && view.contentEl.contains(bridge.cm.dom)) {
+      this.layouts.reconcileRelink(view.file.path, new Set(bridge.identities.values()));
+    }
+  }
   subscribe(callback: () => void): () => void { this.listeners.add(callback); return () => this.listeners.delete(callback); }
   private rememberMarkdown(view?: MarkdownView): void {
     const source = view?.file?.path;

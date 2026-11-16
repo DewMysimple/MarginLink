@@ -5,6 +5,7 @@ class ElementStub {
   className = '';
   children: ElementStub[] = [];
   parent?: ElementStub;
+  get parentElement() { return this.parent; }
   clientHeight = 1600;
   clientWidth = 900;
   clientLeft = 0;
@@ -54,5 +55,23 @@ describe('native note decoration layer', () => {
     expect(first.style.position).toBe('sticky'); expect(first.children).toEqual([]);
     expect(second.children).toHaveLength(2);
     layer.detach(); expect(second.style.position).toBe('relative'); expect(second.children).toEqual([body]);
+  });
+  it('reattaches a reading layer removed by a section refresh without losing cards or position ownership', () => {
+    const sizer = new ElementStub(), scroller = new ElementStub();
+    const layer = new NativeScrollLayer(doc as unknown as Document);
+    layer.mount(element(scroller), element(sizer), host, 0);
+    const plane = layer.element as unknown as ElementStub, canvas = layer.canvas as unknown as ElementStub;
+    const card = new ElementStub(); canvas.appendChild(card);
+    const originalTransform = canvas.values.transform, writes = [plane.writes, canvas.writes];
+    // Obsidian replaces the section children, retaining its live sizer.
+    plane.remove(); const renderedSection = new ElementStub(); sizer.appendChild(renderedSection);
+    expect(plane.parentElement).toBeUndefined(); expect(sizer.style.position).toBe('relative');
+    layer.mount(element(scroller), element(sizer), host, 0);
+    expect(sizer.children).toEqual([renderedSection, plane]);
+    expect(plane.children).toEqual([canvas]); expect(canvas.children).toEqual([card]);
+    expect(canvas.values.transform).toBe(originalTransform); expect([plane.writes, canvas.writes]).toEqual(writes);
+    layer.mount(element(scroller), element(sizer), host, 0);
+    expect(sizer.children).toEqual([renderedSection, plane]);
+    layer.detach(); expect(sizer.style.position).toBe(''); expect(sizer.children).toEqual([renderedSection]);
   });
 });

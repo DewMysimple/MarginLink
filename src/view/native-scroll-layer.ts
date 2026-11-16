@@ -23,8 +23,11 @@ export class NativeScrollLayer {
       this.previousPosition = parent.style.position;
       this.positioned = parent.ownerDocument.defaultView!.getComputedStyle(parent).position === 'static';
       if (this.positioned) parent.style.position = 'relative';
-      parent.appendChild(this.element);
     }
+    // Reading mode can replace a sizer's rendered children while retaining the
+    // same element. Repair that host-owned removal without resetting position
+    // ownership, the canvas, cards, or cached document coordinates.
+    if (this.element.parentElement !== parent) parent.appendChild(this.element);
     const origin = parent.getBoundingClientRect(), viewport = scroller.getBoundingClientRect();
     const left = viewport.left + scroller.clientLeft;
     const stable = (value: number) => Math.round(value * 10000) / 10000;

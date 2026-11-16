@@ -1,0 +1,1786 @@
+{
+  "date": "2026-11-16",
+  "baseline": "27c4e2d31f6aa3e0f169a6637e653558c39d084a",
+  "version": "0.2.20",
+  "finalBundleSHA256": "eb0ac3ba728f4b7a11020aaf78ea19d3d05f8f4954331e580720fb61dcf171f7",
+  "hardware": {
+    "cpu": "Intel Core i7-14700KF",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "refreshHz": 180,
+    "os": "Windows",
+    "node": "24.16.0",
+    "npm": "12.0.1",
+    "obsidian": "1.15.1",
+    "viewport": [
+      1800,
+      1100
+    ],
+    "dpr": 1,
+    "zoom": 1,
+    "theme": "Obsidian default, light and dark"
+  },
+  "sourceVideo": {
+    "decodedFrames": 120,
+    "recordedFPS": 24,
+    "width": 1134,
+    "height": 898,
+    "activeFrames": [
+      22,
+      105
+    ],
+    "over1px": 79,
+    "over100px": 17,
+    "medianAbsoluteDrift": 51,
+    "maxAbsoluteDrift": 244,
+    "fullAnalysis": "artifacts/source-scroll-analysis.json"
+  },
+  "tests": {
+    "unit": 384,
+    "linking": [
+      {
+        "name": "single click links exact selection; one native undo restores it",
+        "passed": true
+      },
+      {
+        "name": "cancel and Enter/Space do not duplicate panels or edit source",
+        "passed": true
+      },
+      {
+        "name": "threshold click and irreversible drag-return keep distinct behavior",
+        "passed": true
+      },
+      {
+        "name": "valid margin drag opens once and Escape cancels a gesture",
+        "passed": true
+      },
+      {
+        "name": "quoted Chinese HTML preview is read-only; move retains bytes and native undo retains attachment",
+        "passed": true
+      },
+      {
+        "name": "raw XMind path preserves binary bytes and original extension",
+        "passed": true
+      },
+      {
+        "name": "same-name conflict can use existing file and keeps external original",
+        "passed": true
+      },
+      {
+        "name": "exact vault path resolves to existing TFile with no move operation",
+        "passed": true
+      },
+      {
+        "name": "folder path and stale input generation show the current result",
+        "passed": true
+      }
+    ],
+    "numbers": [
+      {
+        "name": "source: dense original has six exact source/card pairs in parse order",
+        "passed": true
+      },
+      {
+        "name": "preview: dense original has six exact source/card pairs in parse order",
+        "passed": true
+      },
+      {
+        "name": "source: enabling numbers from disabled performs zero routing, SVG d writes and obstacle reads",
+        "passed": true
+      },
+      {
+        "name": "preview: enabling numbers from disabled performs zero routing, SVG d writes and obstacle reads",
+        "passed": true
+      },
+      {
+        "name": "all four modes switch without residual markers; line style and occurrence numbers remain stable",
+        "passed": true
+      },
+      {
+        "name": "light: keyboard focus highlights both number endpoints, the card and the original text",
+        "passed": true
+      },
+      {
+        "name": "dark: keyboard focus highlights both number endpoints, the card and the original text",
+        "passed": true
+      },
+      {
+        "name": "a clipped source endpoint retains its visible target and unchanged occurrence number",
+        "passed": true
+      },
+      {
+        "name": "duplicate appearances have separate deterministic numbers across redraw, reading mode and reopen",
+        "passed": true
+      },
+      {
+        "name": "both complete settings entries and quick controls expose the same four display choices",
+        "passed": true
+      },
+      {
+        "name": "source: original dense connectors explicitly report a complete route or a paired continuation for every visible relation",
+        "passed": true
+      },
+      {
+        "name": "preview: original dense connectors explicitly report a complete route or a paired continuation for every visible relation",
+        "passed": true
+      },
+      {
+        "name": "source/straight/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "source/straight/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "source/elbow/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "source/elbow/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "source/curve/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "source/curve/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "preview/straight/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "preview/straight/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "preview/elbow/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "preview/elbow/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "preview/curve/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      },
+      {
+        "name": "preview/curve/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+        "passed": true
+      }
+    ],
+    "relink": [
+      {
+        "name": "only the second identical occurrence changes; alias, neighboring manual placement and native Undo/Redo stay exact",
+        "passed": true
+      },
+      {
+        "name": "a link without an explicit alias stays without an alias",
+        "passed": true
+      },
+      {
+        "name": "unverified heading requires explicit 保留子路径",
+        "passed": true
+      },
+      {
+        "name": "unverified heading requires explicit 移除子路径",
+        "passed": true
+      },
+      {
+        "name": "unverified heading requires explicit 取消",
+        "passed": true
+      },
+      {
+        "name": "verified subpath #Known is preserved without extra confirmation",
+        "passed": true
+      },
+      {
+        "name": "verified subpath #^known is preserved without extra confirmation",
+        "passed": true
+      },
+      {
+        "name": "an unresolved card can be relinked without creating or deleting its old target",
+        "passed": true
+      },
+      {
+        "name": "reading-mode relink restores the mode and scroll position",
+        "passed": true
+      },
+      {
+        "name": "an unsaved edit from a same-note split invalidates the captured occurrence without overwriting either editor",
+        "passed": true
+      },
+      {
+        "name": "a failing external path leaves the captured original link untouched",
+        "passed": true
+      }
+    ],
+    "lifecycle": [
+      {
+        "name": "native pointer free-card drag changes only its own placement",
+        "passed": true,
+        "unchangedNeighbors": 5,
+        "movement": 65
+      },
+      {
+        "name": "source and reading split panes scroll independently",
+        "passed": true,
+        "unchangedSource": 6,
+        "unchangedReading": 6,
+        "readingDelta": 65
+      },
+      {
+        "name": "reading section refresh and retained-sizer host removal reconnect native cards",
+        "passed": true,
+        "reattachedToSameSizer": true,
+        "connectedCards": 6,
+        "cards": 6
+      },
+      {
+        "name": "settled source and reading panes schedule zero idle renders",
+        "passed": true,
+        "diagnostics": [
+          {
+            "mode": "source",
+            "renders": 0,
+            "measurements": 0,
+            "routes": 0,
+            "svgWrites": 0,
+            "markerWrites": 0,
+            "work": []
+          },
+          {
+            "mode": "preview",
+            "renders": 0,
+            "measurements": 0,
+            "routes": 0,
+            "svgWrites": 0,
+            "markerWrites": 0,
+            "work": []
+          }
+        ]
+      },
+      {
+        "name": "large scroll into a new virtualized region reports geometry costs separately",
+        "passed": true,
+        "before": {
+          "scrollTop": 0,
+          "scrollHeight": 3856,
+          "height": 1021,
+          "obstacleRevision": 14,
+          "measuredTop": -1021,
+          "measuredBottom": 2042
+        },
+        "after": {
+          "scrollTop": 2955,
+          "obstacleRevision": 18,
+          "diagnostics": {
+            "renders": 4,
+            "measurements": 4,
+            "routes": 4,
+            "svgWrites": 6,
+            "markerWrites": 48,
+            "work": [
+              1.3999999985098839,
+              1.3999999985098839,
+              1.3000000044703484,
+              0.8999999985098839
+            ]
+          },
+          "measuredTop": 1934,
+          "measuredBottom": 4997
+        },
+        "fullObstacleScans": 4,
+        "classification": "new-region; excluded from warm-cache budgets"
+      },
+      {
+        "name": "disabling the plugin unloads native layers and restores owned sizer positioning",
+        "passed": true,
+        "nativeLayers": 0,
+        "fixedLayers": 0,
+        "parents": [
+          {
+            "owned": true,
+            "previous": "",
+            "current": ""
+          }
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "performance": [
+    {
+      "phase": "baseline",
+      "mode": "preview",
+      "name": "plugin-disabled",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.699999999953434,
+      "longestFrame": 5.7000000000116415,
+      "workP95": null,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": null,
+      "scrollHeight": 2382,
+      "routes": null,
+      "measurements": null,
+      "markerWrites": null,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.15"
+      }
+    },
+    {
+      "phase": "baseline",
+      "mode": "preview",
+      "name": "always",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 11.100000000034925,
+      "workP95": 4.5,
+      "maxDrift": 17,
+      "svgD": 1505,
+      "scans": 0,
+      "saves": 0,
+      "workP50": 1.3999999985098839,
+      "scrollHeight": 2382,
+      "routes": null,
+      "measurements": null,
+      "markerWrites": null,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.15"
+      }
+    },
+    {
+      "phase": "baseline",
+      "mode": "source",
+      "name": "plugin-disabled",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7000000000116415,
+      "workP95": null,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": null,
+      "scrollHeight": 2609,
+      "routes": null,
+      "measurements": null,
+      "markerWrites": null,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.15"
+      }
+    },
+    {
+      "phase": "baseline",
+      "mode": "source",
+      "name": "always",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.699999999953434,
+      "longestFrame": 5.7999999999883585,
+      "workP95": 2.7999999970197678,
+      "maxDrift": 17,
+      "svgD": 2820,
+      "scans": 0,
+      "saves": 0,
+      "workP50": 2.2999999970197678,
+      "scrollHeight": 2609,
+      "routes": null,
+      "measurements": null,
+      "markerWrites": null,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.15"
+      }
+    },
+    {
+      "phase": "final",
+      "mode": "preview",
+      "name": "plugin-disabled",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7000000000116415,
+      "workP95": null,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": null,
+      "scrollHeight": 2382,
+      "routes": null,
+      "measurements": null,
+      "markerWrites": null,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.20"
+      }
+    },
+    {
+      "phase": "final",
+      "mode": "preview",
+      "name": "always",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7999999999883585,
+      "workP95": 0.4000000059604645,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": 0.29999999701976776,
+      "scrollHeight": 2382,
+      "routes": 0,
+      "measurements": 0,
+      "markerWrites": 0,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.20"
+      }
+    },
+    {
+      "phase": "final",
+      "mode": "preview",
+      "name": "numbers",
+      "frames": 150,
+      "p50": 5.5,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7000000000116415,
+      "workP95": 0.30000000447034836,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": 0.19999999552965164,
+      "scrollHeight": 2382,
+      "routes": 0,
+      "measurements": 0,
+      "markerWrites": 0,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.20"
+      }
+    },
+    {
+      "phase": "final",
+      "mode": "source",
+      "name": "plugin-disabled",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7999999999883585,
+      "workP95": null,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": null,
+      "scrollHeight": 2609,
+      "routes": null,
+      "measurements": null,
+      "markerWrites": null,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.20"
+      }
+    },
+    {
+      "phase": "final",
+      "mode": "source",
+      "name": "always",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7000000000116415,
+      "workP95": 0.3999999985098839,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": 0.29999999701976776,
+      "scrollHeight": 2609,
+      "routes": 0,
+      "measurements": 0,
+      "markerWrites": 0,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.20"
+      }
+    },
+    {
+      "phase": "final",
+      "mode": "source",
+      "name": "numbers",
+      "frames": 150,
+      "p50": 5.599999999976717,
+      "p95": 5.7000000000116415,
+      "longestFrame": 5.7000000000116415,
+      "workP95": 0.30000000447034836,
+      "maxDrift": 0,
+      "svgD": 0,
+      "scans": 0,
+      "saves": 0,
+      "workP50": 0.20000000298023224,
+      "scrollHeight": 2609,
+      "routes": 0,
+      "measurements": 0,
+      "markerWrites": 0,
+      "observedLongTasksOver50ms": 0,
+      "traceLongTasksOver50ms": 0,
+      "samples": 150,
+      "environment": {
+        "dpr": 1,
+        "theme": "mod-windows is-frameless is-hidden-frameless obsidian-app styled-scrollbars show-inline-title is-floating-nav auto-full-screen show-ribbon show-view-header theme-dark",
+        "zoom": 1,
+        "refresh": "rAF sample below",
+        "plugin": "0.2.20"
+      }
+    }
+  ],
+  "compositorCaptures": [
+    {
+      "phase": "baseline",
+      "mode": "source",
+      "method": "fixed-x normalized cross correlation of source/card labels in compositor frames",
+      "frames": [
+        {
+          "frame": 0,
+          "timestamp": 1794840980.557308,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 1,
+          "timestamp": 1794840980.561602,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 2,
+          "timestamp": 1794840980.630481,
+          "body": -90,
+          "bodyConfidence": 1,
+          "card": -90,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 3,
+          "timestamp": 1794840980.679602,
+          "body": -180,
+          "bodyConfidence": 1,
+          "card": -180,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 4,
+          "timestamp": 1794840980.723544,
+          "body": -70,
+          "bodyConfidence": 1,
+          "card": -70,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 5,
+          "timestamp": 1794840980.776781,
+          "body": 40,
+          "bodyConfidence": 1,
+          "card": 40,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 6,
+          "timestamp": 1794840980.821172,
+          "body": -40,
+          "bodyConfidence": 1,
+          "card": -40,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 7,
+          "timestamp": 1794840980.869179,
+          "body": -120,
+          "bodyConfidence": 1,
+          "card": -120,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 8,
+          "timestamp": 1794840980.912847,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 9,
+          "timestamp": 1794840980.962465,
+          "body": 80,
+          "bodyConfidence": 1,
+          "card": 80,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 10,
+          "timestamp": 1794840981.006742,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 11,
+          "timestamp": 1794840981.053098,
+          "body": -80,
+          "bodyConfidence": 1,
+          "card": -80,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 12,
+          "timestamp": 1794840981.103156,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 13,
+          "timestamp": 1794840981.14698,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        }
+      ],
+      "validFrames": 14,
+      "capturedFrames": 14,
+      "maxDriftPixels": 0,
+      "over1Pixel": 0,
+      "dpr": 1,
+      "observedSamplingHz": 22.04615115895432
+    },
+    {
+      "phase": "final",
+      "mode": "source",
+      "method": "fixed-x normalized cross correlation of source/card labels in compositor frames",
+      "frames": [
+        {
+          "frame": 0,
+          "timestamp": 1794840754.914626,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 1,
+          "timestamp": 1794840754.988713,
+          "body": -90,
+          "bodyConfidence": 1,
+          "card": -90,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 2,
+          "timestamp": 1794840755.035324,
+          "body": -180,
+          "bodyConfidence": 1,
+          "card": -180,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 3,
+          "timestamp": 1794840755.079632,
+          "body": -70,
+          "bodyConfidence": 1,
+          "card": -70,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 4,
+          "timestamp": 1794840755.129638,
+          "body": 40,
+          "bodyConfidence": 1,
+          "card": 40,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 5,
+          "timestamp": 1794840755.174117,
+          "body": -40,
+          "bodyConfidence": 1,
+          "card": -40,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 6,
+          "timestamp": 1794840755.21858,
+          "body": -120,
+          "bodyConfidence": 1,
+          "card": -120,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 7,
+          "timestamp": 1794840755.268636,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 8,
+          "timestamp": 1794840755.313138,
+          "body": 80,
+          "bodyConfidence": 1,
+          "card": 80,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 9,
+          "timestamp": 1794840755.363086,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 10,
+          "timestamp": 1794840755.40744,
+          "body": -80,
+          "bodyConfidence": 1,
+          "card": -80,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 11,
+          "timestamp": 1794840755.451912,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 12,
+          "timestamp": 1794840755.50195,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        }
+      ],
+      "validFrames": 13,
+      "capturedFrames": 13,
+      "maxDriftPixels": 0,
+      "over1Pixel": 0,
+      "dpr": 1,
+      "observedSamplingHz": 20.431647760670547
+    },
+    {
+      "phase": "final",
+      "mode": "preview",
+      "method": "fixed-x normalized cross correlation of source/card labels in compositor frames",
+      "frames": [
+        {
+          "frame": 0,
+          "timestamp": 1794840753.747978,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 1,
+          "timestamp": 1794840753.820068,
+          "body": -90,
+          "bodyConfidence": 1,
+          "card": -90,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 2,
+          "timestamp": 1794840753.87416,
+          "body": -180,
+          "bodyConfidence": 1,
+          "card": -180,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 3,
+          "timestamp": 1794840753.929582,
+          "body": -70,
+          "bodyConfidence": 1,
+          "card": -70,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 4,
+          "timestamp": 1794840753.97419,
+          "body": 40,
+          "bodyConfidence": 1,
+          "card": 40,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 5,
+          "timestamp": 1794840754.027341,
+          "body": -40,
+          "bodyConfidence": 1,
+          "card": -40,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 6,
+          "timestamp": 1794840754.068458,
+          "body": -120,
+          "bodyConfidence": 1,
+          "card": -120,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 7,
+          "timestamp": 1794840754.112968,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 8,
+          "timestamp": 1794840754.157476,
+          "body": 80,
+          "bodyConfidence": 1,
+          "card": 80,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 9,
+          "timestamp": 1794840754.211642,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 10,
+          "timestamp": 1794840754.251965,
+          "body": -80,
+          "bodyConfidence": 1,
+          "card": -80,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 11,
+          "timestamp": 1794840754.306162,
+          "body": -20,
+          "bodyConfidence": 1,
+          "card": -20,
+          "cardConfidence": 1,
+          "drift": 0
+        },
+        {
+          "frame": 12,
+          "timestamp": 1794840754.346684,
+          "body": 0,
+          "bodyConfidence": 1,
+          "card": 0,
+          "cardConfidence": 1,
+          "drift": 0
+        }
+      ],
+      "validFrames": 13,
+      "capturedFrames": 13,
+      "maxDriftPixels": 0,
+      "over1Pixel": 0,
+      "dpr": 1,
+      "observedSamplingHz": 20.04322632414168
+    }
+  ],
+  "denseRelations": [
+    {
+      "fixture": "original-dense",
+      "mode": "source",
+      "relations": [
+        {
+          "label": "Early Access",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0.00000762939453125,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 420.3718719482422,
+            "tail": 11.3499755859375,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2.5,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:left|0,1|-601.0469:887.875:891.125:1476:0",
+              "shared:left|1,0|887.875:400.15:601.0469:",
+              "shared:left|0,1|-400.15:847.5:887.875:",
+              "private:left|1,0|847.5:236.3:400.15:1476:3"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "1",
+              "text": "1",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "1",
+              "text": "1",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "dives",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 767.034423828125,
+            "tail": 11.375,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2.5,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:right|0,1|-766.8906:887.875:891.125:1526:0",
+              "shared:right|1,0|887.875:1083.0469:1412.3:",
+              "private:right|0,1|-1412.3:781.5:887.875:1526:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "2",
+              "text": "2",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "2",
+              "text": "2",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "Verse",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 705.4656372070312,
+            "tail": 121.47500610351562,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:left|0,1|-846.8906:887.875:891.125:1548:0",
+              "shared:left|1,0|887.875:601.0469:846.8906:",
+              "shared:left|1,0|887.875:400.15:601.0469:",
+              "private:left|0,1|-400.15:887.875:1021.5:1548:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "3",
+              "text": "3",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "3",
+              "text": "3",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "Scene Graph",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 785.6687622070312,
+            "tail": 121.35000610351562,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:left|0,1|-954.3437:887.875:891.125:1577:0",
+              "shared:left|1,0|887.875:601.0469:846.8906:",
+              "shared:left|1,0|887.875:400.15:601.0469:",
+              "shared:left|0,1|-400.15:847.5:887.875:",
+              "private:left|0,1|-400.15:781.5:847.5:1577:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "4",
+              "text": "4",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "4",
+              "text": "4",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "model-assisted",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 358.128173828125,
+            "tail": 11.625,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:right|0,1|-1083.0469:887.875:891.125:1609:0",
+              "shared:right|1,0|887.875:1083.0469:1412.3:",
+              "private:right|0,1|-1412.3:887.875:901.5:1609:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "5",
+              "text": "5",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "5",
+              "text": "5",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "ship",
+          "state": "continuation",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "reason": "search-exhausted",
+          "route": {
+            "complete": false,
+            "startError": null,
+            "endError": null,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 0,
+            "tail": 0,
+            "maxTurn": 0,
+            "turningLength": 0,
+            "startTangentError": null,
+            "endTangentError": null,
+            "shared": false,
+            "segmentIDs": []
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "6",
+              "text": "6",
+              "visible": true,
+              "tabIndex": 0,
+              "active": false,
+              "rect": {
+                "x": 1267,
+                "y": 652.703125,
+                "width": 16,
+                "height": 16,
+                "top": 652.703125,
+                "right": 1283,
+                "bottom": 668.703125,
+                "left": 1267
+              }
+            },
+            {
+              "end": "target",
+              "number": "6",
+              "text": "6",
+              "visible": true,
+              "tabIndex": 0,
+              "active": false,
+              "rect": {
+                "x": 1556.296875,
+                "y": 701.078125,
+                "width": 16,
+                "height": 16,
+                "top": 701.078125,
+                "right": 1572.296875,
+                "bottom": 717.078125,
+                "left": 1556.296875
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "fixture": "original-dense",
+      "mode": "preview",
+      "relations": [
+        {
+          "label": "Early Access",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 329.52813720703125,
+            "tail": 11.53125,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:left|0,1|-601.0469:789.9688:793.2188:1476:0",
+              "shared:left|1,0|789.9688:290.3:601.0469:",
+              "private:left|0,1|-290.3:789.9688:793.5:1476:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "1",
+              "text": "1",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "1",
+              "text": "1",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "dives",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 777.128173828125,
+            "tail": 11.46875,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2.5,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:right|0,1|-766.8906:789.9688:793.2188:1526:0",
+              "shared:right|1,0|789.9688:1083.0469:1412.3:",
+              "private:right|0,1|-1412.3:673.5:789.9688:1526:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "2",
+              "text": "2",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "2",
+              "text": "2",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "Verse",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 695.3718872070312,
+            "tail": 11.53125,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:left|0,1|-846.8906:789.9688:793.2188:1548:0",
+              "shared:left|1,0|789.9688:601.0469:846.8906:",
+              "shared:left|1,0|789.9688:290.3:601.0469:",
+              "private:left|0,1|-290.3:789.9688:913.5:1548:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "3",
+              "text": "3",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "3",
+              "text": "3",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "Scene Graph",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 795.7625122070312,
+            "tail": 11.46875,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2.5,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:left|0,1|-954.3437:789.9688:793.2188:1577:0",
+              "shared:left|1,0|789.9688:601.0469:846.8906:",
+              "shared:left|1,0|789.9688:290.3:601.0469:",
+              "private:left|0,1|-290.3:673.5:789.9688:1577:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "4",
+              "text": "4",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "4",
+              "text": "4",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "model-assisted",
+          "state": "complete",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "route": {
+            "complete": true,
+            "startError": 0,
+            "endError": 0,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 348.034423828125,
+            "tail": 11.53125,
+            "maxTurn": 1.5707963267948966,
+            "turningLength": 2,
+            "startTangentError": 0,
+            "endTangentError": 0,
+            "shared": true,
+            "segmentIDs": [
+              "private:right|0,1|-1083.0469:789.9688:793.2188:1609:0",
+              "shared:right|1,0|789.9688:1083.0469:1412.3:",
+              "private:right|0,1|-1412.3:789.9688:793.5:1609:2"
+            ]
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "5",
+              "text": "5",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            },
+            {
+              "end": "target",
+              "number": "5",
+              "text": "5",
+              "visible": false,
+              "tabIndex": -1,
+              "active": false,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ]
+        },
+        {
+          "label": "ship",
+          "state": "continuation",
+          "sourceVisible": true,
+          "targetVisible": true,
+          "reason": "search-exhausted",
+          "route": {
+            "complete": false,
+            "startError": null,
+            "endError": null,
+            "jointError": 0,
+            "collisions": [],
+            "totalLength": 0,
+            "tail": 0,
+            "maxTurn": 0,
+            "turningLength": 0,
+            "startTangentError": null,
+            "endTangentError": null,
+            "shared": false,
+            "segmentIDs": []
+          },
+          "markers": [
+            {
+              "end": "source",
+              "number": "6",
+              "text": "6",
+              "visible": true,
+              "tabIndex": 0,
+              "active": false,
+              "rect": {
+                "x": 1267,
+                "y": 662.796875,
+                "width": 16,
+                "height": 16,
+                "top": 662.796875,
+                "right": 1283,
+                "bottom": 678.796875,
+                "left": 1267
+              }
+            },
+            {
+              "end": "target",
+              "number": "6",
+              "text": "6",
+              "visible": true,
+              "tabIndex": 0,
+              "active": false,
+              "rect": {
+                "x": 1556.296875,
+                "y": 701.078125,
+                "width": 16,
+                "height": 16,
+                "top": 701.078125,
+                "right": 1572.296875,
+                "bottom": 717.078125,
+                "left": 1556.296875
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Original recording measures 24fps video pixels, not application FPS.",
+    "Compositor capture is sparse: baseline and final both had zero sampled pixel drift on this hardware; it does not reproduce or exclude lag between sampled frames.",
+    "DOM scroll probe deliberately measures immediately after setting scrollTop; baseline drift17px is a synchronization probe, not a measured display-frame error.",
+    "Warm-scroll figures exclude first render and new-region geometry work; raw local traces remain under artifacts/iteration-16-20/.",
+    "Physical cross-volume copy is simulated in filesystem tests; Windows file locks and denied access are injected, not tested with a second process holding an OS lock.",
+    "No final1.10.6, macOS/Linux, user theme/plugin combination or large-vault endurance run."
+  ]
+}

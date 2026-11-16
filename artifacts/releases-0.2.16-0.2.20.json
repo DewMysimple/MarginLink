@@ -1,0 +1,77 @@
+[
+  {
+    "version": "0.2.16",
+    "commit": "b8fa475",
+    "testsPassed": 317,
+    "zip": "dist/MarginLink-0.2.16.zip",
+    "zipSHA256": "bc9bf72cc3a1ed338fa19e88a4b4ac0aba827787701df98e493a73cbf075707f",
+    "filesSHA256": {
+      "manifest.json": "e80c8a34de202a18969b3f68975d798073de26ed0b417b9c762dd1bde6343eb0",
+      "main.js": "10fbb89a70f635b044654737b0312aceea3b6e4425e0a862ca7fc0e7d480aa9c",
+      "styles.css": "980177563c8fc60ecefe428aeb4591f4dac28e9bb3ce435fa0f10cee528c5401",
+      "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+      "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+    },
+    "verified": true
+  },
+  {
+    "version": "0.2.17",
+    "commit": "608b899",
+    "testsPassed": 351,
+    "zip": "dist/MarginLink-0.2.17.zip",
+    "zipSHA256": "689944db2d97cf5686f1d1aceb9cf2cbb9ff94f73bcb06498ce05f272bbd683f",
+    "filesSHA256": {
+      "manifest.json": "63d7b3fa04b4fc9eed1c6449909b8b989f759b49b8746bfa8252a792ccfdb07e",
+      "main.js": "0b1069cd7a75bc3cb2d84d20188ed411d22fd2c71ee55ba45bb169ebc0581803",
+      "styles.css": "980177563c8fc60ecefe428aeb4591f4dac28e9bb3ce435fa0f10cee528c5401",
+      "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+      "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+    },
+    "verified": true
+  },
+  {
+    "version": "0.2.18",
+    "commit": "6e681a0",
+    "testsPassed": 356,
+    "zip": "dist/MarginLink-0.2.18.zip",
+    "zipSHA256": "c3818a174f8301043895753aca2f8fb807ba5e9d1f66609656b23cbf07c12701",
+    "filesSHA256": {
+      "manifest.json": "8948baef06ce2324b7140a0bde51419d8f2f6c483d478288670545a90d21e628",
+      "main.js": "062f5317337fd9b5b3533c68705d2a86445e12a8717c5d7000594bfa6f7bf8bc",
+      "styles.css": "844720773da0f81d09bf54739ceb344a9706fc6ed42cc9a95055893c33377154",
+      "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+      "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+    },
+    "verified": true
+  },
+  {
+    "version": "0.2.19",
+    "commit": "323dc5d",
+    "testsPassed": 360,
+    "zip": "dist/MarginLink-0.2.19.zip",
+    "zipSHA256": "25aaeae5f0a61be46555b75bbc87799f916cff03f1814f94e2cc6a47a5f65ddd",
+    "filesSHA256": {
+      "manifest.json": "3965b8c7a3f7564af63873e70201cf8e5cd2c1182f497e594e1327d04b05655d",
+      "main.js": "917f8899e06af9ed54646a8a59a12dd991b0b02779a343bd3915a5cc09ca6067",
+      "styles.css": "7586c61728ea92508d1ac444e45100c2deefab3d0afb10d1882dca87cc6b2da1",
+      "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+      "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+    },
+    "verified": true
+  },
+  {
+    "version": "0.2.20",
+    "testsPassed": 384,
+    "zip": "dist/margin-link-0.2.20.zip",
+    "zipSHA256": "b6560d3d57aeadb6755c6f47f25671b39ad5a6b7d2eadb8f6c8a76b965a50803",
+    "filesSHA256": {
+      "manifest.json": "755395200bdbef7615af055380f4a52ba903dfc4b2e85d311eadbe566d23758a",
+      "main.js": "eb0ac3ba728f4b7a11020aaf78ea19d3d05f8f4954331e580720fb61dcf171f7",
+      "styles.css": "7586c61728ea92508d1ac444e45100c2deefab3d0afb10d1882dca87cc6b2da1",
+      "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+      "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+    },
+    "verified": true,
+    "commitLookup": "git log -1 --format=%H -- manifest.json (the 0.2.20 version commit)"
+  }
+]

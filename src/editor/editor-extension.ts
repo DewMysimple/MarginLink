@@ -7,6 +7,7 @@ import { layoutIdentities } from '../core/layout-identity';
 export interface EditorHost {
   bridges: Set<EditorBridge>;
   refresh(): void;
+  documentChanged?(bridge: EditorBridge): void;
 }
 export class EditorBridge {
   parsed: ParsedDocument;
@@ -29,6 +30,7 @@ export class EditorBridge {
       this.parsed = parseDocument(this.text);
       this.identities = layoutIdentities(this.text, this.parsed.links);
       this.hint = undefined;
+      this.host.documentChanged?.(this);
     }
     if (update.docChanged || update.selectionSet || update.viewportChanged || update.geometryChanged || update.focusChanged) this.host.refresh();
   }

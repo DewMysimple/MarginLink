@@ -55,6 +55,10 @@ artifacts/*
 !artifacts/stability-0.2.2-restart.json
 !artifacts/stability-0.2.2-restart.png
 !artifacts/preferences-restart.json
+!artifacts/iteration-16-20-summary.json
+!artifacts/source-scroll-analysis.json
+!artifacts/releases-0.2.16-0.2.20.json
+!artifacts/iteration-final-numbers.png
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/
