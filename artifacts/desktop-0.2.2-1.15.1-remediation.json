@@ -1,0 +1,102 @@
+{
+  "host": "Remediation A - test-vault - Obsidian 1.15.1",
+  "pluginVersion": "0.2.2",
+  "observations": [
+    {
+      "scenario": "immediate navigation",
+      "a": {
+        "rect": {
+          "x": 1663.765625,
+          "y": 641.4453125,
+          "width": 196,
+          "height": 48,
+          "top": 641.4453125,
+          "right": 1859.765625,
+          "bottom": 689.4453125,
+          "left": 1663.765625
+        },
+        "side": "right",
+        "line": "M 669.640625 172.0625 L 1319.765625 587.0078125",
+        "manual": "true"
+      },
+      "b": {
+        "rect": {
+          "x": 556.5,
+          "y": 444.4375,
+          "width": 196,
+          "height": 48,
+          "top": 444.4375,
+          "right": 752.5,
+          "bottom": 492.4375,
+          "left": 556.5
+        },
+        "side": "left",
+        "line": "M 679.78125 172.0625 L 408.5 390",
+        "manual": "true"
+      },
+      "layouts": [
+        {
+          "source": "Remediation B.md",
+          "key": "7e72f103c61d31f5695d73d175ddbfe36c58f3ede65723fb340ca71c53c0841a",
+          "side": "left",
+          "xNormalized": 0.8450413223140496,
+          "yOffset": 9.080729166666666,
+          "updated": 1794801962160
+        },
+        {
+          "source": "Remediation A.md",
+          "key": "7e72f103c61d31f5f7d15c3a04c218c0cd7412ed3ea1792b340ca71c53c0841a",
+          "side": "right",
+          "xNormalized": 0.5581323818897638,
+          "yOffset": 17.289388020833332,
+          "updated": 1794801961936
+        }
+      ]
+    },
+    {
+      "scenario": "120ms Vault read loading delay",
+      "a": {
+        "rect": {
+          "x": 1553,
+          "y": 646.4375,
+          "width": 196,
+          "height": 48,
+          "top": 646.4375,
+          "right": 1749,
+          "bottom": 694.4375,
+          "left": 1553
+        },
+        "side": "right",
+        "line": "M 669.640625 172.0625 L 1209 592",
+        "manual": "true"
+      },
+      "layouts": [
+        {
+          "source": "Remediation A.md",
+          "key": "7e72f103c61d31f5f7d15c3a04c218c0cd7412ed3ea1792b340ca71c53c0841a",
+          "side": "right",
+          "xNormalized": 0.1220472440944882,
+          "yOffset": 17.497395833333332,
+          "updated": 1794801962566
+        },
+        {
+          "source": "Remediation B.md",
+          "key": "7e72f103c61d31f5695d73d175ddbfe36c58f3ede65723fb340ca71c53c0841a",
+          "side": "left",
+          "xNormalized": 0.8450413223140496,
+          "yOffset": 9.080729166666666,
+          "updated": 1794801962160
+        }
+      ]
+    },
+    {
+      "scenario": "CRLF reading/editing",
+      "layoutRestored": true,
+      "dragPreservedRawBytes": true,
+      "hostNormalizedNewlines": true,
+      "beforeSHA256": "0132b85fb831b56fa686a1bce6f17ccd385ebd0c4e1388f5d1cdb4288c55bed4",
+      "afterSHA256": "47cb80ac3084a897012bc8f00e5402a240f85d869c0641954edf9f4b240edf87"
+    }
+  ],
+  "markdownHashesUnchanged": true
+}

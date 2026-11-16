@@ -1,17 +1,15 @@
 import type { RelativePosition } from '../types';
-import { lane, positionFromDrop, type LayoutAnchor, type LayoutInput, type Placement } from './layout-engine';
+import { clamp, lane, positionFromDrop, type LayoutAnchor, type LayoutInput, type Placement } from './layout-engine';
 
 export interface CardDragContext { input: LayoutInput; anchor: LayoutAnchor; occupied: Placement[]; valid: () => boolean }
 export class CardDragController {
   private cleanup?: () => void;
   private current?: { key: string; placement: Placement };
   private suppressedClick?: string;
-  private ghost: HTMLDivElement;
   private bands: HTMLDivElement[];
   constructor(private root: HTMLElement, private context: (key: string) => CardDragContext | undefined,
     private preview: (key: string, placement?: Placement) => void,
     private commit: (key: string, relative: RelativePosition) => void) {
-    this.ghost = root.createDiv({ cls: 'margin-link-position-ghost', text: '放到正文两侧空白 · Esc 取消' });
     this.bands = ['left', 'right'].map(() => root.createDiv({ cls: 'margin-link-position-band' }));
   }
   get dragging(): boolean { return !!this.cleanup; }
@@ -28,18 +26,30 @@ export class CardDragController {
     this.suppressedClick = undefined;
     const context = this.context(key);
     if (!context || event.button !== 0) return;
-    this.cancel(); this.suppressedClick = undefined; event.preventDefault(); event.stopPropagation();
+    this.cancel(); this.suppressedClick = undefined;
+    // Read the outer button even when the event target is text or an SVG child.
+    const rect = card.getBoundingClientRect();
+    if (![rect.left, rect.top, rect.width, rect.height, event.clientX, event.clientY].every(Number.isFinite) || rect.width <= 0 || rect.height <= 0) return;
+    const grabPoint = { u: clamp((event.clientX - rect.left) / rect.width, 0, 1), v: clamp((event.clientY - rect.top) / rect.height, 0, 1) };
+    event.preventDefault(); event.stopPropagation();
     // Native button focus can scroll the note on its first pointerdown, which
     // would cancel the gesture before the threshold. Keep focus on the card.
     card.focus({ preventScroll: true });
     const doc = this.root.ownerDocument, win = doc.defaultView!;
     const start = { x: event.clientX, y: event.clientY }, pointerId = event.pointerId;
-    const host = this.root.getBoundingClientRect();
     let moved = false;
-    let drop: ReturnType<typeof positionFromDrop>;
+    const locate = (e: PointerEvent) => {
+      const latest = this.context(key), host = this.root.getBoundingClientRect();
+      if (!context.valid() || !latest?.valid() || ![host.left, host.top, host.width, host.height].every(Number.isFinite) || host.width <= 0 || host.height <= 0 ||
+          ![latest.input.width, latest.input.height, ...Object.values(latest.input.body), ...Object.values(latest.input.viewport)].every(Number.isFinite) || latest.input.width <= 0 || latest.input.height <= 0) {
+        cancel(); return;
+      }
+      return positionFromDrop(latest.input, latest.anchor, e.clientX - host.left, e.clientY - host.top, latest.occupied, grabPoint);
+    };
     const reset = (suppressClick = moved) => {
+      if (this.cleanup !== cancel) return;
       doc.removeEventListener('pointermove', move, true); doc.removeEventListener('pointerup', up, true);
-      doc.removeEventListener('pointercancel', cancel, true); doc.removeEventListener('keydown', keydown, true);
+      doc.removeEventListener('pointercancel', pointerCancel, true); doc.removeEventListener('keydown', keydown, true);
       doc.removeEventListener('focusin', focus, true);
       doc.removeEventListener('scroll', cancel, true); win.removeEventListener('blur', cancel); win.removeEventListener('resize', cancel);
       card.removeEventListener('lostpointercapture', cancel);
@@ -50,6 +60,7 @@ export class CardDragController {
       this.preview(key);
     };
     const cancel = () => reset(true);
+    const pointerCancel = (e: PointerEvent) => { if (e.pointerId === pointerId) cancel(); };
     const focus = (e: FocusEvent) => { if (!card.contains(e.target as Node)) cancel(); };
     const move = (e: PointerEvent) => {
       if (e.pointerId !== pointerId) return;
@@ -58,11 +69,10 @@ export class CardDragController {
       if (!moved) return;
       e.preventDefault();
       this.root.classList.add('margin-link-card-dragging');
-      drop = positionFromDrop(context.input, context.anchor, e.clientX - host.left, e.clientY - host.top, context.occupied);
+      const drop = locate(e);
+      if (this.cleanup !== cancel) return;
       this.root.classList.toggle('margin-link-drop-valid', !!drop);
       this.root.classList.toggle('margin-link-snapped', !!drop?.snapped);
-      this.ghost.style.transform = `translate(${Math.max(0, Math.min(host.width - 160, e.clientX - host.left + 10))}px, ${Math.max(0, Math.min(host.height - 40, e.clientY - host.top + 12))}px)`;
-      this.ghost.textContent = drop ? drop.snapped ? '已对齐并避让 · 放下保存' : '放下保存位置' : '无可用位置 · 松手恢复';
       if (drop) {
         this.current = { key, placement: drop.placement };
         this.preview(key, drop.placement);
@@ -71,7 +81,8 @@ export class CardDragController {
     const up = (e: PointerEvent) => {
       if (e.pointerId !== pointerId) return;
       // Validate the actual release point, even if no last pointermove was delivered.
-      const finalDrop = moved && context.valid() ? positionFromDrop(context.input, context.anchor, e.clientX - host.left, e.clientY - host.top, context.occupied) : undefined;
+      moved ||= Math.hypot(e.clientX - start.x, e.clientY - start.y) >= 5;
+      const finalDrop = moved ? locate(e) : undefined;
       reset();
       if (finalDrop) this.commit(key, finalDrop.relative);
     };
@@ -83,11 +94,11 @@ export class CardDragController {
     this.cleanup = cancel;
     try { card.setPointerCapture(pointerId); } catch { /* Document listeners remain a fallback. */ }
     doc.addEventListener('pointermove', move, true); doc.addEventListener('pointerup', up, true);
-    doc.addEventListener('pointercancel', cancel, true); doc.addEventListener('keydown', keydown, true);
+    doc.addEventListener('pointercancel', pointerCancel, true); doc.addEventListener('keydown', keydown, true);
     doc.addEventListener('focusin', focus, true);
     doc.addEventListener('scroll', cancel, true); win.addEventListener('blur', cancel); win.addEventListener('resize', cancel);
     card.addEventListener('lostpointercapture', cancel);
   }
   cancel(): void { this.cleanup?.(); }
-  destroy(): void { this.cancel(); this.ghost.remove(); this.bands.forEach(b => b.remove()); }
+  destroy(): void { this.cancel(); this.bands.forEach(b => b.remove()); }
 }

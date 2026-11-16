@@ -83,7 +83,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     await owner.locator('.margin-link-settings').waitFor();
     assert.equal(await owner.locator('.margin-link-settings h3').count(), 5);
     assert.equal(await owner.locator('[data-margin-key="layout"] select:not(.is-measuring)').inputValue(), 'balanced');
-    assert.equal(await owner.locator('[data-margin-key="placementMode"] select:not(.is-measuring)').inputValue(), 'auto');
+    assert.equal(await owner.locator('[data-margin-key="placementMode"] select:not(.is-measuring)').inputValue(), 'free');
     await owner.locator('[data-margin-key="lineStyle"] select:not(.is-measuring)').selectOption('elbow');
     assert((await owner.locator('.margin-link-settings-preview path.margin-link-connector').getAttribute('d')).includes(' H '));
     await closeSettings(owner);
@@ -289,7 +289,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     // Use the native settings action; no external application/profile writes.
     const panel = await full(); await panel.getByRole('button', { name: '恢复默认', exact: true }).click();
     await page.locator('.margin-link-confirm').getByRole('button', { name: '确认', exact: true }).click(); await closeFull();
-    await waitData(d => d.preferences.placementMode === 'auto' && d.layouts.length === 0);
+    await waitData(d => d.preferences.placementMode === 'free' && d.preferences.lines === 'always' && d.preferences.cardShape === 'square' && d.layouts.length === 0);
     await persist(); await unlink('test-vault/.obsidian/plugins/margin-link/data.json');
     await page.reload(); await page.waitForSelector('.margin-link-card');
     assert.equal(await page.locator('.margin-link-card').count(), 7); assert.equal(await diskText(), original);

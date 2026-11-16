@@ -3,11 +3,17 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 const phase = process.argv[2]; assert(['prepare', 'verify'].includes(phase));
+const outputPrefix = process.env.MARGINLINK_RESTART_PREFIX ?? 'artifacts/remediation';
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
 const page = browser.contexts().flatMap(c => c.pages()).find(p => p.url().startsWith('app://obsidian.md/'));
 await page.waitForFunction(() => typeof app !== 'undefined' && app.workspace && app.workspace.getLeavesOfType('markdown').length > 0);
 assert.equal(await page.evaluate(() => app.vault.getName()), 'test-vault');
+execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/show-isolated-test.ps1']);
+await page.bringToFront();
+await page.mouse.up();
+await new Promise(resolve => setTimeout(resolve, 350));
 const cdp = await page.context().newCDPSession(page);
 await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1680, height: 1000, deviceScaleFactor: 1, mobile: false });
 const sources = ['Remediation A.md', 'Remediation B.md'];
@@ -22,7 +28,7 @@ const hashes = async () => {
   return Object.fromEntries(await Promise.all(paths.map(async path => [path, createHash('sha256').update(await readFile(`test-vault/${path}`)).digest('hex')])));
 };
 const open = async source => {
-  await page.evaluate(async source => { await app.workspace.getLeavesOfType('markdown')[0].setViewState({ type: 'markdown', state: { file: source, mode: 'source', source: false } }); delete window.restartStable; }, source);
+  await page.evaluate(async source => { const leaf = app.workspace.getLeavesOfType('markdown')[0]; await leaf.setViewState({ type: 'markdown', state: { file: source, mode: 'source', source: false } }); app.workspace.setActiveLeaf(leaf, { focus: true }); leaf.view.editor.focus(); delete window.restartStable; }, source);
   await page.waitForSelector('.margin-link-host .margin-link-card');
   await page.waitForFunction(() => {
     const el = document.querySelector('.margin-link-host .margin-link-card-shell');
@@ -77,8 +83,8 @@ try {
     const positions = {};
     for (const source of sources) { await open(source); positions[source] = await actual(); compare(positions[source], expected.positions[source]); }
     assert.deepEqual(await hashes(), expected.hashes); assert.deepEqual(await data(), expected.data);
-    await page.screenshot({ path: 'artifacts/remediation-restart.png' });
-    await writeFile('artifacts/remediation-restart.json', JSON.stringify({ passed: true, titleBefore: expected.title, titleAfter: await page.title(), layoutsRestored: expected.data.layouts.length, positions, markdownHashesUnchanged: true }, null, 2));
+    await page.screenshot({ path: `${outputPrefix}-restart.png` });
+    await writeFile(`${outputPrefix}-restart.json`, JSON.stringify({ passed: true, titleBefore: expected.title, titleAfter: await page.title(), layoutsRestored: expected.data.layouts.length, positions, markdownHashesUnchanged: true }, null, 2));
     console.log('PASS full isolated application exit/relaunch: both manual rectangles and connector endpoints restored; all Markdown bytes unchanged.');
   }
 } finally { await browser.close(); }

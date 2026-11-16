@@ -10,6 +10,7 @@ import { resolveLink } from '../core/link-resolver';
 import { canOpenInObsidian } from '../core/file-capabilities';
 import { layoutCards, positionFromDrop, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
+import { cardTooltip } from './card-tooltip';
 import { connectorPath } from './connector-renderer';
 import { applyAppearance } from './appearance';
 import { legacyLayoutAliases } from '../core/layout-identity';
@@ -43,6 +44,7 @@ export class MarginOverlay {
   private legacyLayoutKeys = new Map<string, string>();
   private layoutInput?: LayoutInput;
   private geometrySignature = '';
+  private hostRect?: DOMRect;
   private highlighted?: string;
   private highlightedElements: HTMLElement[] = [];
   private observedBody?: Element;
@@ -51,7 +53,7 @@ export class MarginOverlay {
     const container = view.contentEl;
     this.win = container.ownerDocument.defaultView!;
     container.classList.add('margin-link-host');
-    this.root = container.createDiv({ cls: 'margin-link-overlay', attr: { 'aria-label': '正文边缘双链' } });
+    this.root = container.createDiv({ cls: 'margin-link-overlay' });
     this.svg = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.svg.classList.add('margin-link-connectors'); this.svg.setAttribute('aria-hidden', 'true');
     this.root.appendChild(this.svg);
@@ -72,7 +74,10 @@ export class MarginOverlay {
       })) this.schedule();
     });
     this.mutation.observe(container, { childList: true, subtree: true, characterData: true, attributes: true, attributeOldValue: true, attributeFilter: ['style', 'class'] });
-    this.resize = new ResizeObserver(() => { this.root.style.visibility = 'hidden'; this.schedule(); }); this.resize.observe(container);
+    // RO is delivered after layout, before paint. Flush this view's queued frame
+    // here so a shrinking lane cannot paint yesterday's larger card for a frame.
+    // The overlay is absolute and never changes the observed container/body size.
+    this.resize = new ResizeObserver(this.flushFrame); this.resize.observe(container);
     container.addEventListener('scroll', this.schedule, true);
     container.addEventListener('pointermove', this.onPointerMove); container.addEventListener('pointerleave', this.onLeave);
     this.win.addEventListener('resize', this.schedule);
@@ -80,9 +85,13 @@ export class MarginOverlay {
   }
   bridge(): EditorBridge | undefined { return [...this.host.bridges].find(b => b.alive && this.view.contentEl.contains(b.cm.dom)); }
   schedule = (): void => {
-    if (!this.stopped && !this.frame) this.frame = this.win.requestAnimationFrame(() => { this.frame = 0; this.render(); });
+    if (!this.stopped && !this.frame) this.frame = this.win.requestAnimationFrame(this.flushFrame);
   };
-  cancelInteractions(): void { this.cardDrag.cancel(); this.drag.cancel(); }
+  private flushFrame = (): void => {
+    if (this.stopped) return;
+    this.win.cancelAnimationFrame(this.frame); this.frame = 0; this.render();
+  };
+  cancelInteractions(): void { cardTooltip.hideWithin(this.root); this.cardDrag.cancel(); this.drag.cancel(); }
   private render(): void {
     const container = this.view.contentEl;
     const mode = this.view.getMode();
@@ -96,6 +105,7 @@ export class MarginOverlay {
       this.cancelInteractions(); this.clearCards();
     }
     const prefs = this.host.preferences, hostRect = container.getBoundingClientRect();
+    this.hostRect = hostRect;
     this.root.hidden = !prefs.enabled || !this.path || hostRect.width < 1 || hostRect.height < 1;
     if (this.root.hidden) { this.cancelInteractions(); this.clearCards(); return; }
     const bridge = mode === 'source' ? this.bridge() : undefined;
@@ -121,12 +131,12 @@ export class MarginOverlay {
       right: Math.min(hostRect.width, rect.right - hostRect.left - (parseFloat(style.paddingRight) || 0)), top: 0, bottom: hostRect.height
     };
     const viewport: Box = { left: Math.max(0, scroll.left - hostRect.left), right: Math.min(hostRect.width, scroll.right - hostRect.left), top: Math.max(0, scroll.top - hostRect.top), bottom: Math.min(hostRect.height, scroll.bottom - hostRect.top) };
-    // Native sidebars animate. Hide during changing geometry rather than painting
-    // yesterday's margin over today's text; show again after one stable frame.
+    // Read one view's geometry together, then paint its cards and connectors in
+    // the same frame. Keep following native sidebar animation until it settles.
     const geometry = [hostRect.left, hostRect.top, hostRect.width, hostRect.height, body.left, body.right, ...Object.values(viewport)].map(v => v.toFixed(1)).join(':');
     if (geometry !== this.geometrySignature) {
-      this.geometrySignature = geometry; this.root.style.visibility = 'hidden'; this.cardDrag.cancel(); this.schedule();
-    } else this.root.style.visibility = '';
+      this.geometrySignature = geometry; cardTooltip.hideWithin(this.root); this.schedule();
+    }
     this.anchors = (bridge ? bridge.anchors() : this.host.reading.anchors(this.view)).filter(a => a.rect.width > 0 && a.rect.top >= hostRect.top + viewport.top && a.rect.bottom <= hostRect.top + viewport.bottom);
     this.svg.setAttribute('width', String(hostRect.width)); this.svg.setAttribute('height', String(hostRect.height));
     this.svg.style.clipPath = `inset(${viewport.top}px ${hostRect.width - viewport.right}px ${hostRect.height - viewport.bottom}px ${viewport.left}px)`;
@@ -138,7 +148,7 @@ export class MarginOverlay {
         preferred: bridge?.preferred(a.occurrence.start, a.occurrence.target), manual: this.host.layouts.get(this.path, a.layoutKey, this.legacyLayoutKeys.get(a.layoutKey ?? '')) }))
     };
     const placements = layoutCards(this.layoutInput), keep = new Set(placements.map(p => p.key));
-    for (const [key, card] of this.cards) if (!keep.has(key)) { card.shell.remove(); card.path.remove(); this.cards.delete(key); }
+    for (const [key, card] of this.cards) if (!keep.has(key)) { cardTooltip.hideWithin(card.button); card.shell.remove(); card.path.remove(); this.cards.delete(key); }
     const anchorMap = new Map(this.anchors.map(a => [a.key, a]));
     for (const p of placements) {
       const anchor = anchorMap.get(p.key)!;
@@ -151,10 +161,11 @@ export class MarginOverlay {
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.classList.add('margin-link-connector'); this.svg.appendChild(path);
         card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
-        shell.addEventListener('pointerenter', () => this.highlight(p.key)); shell.addEventListener('pointerleave', () => this.highlight(undefined));
+        shell.addEventListener('pointerenter', e => { this.highlight(p.key); if (!e.buttons && !this.cardDrag.dragging) cardTooltip.show(button); });
+        shell.addEventListener('pointerleave', () => { this.highlight(undefined); cardTooltip.hideWithin(button); });
         shell.addEventListener('focusin', () => this.highlight(p.key)); shell.addEventListener('focusout', () => this.highlight(undefined));
         button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, p.key)) void this.open(p.key, event); });
-        button.addEventListener('pointerdown', e => { this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
+        button.addEventListener('pointerdown', e => { cardTooltip.hideWithin(button); this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
         button.addEventListener('keydown', e => this.onCardKey(e, p.key));
         shell.addEventListener('contextmenu', e => {
           e.preventDefault(); const menu = new Menu(); this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
@@ -164,7 +175,7 @@ export class MarginOverlay {
         });
       }
       card.anchor = anchor; card.placement = p;
-      if (card.signature !== signature) { card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
+      if (card.signature !== signature) { cardTooltip.hideWithin(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
       card.button.classList.toggle('margin-link-card-movable', prefs.placementMode !== 'auto');
       if (prefs.placementMode !== 'auto') card.button.setAttribute('aria-description', '拖动调整位置；方向键移动，Shift+左右键跨侧，Delete 恢复自动位置，Enter 打开文件');
       else card.button.removeAttribute('aria-description');
@@ -202,7 +213,8 @@ export class MarginOverlay {
     return false;
   }
   private place(card: Card, p: Placement): void {
-    const rect = this.view.contentEl.getBoundingClientRect();
+    const rect = this.hostRect;
+    if (!rect) return;
     card.shell.dataset.shape = p.shape ?? 'horizontal'; card.button.classList.toggle('margin-link-compact', p.compact);
     card.shell.dataset.manual = String(!!p.manual);
     Object.assign(card.shell.style, { width: `${p.width}px`, height: `${p.height}px`, transform: `translate(${p.x}px, ${p.y}px)` });
@@ -276,6 +288,7 @@ export class MarginOverlay {
     }
   }
   private clearCards(): void {
+    cardTooltip.hideWithin(this.root);
     this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); }
     this.cards.clear(); this.anchors = []; this.layoutInput = undefined;
   }

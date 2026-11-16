@@ -1,0 +1,454 @@
+{
+  "cases": [
+    {
+      "name": "flat-valid",
+      "passed": true,
+      "bundleSHA256": "ab2a65b0acdd92cdae9d0954d3f737b23152d0073a5a645e5b15c7a9f95b08af",
+      "before": {
+        "preferences": {
+          "enabled": true,
+          "lines": "hover",
+          "density": "auto",
+          "layout": "right",
+          "placementMode": "auto",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "horizontal",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "hover",
+              "text": "悬停或聚焦时显示"
+            },
+            "placementMode": {
+              "value": "auto",
+              "text": "自动排列"
+            },
+            "cardShape": {
+              "value": "horizontal",
+              "text": "横向卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "after": {
+        "preferences": {
+          "enabled": true,
+          "lines": "hover",
+          "density": "auto",
+          "layout": "right",
+          "placementMode": "auto",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "horizontal",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "hover",
+              "text": "悬停或聚焦时显示"
+            },
+            "placementMode": {
+              "value": "auto",
+              "text": "自动排列"
+            },
+            "cardShape": {
+              "value": "horizontal",
+              "text": "横向卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "markdownHashesUnchanged": true
+    },
+    {
+      "name": "nested-valid",
+      "passed": true,
+      "bundleSHA256": "ab2a65b0acdd92cdae9d0954d3f737b23152d0073a5a645e5b15c7a9f95b08af",
+      "before": {
+        "preferences": {
+          "enabled": true,
+          "lines": "hover",
+          "density": "auto",
+          "layout": "balanced",
+          "placementMode": "auto",
+          "lineStyle": "elbow",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "horizontal",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "hover",
+              "text": "悬停或聚焦时显示"
+            },
+            "placementMode": {
+              "value": "auto",
+              "text": "自动排列"
+            },
+            "cardShape": {
+              "value": "horizontal",
+              "text": "横向卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "after": {
+        "preferences": {
+          "enabled": true,
+          "lines": "hover",
+          "density": "auto",
+          "layout": "balanced",
+          "placementMode": "auto",
+          "lineStyle": "elbow",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "horizontal",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "hover",
+              "text": "悬停或聚焦时显示"
+            },
+            "placementMode": {
+              "value": "auto",
+              "text": "自动排列"
+            },
+            "cardShape": {
+              "value": "horizontal",
+              "text": "横向卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "markdownHashesUnchanged": true
+    },
+    {
+      "name": "missing",
+      "passed": true,
+      "bundleSHA256": "ab2a65b0acdd92cdae9d0954d3f737b23152d0073a5a645e5b15c7a9f95b08af",
+      "before": {
+        "preferences": {
+          "enabled": true,
+          "lines": "hover",
+          "density": "auto",
+          "layout": "balanced",
+          "placementMode": "free",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "horizontal",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "hover",
+              "text": "悬停或聚焦时显示"
+            },
+            "placementMode": {
+              "value": "free",
+              "text": "自由拖动"
+            },
+            "cardShape": {
+              "value": "horizontal",
+              "text": "横向卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "after": {
+        "preferences": {
+          "enabled": true,
+          "lines": "hover",
+          "density": "auto",
+          "layout": "balanced",
+          "placementMode": "free",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "horizontal",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "hover",
+              "text": "悬停或聚焦时显示"
+            },
+            "placementMode": {
+              "value": "free",
+              "text": "自由拖动"
+            },
+            "cardShape": {
+              "value": "horizontal",
+              "text": "横向卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "markdownHashesUnchanged": true
+    },
+    {
+      "name": "invalid",
+      "passed": true,
+      "bundleSHA256": "ab2a65b0acdd92cdae9d0954d3f737b23152d0073a5a645e5b15c7a9f95b08af",
+      "before": {
+        "preferences": {
+          "enabled": true,
+          "lines": "always",
+          "density": "auto",
+          "layout": "left",
+          "placementMode": "free",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "square",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "always",
+              "text": "始终显示"
+            },
+            "placementMode": {
+              "value": "free",
+              "text": "自由拖动"
+            },
+            "cardShape": {
+              "value": "square",
+              "text": "正方形卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "after": {
+        "preferences": {
+          "enabled": true,
+          "lines": "always",
+          "density": "auto",
+          "layout": "left",
+          "placementMode": "free",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "square",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "always",
+              "text": "始终显示"
+            },
+            "placementMode": {
+              "value": "free",
+              "text": "自由拖动"
+            },
+            "cardShape": {
+              "value": "square",
+              "text": "正方形卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "markdownHashesUnchanged": true
+    },
+    {
+      "name": "defaults",
+      "passed": true,
+      "bundleSHA256": "ab2a65b0acdd92cdae9d0954d3f737b23152d0073a5a645e5b15c7a9f95b08af",
+      "before": {
+        "preferences": {
+          "enabled": true,
+          "lines": "always",
+          "density": "auto",
+          "layout": "balanced",
+          "placementMode": "free",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "square",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "always",
+              "text": "始终显示"
+            },
+            "placementMode": {
+              "value": "free",
+              "text": "自由拖动"
+            },
+            "cardShape": {
+              "value": "square",
+              "text": "正方形卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "after": {
+        "preferences": {
+          "enabled": true,
+          "lines": "always",
+          "density": "auto",
+          "layout": "balanced",
+          "placementMode": "free",
+          "lineStyle": "curve",
+          "lineWidth": 1.5,
+          "lineOpacity": 0.65,
+          "lineColor": "theme",
+          "cardShape": "square",
+          "cardSize": "medium",
+          "cardRadius": 8,
+          "cardBorder": true,
+          "cardShadow": "subtle",
+          "showPath": true,
+          "edgePadding": 16,
+          "snapGrid": 12,
+          "hoverFeedback": true,
+          "dragHints": true,
+          "reduceMotion": false
+        },
+        "values": {
+          "heading": "MarginLink",
+          "fields": {
+            "lines": {
+              "value": "always",
+              "text": "始终显示"
+            },
+            "placementMode": {
+              "value": "free",
+              "text": "自由拖动"
+            },
+            "cardShape": {
+              "value": "square",
+              "text": "正方形卡片"
+            }
+          }
+        },
+        "title": "MarginLink Demo - test-vault - Obsidian 1.15.1"
+      },
+      "markdownHashesUnchanged": true
+    }
+  ]
+}

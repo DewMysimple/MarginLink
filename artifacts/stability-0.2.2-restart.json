@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "titleBefore": "Remediation B - test-vault - Obsidian 1.15.1",
+  "titleAfter": "Remediation B - test-vault - Obsidian 1.15.1",
+  "layoutsRestored": 2,
+  "positions": {
+    "Remediation A.md": {
+      "manual": "true",
+      "shape": "square",
+      "rect": {
+        "x": 1476,
+        "y": 516.4375,
+        "width": 84,
+        "height": 84,
+        "top": 516.4375,
+        "right": 1560,
+        "bottom": 600.4375,
+        "left": 1476
+      },
+      "line": "M 519.640625 172.0625 C 825.8203125 172.0625, 825.8203125 480, 1132 480"
+    },
+    "Remediation B.md": {
+      "manual": "true",
+      "shape": "square",
+      "rect": {
+        "x": 458,
+        "y": 416.4375,
+        "width": 84,
+        "height": 84,
+        "top": 416.4375,
+        "right": 542,
+        "bottom": 500.4375,
+        "left": 458
+      },
+      "line": "M 529.78125 172.0625 C 363.890625 172.0625, 363.890625 380, 198 380"
+    }
+  },
+  "markdownHashesUnchanged": true
+}

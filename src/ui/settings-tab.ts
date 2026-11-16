@@ -8,7 +8,7 @@ import { ConfirmAction } from './quick-controls';
 
 export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin): () => void {
   container.empty(); container.addClass('margin-link-settings');
-  container.createEl('h2', { text: 'MarginLink · 空间布局与外观' });
+  container.createEl('h2', { text: 'MarginLink' });
   container.createEl('p', { text: '关联始终来自原生双链。拖动只保存可清除的界面位置；删除插件数据只会恢复默认外观与自动排布。' });
   const sync: (() => void)[] = [];
   const update = (key: keyof Preferences, value: unknown) => { Object.assign(plugin.preferences, { [key]: value }); void plugin.savePreferences(); };
@@ -62,7 +62,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   dropdown('density', '窄边距策略（兼容旧设置）', { auto: '按可用空间自动调整', compact: '始终紧凑图标' });
   slider('cardRadius', '卡片圆角（px）', 0, 20, 1); toggle('cardBorder', '显示卡片边框');
   dropdown('cardShadow', '阴影强度', { none: '无阴影', subtle: '轻微', strong: '明显' }); toggle('showPath', '在横向卡片显示路径');
-  heading('交互与辅助功能'); toggle('hoverFeedback', '悬停与焦点高亮反馈'); toggle('dragHints', '显示拖动提示与边界'); toggle('reduceMotion', '减少动画');
+  heading('交互与辅助功能'); toggle('hoverFeedback', '悬停与焦点高亮反馈'); toggle('dragHints', '显示拖动边界'); toggle('reduceMotion', '减少动画');
   container.createEl('p', { text: '单击卡片打开文件；自由/吸附模式下，按住卡片任意位置移动即可拖动。聚焦卡片后可用方向键移动、Shift+左右键换侧、Delete 恢复自动位置；右键卡片也可恢复。Esc/失焦/滚动取消拖动。系统减少动画偏好始终优先。' });
   refreshPreview();
   return plugin.subscribe(() => { sync.forEach(s => s()); refreshPreview(); });

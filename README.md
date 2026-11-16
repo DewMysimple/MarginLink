@@ -2,11 +2,11 @@
 
 **Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.2.1**，Windows 桌面，最低 Obsidian **1.10.6**。提供可调连线、可保存的卡片自由布局、三种卡片形状和分组设置。本次整改加入左侧图标直达右侧完整设置、整卡拖动及切页位置保护。实际检查结果和未覆盖范围见 [VALIDATION.md](VALIDATION.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+**v0.2.2**，Windows 桌面，最低 Obsidian **1.10.6**。本次整改让卡片与连线连续跟随分隔线，保留鼠标抓点，精简悬停提示，并改善设置可读性。首次启用默认使用常驻连线、自由拖动、正方形卡片。实际检查结果和未覆盖范围见 [VALIDATION.md](VALIDATION.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.1.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.2.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
@@ -19,7 +19,7 @@
 
 进入“设置 → 第三方插件”，按需关闭受限模式，启用 MarginLink。**不要安装到 `D:\SoftWare\Obsidian` 程序目录**；程序安装位置与笔记库插件位置不同。本项目的独立演示库是 `test-vault/`，可用 Obsidian 仓库管理器打开；开发测试不写入你的正式 Vault。
 
-从 v0.1 升级时只替换发布文件，保留原 `data.json`。读取白名单将原来的 `enabled / lines / density / layout` 安全迁移，新增选项补默认值，布局默认仍为 `auto`，避免旧用户突然变更排版。`layout` 继续代表左右优先，新布局模式单独使用 `placementMode`。
+升级时只替换发布文件，保留原 `data.json`。旧平铺配置与当前嵌套配置中的合法选择逐项保留，包括“悬停”“自动排列”“横向卡片”；只有缺失或无效的字段采用新默认。新安装和“恢复默认外观设置”统一为 `lines=always`、`placementMode=free`、`cardShape=square`。恢复默认不删除卡片位置。`layout` 继续代表左右优先，`placementMode` 控制拖动模式。
 
 Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码后运行 `npm ci`、`npm run package` 生成安装目录；ZIP 命令见开发章节。此版本没有代替用户发布 GitHub Release 或提交 Obsidian 社区目录。
 
@@ -42,20 +42,20 @@ Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码
 | `free` 自由 | 在当前 MarkdownView 的左右空白带进行二维放置，可跨侧移动；冲突时就近避让，空间不足则省略 |
 | `snap` 吸附 | 自由放置加栅格/邻近卡片对齐、边界提示和碰撞避让 |
 
-移动达到约 5 个 CSS 像素才开始拖动；单击卡片任意位置打开文件，Ctrl/Cmd 单击新标签。合法松手立即提交内存位置并抑制本次拖动产生的点击，下一次单击正常打开。正文上可以显示提示，最终位置必须落在本 leaf 的空白带内。**Esc、pointercancel、失焦、焦点进入其他控件、滚动、窗口 resize、切换笔记/模式、文档变化或卸载会取消**。非法或无空间的放置恢复原位置。
+移动达到约 5 个 CSS 像素才开始拖动；第一帧起保留按下时的整卡抓点，跨侧改变尺寸时保留抓点比例。单击卡片任意位置打开文件，Ctrl/Cmd 单击新标签。合法松手立即提交内存位置并抑制本次拖动产生的点击，下一次单击正常打开。拖动中没有跟随文字或悬停提示，“显示拖动边界”只控制空白带视觉反馈。最终位置必须落在本 leaf 的空白带内。**Esc、pointercancel、失焦、焦点进入其他控件、滚动、窗口 resize、切换笔记/模式、文档变化或卸载会取消**。非法或无空间的放置恢复原位置。
 
 键盘操作：Tab 聚焦卡片自身，Enter/Space 打开，方向键移动，Shift+左右键换侧，Delete/Backspace 恢复此卡片自动位置。右键卡片也可恢复单个位置。设置、快捷面板及命令提供“整理/清除当前笔记布局”和“清除所有布局”，清除需确认，双链不受影响。
 
-同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。字体/窗口变化后重新合法化；锚点离屏时卡片和连线移除，可见锚点的超界位置安全裁剪。侧栏动画中短暂隐藏，几何稳定后重现，不用 `position: fixed` 挂在无关段落上。
+同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。字体/窗口变化后重新合法化；锚点离屏时卡片和连线移除，可见锚点的超界位置安全裁剪。拖动侧栏或分屏分隔线时，卡片与连线使用同一帧几何连续更新；只在该卡片确实没有空间或锚点离屏时移除，不修改保存的位置。
 
 ## 连线与卡片外观
 
 原生“设置 → MarginLink”保留完整设置，按基础、连线、布局、卡片、交互与辅助功能分组。顶部有不修改笔记的实时 DOM/SVG 预览。
 
 - **连线**：隐藏/悬停聚焦/始终显示；曲线/直线/直角折线；1–5px、步长 0.5；常驻透明度 10–100%、默认 65%；主题强调色或紫/蓝/绿/灰预设。激活状态更清晰，`none` 保留卡片与跳转。
-- **卡片**：横向、正方形、极简图标；小/中/大。正方形 76/84/92px，图标 32/36/44px；横向按实际空白宽度缩放。可调圆角、边框、阴影和路径显示。窄边距退化到图标，无空间则隐藏；tooltip 与 aria-label 始终保留完整名称、路径和解析状态。
+- **卡片**：横向、正方形、极简图标；小/中/大。正方形 76/84/92px，图标 32/36/44px；横向按实际空白宽度缩放。可调圆角、边框、阴影和路径显示。窄边距退化到图标，无空间则隐藏。悬停只显示一个“文件名称 · 文件类型”，保留扩展名；无路径、子标题、重复别名或诊断。未解析且无已知后缀显示“类型未知”；虚线状态与点击时的必要提示保留。
 - **布局**：三种模式、左右优先、正文边缘留白、吸附栅格/范围；可清除当前或全部笔记的位置。
-- **辅助**：高亮反馈、移动提示、减少动画。系统 `prefers-reduced-motion` 始终生效；不禁止全局文字选择。
+- **辅助**：高亮反馈、拖动边界、减少动画。系统 `prefers-reduced-motion` 始终生效；不禁止全局文字选择。
 
 单击左侧竖排工具栏的链接图标（“打开 MarginLink 设置”），即可展开右侧栏并选中 MarginLink 完整设置标签。连续点击复用同一面板，关闭标签后可以重开；自行收起侧栏或拖动标签后，插件不会主动搬回或展开。面板与原生设置页共用同一表单、偏好和实时预览。“当前笔记”指最近操作的 Markdown 视图，进入设置后仍可整理刚才的笔记，多分屏也按最近操作判定。
 
@@ -127,7 +127,7 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 | `src/view/card-drag-controller.ts` | 已有卡片移动及取消，独立于建链手柄 |
 | `src/view/margin-overlay.ts`, `appearance.ts` | 每视图协调、局部几何与主题变量 |
 | `src/ui/settings-tab.ts`, `settings-view.ts`, `quick-controls.ts` | 共享原生表单、右侧 ItemView、实时预览、快捷 Modal 与确认 |
-| `scripts/desktop-test.mjs`, `desktop-v2.mjs`, `desktop-remediation.mjs` | 隔离库客户端回归、整改即时切页及延迟加载场景 |
+| `scripts/desktop-test.mjs`, `desktop-v2.mjs`, `desktop-remediation.mjs`, `desktop-stability.mjs` | 隔离库客户端回归、即时切页、逐帧分隔线/抓点和长悬停场景 |
 
 Node 24 / npm 12，安装与常规检查：
 
@@ -137,10 +137,12 @@ npm test
 npm run lint
 npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.1.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.2.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。
+
+npm 12 默认禁止跨 registry 主机下载 URL；如果本机官方 registry 与锁文件中的既有镜像地址触发 `EALLOWREMOTE`，可对本次安装使用 `npm ci --allow-remote=all`，仍校验锁文件完整性，不修改全局 npm 配置。
 
 真实桌面验收会重写测试笔记、测试偏好及工作区，只能在本项目独立库执行：
 
@@ -157,6 +159,10 @@ npm run test:desktop
 `node scripts/host-window-control.mjs` 是编辑器设置窗口的卸载插件对照；`node scripts/restart-layout-check.mjs prepare` → 完全关闭并重新启动隔离实例 → `verify`，检查实际卡片恢复和所有 Markdown 哈希。上述脚本都有独立库校验，不运行于正式库。
 
 `node scripts/legacy-layout-migration.mjs` 专测旧 CRLF 布局：通过原生设置禁用插件后预置已有 UI 数据夹具，正常启用，验证迁移、跨模式、导航与重载；同样仅允许在本工程隔离库运行。
+
+`node scripts/desktop-stability.mjs final` 专测连续分隔线帧、抓点独立期望、长悬停与设置可见宽度；`baseline` 使用相同操作保留问题对照。截图及每帧观测见 VALIDATION；不要把几何稳定后的截图作为过程中没有闪烁的证据。
+
+`node scripts/preferences-restart-check.mjs prepare <case>` → 正常关闭/重启隔离实例 → `verify`，核对旧平铺、旧嵌套、缺项、非法项和新默认的读取及设置文字。case 可用 `flat-valid`、`nested-valid`、`missing`、`invalid`、`defaults`；它会在插件禁用时改写隔离插件的测试配置。
 
 协作规则见 [AGENTS.md](AGENTS.md)，[standard 工程记忆](wiki_memory/README.md) 保存状态与决策。每轮有项目修改均验证、同步必要记忆、提交并推送已核实 upstream；无变化不造空提交。源码仓库为 [DewMysimple/MarginLink](https://github.com/DewMysimple/MarginLink)。
 

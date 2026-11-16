@@ -38,6 +38,23 @@ artifacts/*
 !artifacts/desktop-0.2.1-1.15.1.json
 !artifacts/desktop-diagnostics-0.2.1-1.15.1.json
 !artifacts/legacy-layout-migration.json
+# v0.2.2 interaction stability evidence; keep historical reports unchanged.
+!artifacts/stability-baseline.json
+!artifacts/stability-intermediate-threshold.json
+!artifacts/stability-final.json
+!artifacts/stability-final-hover-system.png
+!artifacts/stability-final-hover-title.png
+!artifacts/stability-final-settings-260.png
+!artifacts/stability-final-settings-360.png
+!artifacts/stability-final-settings-600.png
+!artifacts/stability-final-settings-theme-light.png
+!artifacts/stability-final-settings-theme-dark.png
+!artifacts/desktop-0.2.2-1.15.1.json
+!artifacts/desktop-diagnostics-0.2.2-1.15.1.json
+!artifacts/desktop-0.2.2-1.15.1-remediation.json
+!artifacts/stability-0.2.2-restart.json
+!artifacts/stability-0.2.2-restart.png
+!artifacts/preferences-restart.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

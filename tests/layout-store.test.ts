@@ -8,7 +8,7 @@ const now = Date.now();
 const record = { source: 'Notes/A.md', key: 'a'.repeat(64), side: 'left', xNormalized: 0.4, yOffset: -2, updated: now };
 const ids = (text: string) => layoutIdentities(text, parseWikilinks(text));
 describe('v0.2 UI data whitelist and migration', () => {
-  it('preserves every legacy preference and its auto placement semantics', () => {
+  it('preserves every supplied legacy preference while using current defaults for missing fields', () => {
     expect(readStoredData({ enabled: false, lines: 'always', density: 'compact', layout: 'right' })).toEqual({ schemaVersion: 2,
       preferences: { ...DEFAULT_PREFERENCES, enabled: false, lines: 'always', density: 'compact', layout: 'right' }, layouts: [] });
   });
@@ -19,7 +19,7 @@ describe('v0.2 UI data whitelist and migration', () => {
   it('bounds numeric values and rejects non-finite or inherited controls', () => {
     const p = readPreferences({ lineWidth: 8, lineOpacity: 0, cardRadius: NaN, snapGrid: Infinity, cardShape: 'script', edgePadding: -10 });
     expect([p.lineWidth, p.lineOpacity, p.cardRadius, p.snapGrid, p.edgePadding]).toEqual([5, 0.1, 8, 12, 8]);
-    expect(p.cardShape).toBe('horizontal');
+    expect(p.cardShape).toBe('square');
     expect(readPreferences(Object.create({ enabled: false }))).toEqual(DEFAULT_PREFERENCES);
     expect(readPreferences({ lineWidth: 1.74 }).lineWidth).toBe(1.5);
   });

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 
-export async function runRemediationScenarios({ page, viewport, check, command, persist }) {
+export async function runRemediationScenarios({ page, viewport, check, command, persist, screenshotPrefix = 'artifacts/desktop' }) {
   const a = 'Remediation A.md', b = 'Remediation B.md', target = 'Folder/Note A.md';
   const fixtures = {
     [a]: '# Remediation A\n\nSource A has [[Folder/Note A|Shared target]] in its own context.\n',
@@ -82,6 +82,9 @@ export async function runRemediationScenarios({ page, viewport, check, command, 
       ? { x: childBounds.x + childBounds.width / 2, y: childBounds.y + childBounds.height / 2 }
       : { x: bounds.x + bounds.width - 6, y: bounds.y + bounds.height - 6 };
     const destination = await point(side, y);
+    // A restored card may already occupy this destination. Keep this a real
+    // drag rather than accidentally testing a legitimate sub-threshold click.
+    if (Math.hypot(destination.x - start.x, destination.y - start.y) < 20) destination.y -= 80;
     await page.mouse.move(start.x, start.y); await page.mouse.down(); await page.mouse.move(destination.x, destination.y, { steps: 10 });
     await page.waitForSelector('.margin-link-card-dragging');
     return snapshot();
@@ -108,7 +111,7 @@ export async function runRemediationScenarios({ page, viewport, check, command, 
     await panel().locator('[data-margin-key="lines"] select:not(.is-measuring)').selectOption('always');
     await panel().locator('[data-margin-key="lineStyle"] select:not(.is-measuring)').selectOption('straight');
     await page.waitForFunction(() => document.querySelector('.margin-link-host .margin-link-connector')?.getAttribute('d').includes(' L '));
-    await page.screenshot({ path: 'artifacts/remediation-settings.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-remediation-settings.png` });
     await page.keyboard.press('Control+w');
     await panel().waitFor({ state: 'detached' }); await stable();
     await ribbon().click(); await panel().waitFor();
@@ -249,7 +252,7 @@ export async function runRemediationScenarios({ page, viewport, check, command, 
     await closePanel(); await viewport(1980); await stable();
     assert.deepEqual(await hashes(), beforeHashes);
   });
-  await writeFile('artifacts/desktop-remediation.json', JSON.stringify({ host: await page.title(), pluginVersion: JSON.parse(await readFile('manifest.json', 'utf8')).version, observations, markdownHashesUnchanged: true }, null, 2));
-  await page.screenshot({ path: 'artifacts/remediation-final.png' });
+  await writeFile(`${screenshotPrefix}-remediation.json`, JSON.stringify({ host: await page.title(), pluginVersion: JSON.parse(await readFile('manifest.json', 'utf8')).version, observations, markdownHashesUnchanged: true }, null, 2));
+  await page.screenshot({ path: `${screenshotPrefix}-remediation-final.png` });
   await open('MarginLink Demo.md'); await viewport(1680); await persist();
 }

@@ -32,7 +32,7 @@ export class QuickControls extends ManagedModal {
       refresh.push(() => d.setValue(this.plugin.preferences.placementMode));
     });
     new Setting(this.contentEl).setName('卡片形状').addDropdown(d => {
-      d.addOptions({ horizontal: '横向卡片', square: '正方形', icon: '极简图标' }).setValue(this.plugin.preferences.cardShape).onChange(v => { Object.assign(this.plugin.preferences, { cardShape: v }); void this.plugin.savePreferences(); });
+      d.addOptions({ horizontal: '横向卡片', square: '正方形卡片', icon: '极简图标' }).setValue(this.plugin.preferences.cardShape).onChange(v => { Object.assign(this.plugin.preferences, { cardShape: v }); void this.plugin.savePreferences(); });
       refresh.push(() => d.setValue(this.plugin.preferences.cardShape));
     });
     new Setting(this.contentEl).setName('整理当前笔记').addButton(b => {

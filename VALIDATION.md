@@ -1,4 +1,46 @@
-# MarginLink v0.2.1 验证记录
+# MarginLink v0.2.2 验证记录
+
+## 交互稳定性整改（2026-11-16）
+
+本轮依据 `prompt/MarginLink-交互稳定性整改-Codex提示词.md` 完整1–7项。基线 main `15ee229d1a940a3f416bd7ab54acefaa14b9ec85`，当前验证包含本轮源码、单测、脚本、夹具和文档改动。Windows、Node24.18.0/npm12.2.2，隔离宿主 **Obsidian1.15.1**，仅本工程 `test-vault/`、`test-profile/`，本机CDP9223。普通实例与正式Vault未操作。
+
+| 项目 | 对照、实际原因与最终改动 | 验证证据 |
+| --- | --- | --- |
+| 1 连续分隔线 | v0.2.1的RO和几何签名分支隐藏全层；最终基线采样右148帧/24隐藏、左94帧/18隐藏。移除隐藏后还查出RO排下一帧导致阈值处2个真实绘制后越界帧。最终在RO交付、绘制前合并刷新当前视图，复用节点、集中读取host几何，同步卡片/SVG | `margin-overlay.ts`；真实按住左右分隔线、慢/快/暂停/反向，充足边距0无故隐藏；单调square/icon/hidden/icon/square，0越界、存储不变。逐帧记录视口、锚点、隐藏分类及独立端点误差，未跳过不可见层 |
+| 2 单一悬停 | 基线`title`和`aria-label`均含路径/诊断；实测Obsidian把aria-label生成可见tooltip。没有据此宣称系统截图证明两个气泡同时出现。最终去掉这两个属性，短无障碍名用aria-labelledby，唯一自管提示只显示TFile.name/目标末段与类型 | `card-renderer.ts`、`card-tooltip.ts`；HTML图标/标题/空白长悬停1.7秒，DOM与系统截图均只有一个提示。Markdown、Canvas、缺失无后缀/HTML、长中文、同文件标题/块共8类通过；移出/换卡/按下/切页清理 |
+| 3 安静拖动 | 原position-ghost跟随更新文案；现在删除DOM、所有文案与样式，只保留可选边界，设置名“显示拖动边界” | `card-drag-controller.ts`、`styles.css`、`settings-tab.ts`；hints开/关×free/snap×合法右侧/左侧/正文非法/返回，共16观测无ghost、跟随文字或残留tooltip；Esc还原。`editor/drag-controller.ts`建链ghost保留且原桌面流程回归 |
+| 4 保持抓点 | 旧positionFromDrop以中心定位，84px方卡右上首帧多(+36,-36)，左下相反。pointerdown按整卡实际外框记录比例，先原始指针命中，再候选矩形→约束/吸附/避让；move/up共用路径，up独立计算阈值 | `card-drag-controller.ts`、`layout-engine.ts`；右上数值向量得到(1208,212)，左下及无最后move回归。实机三形状×7条目首帧/连续/释放/重开，每轴≤1px；compact无可见文字项明确用中心代替。跨侧、边界、snap以独立公式核对，键盘保持中心语义 |
+| 5 统一默认 | 原常量与reader各自写旧默认，改为单一always/free/square；旧flat/nested合法值逐项保留，只回退缺失/非法字段 | `types.ts`、preferences/store单测；真实删除隔离data后启用，常驻线/方卡/free直接可用；旧合法/缺项/非法、恢复默认、预览/真实卡片及原位置/Markdown不变。完整进程重启矩阵见下方收尾结果 |
+| 6 下拉框文字 | **1.15.1基线首次折叠创建及稳定宽栏未复现箭头only**，值/选中文本正确；不把宿主测宽或主题推测写成已证根因。表单局部CSS改用原生选项固有宽度，给箭头/中文留空间，窄栏换行，排除宿主测宽副本 | `styles.css`；最终窄/中/宽三档记录实际宽度、选中值/文字、可用文字区、control宽度与无横滚。长项“悬停或聚焦时显示”、短项、键盘、明暗、重开和原生共享表单通过，截图目视可读 |
+| 7 顶部标题 | 共享表单原h2含后缀，改为精确MarginLink，保留所有分组/控件 | `settings-tab.ts`；实际右侧栏与原生设置页h2精确相等；截图同时含标题和至少两个闭合可读下拉框 |
+
+基线与最终使用相同真实鼠标轨迹、独立抓点期望。采样采用rAF后任务观察绘制后状态，避免把排在renderer之前的测量当最终帧；仍保留了由绘制后观察确认的中间越界失败报告，没有通过隐藏、慢拖或增大等待掩盖。恢复状态时可等待几何稳定，过程断言不等8个稳定帧。侧栏实际宽度受宿主约束，以报告记录为准。
+
+| 命令/检查 | 本轮状态 |
+| --- | --- |
+| `npm ci` | 首次因npm12默认远程URL策略EALLOWREMOTE失败；`npm ci --allow-remote=all`成功，保留锁文件完整性与全局npm配置 |
+| `npm test` | 13文件、168项通过，包括抓点向量/事件顺序、无最后move的up、失效几何、tooltip生命周期/文本、默认/迁移/逐字段回退 |
+| `npm run lint` | 通过（src/tests/scripts） |
+| `npm run build` / `npm run package` | TypeScript、esbuild与许可证打包通过 |
+| `node scripts/desktop-stability.mjs final` | 12专项通过；含快速“拉侧栏→右上拖→松→点击→后退”、idle800ms新增render0/待执行帧0、面板开关订阅不增长、pending提示禁用后0残留，全库Markdown哈希相等，错误/运行时诊断为空 |
+| `npm run test:desktop` | 最终构建在1.15.1完整55/55通过，插件错误0、宿主告警0；覆盖三模式/分屏/建链/取消/快捷与设置/立即切页/CRLF及布局恢复 |
+| `preferences-restart-check.mjs` | flat-valid/nested-valid/missing/invalid/defaults五种配置，各正常titlebar退出、确认旧隔离PID终止、重启后核对整个偏好、UI中文值和Markdown哈希，5/5通过，普通实例保留 |
+| `restart-layout-check.mjs` | 正常退出并确认隔离进程终止，重新启动1.15.1；A/B独立手动矩形、全部连线坐标、data和全库Markdown哈希精确恢复 |
+| 工程记忆index/check | 索引刷新一次；16页、0错误。仅原协议6117字符超过6000阅读预算的既有warning，不扩大为记忆体检或重写协议 |
+
+证据：[v0.2.1对照](artifacts/stability-baseline.json)、[移除暂隐后发现的阈值失败](artifacts/stability-intermediate-threshold.json)、[最终专项逐帧及交互报告](artifacts/stability-final.json)、[长悬停系统截图](artifacts/stability-final-hover-system.png)、[窄栏](artifacts/stability-final-settings-260.png)、[宽栏](artifacts/stability-final-settings-600.png)、[亮色](artifacts/stability-final-settings-theme-light.png)、[暗色](artifacts/stability-final-settings-theme-dark.png)。代表性截图已用本地图像工具目视核对。
+
+最终专项右146帧、左95帧均0无故隐藏；阈值529帧形态五段准确且0越界。完整回归：[55场景](artifacts/desktop-0.2.2-1.15.1.json)、[诊断](artifacts/desktop-diagnostics-0.2.2-1.15.1.json)、[切页/整卡/布局观测](artifacts/desktop-0.2.2-1.15.1-remediation.json)。五类完整进程重启：[配置/UI/Markdown核对](artifacts/preferences-restart.json)。旧报告未覆盖或重写。
+
+布局正常重启：[A/B矩形、连线及全库哈希](artifacts/stability-0.2.2-restart.json)、[重启截图](artifacts/stability-0.2.2-restart.png)。重启工具只识别本工程test-profile进程并核对物理Vault路径，正常titlebar关闭、确认旧PID退出后再启动；普通实例5788始终保留。最后隔离实例27032已正常关闭并确认退出，tracked临时appearance已恢复。
+
+桌面测试修正了两类夹具操作问题：目标距离不足5px会成为正常点击，因此测试目标确保形成真实拖动；隐藏窗口及setViewState后先明确激活目标Markdown并聚焦，再执行指针动作。失败中间尝试未冒充通过结果，最终均完整重跑、等待进程终态才进入下一阶段。
+
+最终安装目录 `dist/margin-link/`，ZIP `dist/margin-link-0.2.2.zip`，56,415字节，含margin-link根目录及main.js/styles.css/manifest.json/LICENSE/THIRD_PARTY_NOTICES.txt五文件。源码根、打包目录、实测插件main.js SHA256相同：`AB2A65B0ACDD92CDAE9D0954D3F737B23152D0073A5A645E5B15C7A9F95B08AF`；ZIP：`59C20999D16B42C741960C60CF319F934670C51D41BCDC197D66D6BDFE5BE6B2`。package/lock/manifest/versions统一0.2.2。构建物、依赖、隔离profile不入Git。
+
+本轮最终bundle尚未在1.10.6或用户自定义主题/第三方悬停扩展/popout/其他平台复测；minAppVersion声明保留1.10.6。不能将默认主题的单提示与下拉框结果外推所有扩展组合。原生Wikilink唯一来源、原UI布局数据和完整源校验保留，无运行时关系库或Markdown改写。
+
+## 历史：v0.2.1 验证记录
 
 ## 本轮环境与范围（2026-11-16）
 

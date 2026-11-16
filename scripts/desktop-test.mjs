@@ -337,7 +337,7 @@ try {
     await mode('source', false); assert.equal(await text(), original);
   });
   await runV2Scenarios({ page, cdp, viewport, check, command, mode, persist, settings, closeSettings, flipToggle, screenshotPrefix, phase: name => { currentScenario = name; } });
-  await runRemediationScenarios({ page, cdp, viewport, check, command, persist });
+  await runRemediationScenarios({ page, cdp, viewport, check, command, persist, screenshotPrefix });
   // This exact native Electron/CDP diagnostic is also reproduced after removing
   // ALL community plugins and reloading (MARGINLINK_THEME_CONTROL=1). Keep it visible
   // in the report, but do not mislabel it as a failure of plugin behavior assertions.

@@ -10,6 +10,9 @@ export interface Placement {
   key: string; side: Side; x: number; y: number; width: number; height: number;
   compact: boolean; shape?: CardShape; manual?: boolean;
 }
+// Pointer coordinates hit-test the lane; the grab point only positions the card.
+// Omitted for keyboard movement, which intentionally uses the card's centre.
+export interface GrabPoint { u: number; v: number }
 export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 export function lane(input: LayoutInput, side: Side): Box {
   const pad = input.preferences?.edgePadding ?? 16;
@@ -48,13 +51,14 @@ function legalize(candidate: Placement, input: LayoutInput, occupied: Placement[
     if (!occupied.some(c => overlapsCard(card, c))) return card;
   }
 }
-export function positionFromDrop(input: LayoutInput, anchor: LayoutAnchor, x: number, y: number, occupied: Placement[]): { placement: Placement; relative: RelativePosition; snapped: boolean } | undefined {
-  if (![x, y].every(Number.isFinite)) return;
+export function positionFromDrop(input: LayoutInput, anchor: LayoutAnchor, x: number, y: number, occupied: Placement[], grabPoint: GrabPoint = { u: 0.5, v: 0.5 }): { placement: Placement; relative: RelativePosition; snapped: boolean } | undefined {
+  if (![x, y, grabPoint.u, grabPoint.v, input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport), anchor.y].every(Number.isFinite) ||
+      input.width <= 0 || input.height <= 0 || grabPoint.u < 0 || grabPoint.u > 1 || grabPoint.v < 0 || grabPoint.v > 1) return;
   const side = x < input.body.left ? 'left' : x > input.body.right ? 'right' : undefined;
   if (!side) return;
   const band = lane(input, side), dim = dimensions(input, side);
   if (!dim || x < band.left || x > band.right || y < band.top || y > band.bottom) return;
-  let left = x - dim.width / 2, top = y - dim.height / 2;
+  let left = x - dim.width * grabPoint.u, top = y - dim.height * grabPoint.v;
   const snap = input.preferences?.placementMode === 'snap';
   if (snap) {
     const grid = input.preferences?.snapGrid ?? 12;

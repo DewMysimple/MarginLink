@@ -45,9 +45,9 @@ export interface Preferences {
   reduceMotion: boolean;
 }
 export const DEFAULT_PREFERENCES: Preferences = {
-  enabled: true, lines: 'hover', density: 'auto', layout: 'balanced', placementMode: 'auto',
+  enabled: true, lines: 'always', density: 'auto', layout: 'balanced', placementMode: 'free',
   lineStyle: 'curve', lineWidth: 1.5, lineOpacity: 0.65, lineColor: 'theme',
-  cardShape: 'horizontal', cardSize: 'medium', cardRadius: 8, cardBorder: true,
+  cardShape: 'square', cardSize: 'medium', cardRadius: 8, cardBorder: true,
   cardShadow: 'subtle', showPath: true, edgePadding: 16, snapGrid: 12,
   hoverFeedback: true, dragHints: true, reduceMotion: false
 };
@@ -67,15 +67,15 @@ export function readPreferences(value: unknown): Preferences {
   const bool = (key: keyof Preferences) => typeof v[key] === 'boolean' ? v[key] as boolean : DEFAULT_PREFERENCES[key] as boolean;
   return {
     enabled: bool('enabled'),
-    lines: choice('lines', ['none', 'hover', 'always'], 'hover'),
+    lines: choice('lines', ['none', 'hover', 'always'], DEFAULT_PREFERENCES.lines),
     density: v.density === 'compact' ? 'compact' : 'auto',
     layout: choice('layout', ['balanced', 'left', 'right'], 'balanced'),
-    placementMode: choice('placementMode', ['auto', 'free', 'snap'], 'auto'),
+    placementMode: choice('placementMode', ['auto', 'free', 'snap'], DEFAULT_PREFERENCES.placementMode),
     lineStyle: choice('lineStyle', ['curve', 'straight', 'elbow'], 'curve'),
     lineWidth: Math.round(finiteNumber(v.lineWidth, 1.5, 1, 5) * 2) / 2,
     lineOpacity: finiteNumber(v.lineOpacity, 0.65, 0.1, 1),
     lineColor: choice('lineColor', ['theme', 'purple', 'blue', 'green', 'gray'], 'theme'),
-    cardShape: choice('cardShape', ['horizontal', 'square', 'icon'], 'horizontal'),
+    cardShape: choice('cardShape', ['horizontal', 'square', 'icon'], DEFAULT_PREFERENCES.cardShape),
     cardSize: choice('cardSize', ['small', 'medium', 'large'], 'medium'),
     cardRadius: finiteNumber(v.cardRadius, 8, 0, 20), cardBorder: bool('cardBorder'),
     cardShadow: choice('cardShadow', ['none', 'subtle', 'strong'], 'subtle'), showPath: bool('showPath'),
