@@ -17,8 +17,9 @@ import { applyAppearance } from './appearance';
 import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
 import { StableLayout } from './stable-layout';
+import { TextObstacles } from './text-obstacles';
 
-interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice }
+interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice; routeSignature?: string }
 export interface OverlayHost {
   fileRecognition: FileRecognition;
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
@@ -51,6 +52,9 @@ export class MarginOverlay {
   private layoutGeometry = '';
   private layoutSource = '';
   private validOccurrences = new Map<string, string>();
+  private textObstacles = new TextObstacles();
+  private obstacles: readonly Box[] = [];
+  private scrollTop = 0;
   private geometrySignature = '';
   private hostRect?: DOMRect;
   private highlighted?: string;
@@ -79,21 +83,24 @@ export class MarginOverlay {
           if (strip(r.oldValue ?? '') === strip((r.target as Element).getAttribute('class') ?? '')) return false;
         }
         return true;
-      })) this.schedule();
+      })) { this.textObstacles.invalidate(); this.schedule(); }
     });
     this.mutation.observe(container, { childList: true, subtree: true, characterData: true, attributes: true, attributeOldValue: true, attributeFilter: ['style', 'class'] });
     // RO is delivered after layout, before paint. Flush this view's queued frame
     // here so a shrinking lane cannot paint yesterday's larger card for a frame.
     // The overlay is absolute and never changes the observed container/body size.
-    this.resize = new ResizeObserver(this.flushFrame); this.resize.observe(container);
+    this.resize = new ResizeObserver(() => { this.textObstacles.invalidate(); this.flushFrame(); }); this.resize.observe(container);
     container.addEventListener('scroll', this.schedule, true);
     container.addEventListener('pointermove', this.onPointerMove); container.addEventListener('pointerleave', this.onLeave);
     this.win.addEventListener('resize', this.schedule);
-    container.ownerDocument.fonts?.addEventListener('loadingdone', this.schedule); this.schedule();
+    container.ownerDocument.fonts?.addEventListener('loadingdone', this.onFontsLoaded); this.schedule();
   }
   bridge(): EditorBridge | undefined { return [...this.host.bridges].find(b => b.alive && this.view.contentEl.contains(b.cm.dom)); }
   schedule = (): void => {
     if (!this.stopped && !this.frame) this.frame = this.win.requestAnimationFrame(this.flushFrame);
+  };
+  private onFontsLoaded = (): void => {
+    this.layoutGeometry = ''; this.textObstacles.invalidate(); this.schedule();
   };
   private flushFrame = (): void => {
     if (this.stopped) return;
@@ -156,7 +163,7 @@ export class MarginOverlay {
     // fragment currently intersects the viewport or is used by a connector.
     const scrollTop = scroller.scrollTop;
     const lineHeight = Math.max(12, Math.min(72, parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.6 || 24));
-    const geometryKey = [hostRect.width, body.left, body.right, viewport.left, viewport.right, viewport.top,
+    const geometryKey = [hostRect.width, body.left, body.right, viewport.left, viewport.right, viewport.top, scroller.scrollLeft,
       prefs.density, prefs.layout, prefs.placementMode, prefs.cardShape, prefs.cardSize, prefs.edgePadding,
       style.font, style.lineHeight, style.letterSpacing,
       bridge?.cm.dom.closest('.markdown-source-view')?.classList.contains('is-live-preview')].join(':');
@@ -165,9 +172,11 @@ export class MarginOverlay {
       this.validOccurrences = new Map((bridge?.parsed.links ?? parseWikilinks(source)).map(a => [String(a.start), a.raw]));
     }
     if (this.layoutGeometry !== geometryKey || this.layoutSource !== source) {
-      this.stableLayout.clear(); this.contentAnchors.clear();
+      this.stableLayout.clear(); this.contentAnchors.clear(); this.textObstacles.invalidate();
       this.layoutGeometry = geometryKey; this.layoutSource = source;
     }
+    this.scrollTop = scrollTop;
+    this.obstacles = this.textObstacles.read(bodyEl, hostRect, viewport, scrollTop);
     const contentBox = (r: Box): Box => ({ left: r.left - hostRect.left, right: r.right - hostRect.left,
       top: r.top - hostRect.top + scrollTop, bottom: r.bottom - hostRect.top + scrollTop });
     for (const anchor of bridge ? bridge.anchors() : this.host.reading.anchors(this.view, 80 * lineHeight + 100)) {
@@ -261,12 +270,24 @@ export class MarginOverlay {
     card.shell.dataset.shape = p.shape ?? 'horizontal'; card.button.classList.toggle('margin-link-compact', p.compact);
     card.shell.dataset.manual = String(!!p.manual);
     Object.assign(card.shell.style, { width: `${p.width}px`, height: `${p.height}px`, transform: `translate(${p.x}px, ${p.y}px)` });
+    // Route in content coordinates. A pure scroll translates the completed SVG
+    // path and reuses its collision result, rather than solving each card again.
     const fragments = card.anchor.fragments.map(f => ({
-      left: f.left - rect.left, right: f.right - rect.left, top: f.top - rect.top, bottom: f.bottom - rect.top
+      left: f.left - rect.left, right: f.right - rect.left,
+      top: f.top - rect.top + this.scrollTop, bottom: f.bottom - rect.top + this.scrollTop
     }));
-    const route = connectorRoute(fragments, p, this.host.preferences.lineStyle, card.ports);
-    card.ports = route?.choice;
-    card.path.setAttribute('d', route?.path ?? '');
+    const contentPlacement = { ...p, y: p.y + this.scrollTop };
+    const prefs = this.host.preferences;
+    const signature = JSON.stringify([fragments, contentPlacement.x, contentPlacement.y, p.width, p.height,
+      prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision]);
+    if (card.routeSignature !== signature) {
+      const route = connectorRoute(fragments, contentPlacement, prefs.lineStyle, card.ports, {
+        obstacles: this.obstacles, body: this.layoutInput?.body, lineWidth: prefs.lineWidth + 0.5
+      });
+      card.ports = route?.choice; card.routeSignature = signature;
+      card.path.setAttribute('d', route?.path ?? '');
+    }
+    card.path.setAttribute('transform', `translate(0 ${-this.scrollTop})`);
   }
   private dragContext(key: string): CardDragContext | undefined {
     const card = this.cards.get(key), input = this.layoutInput;
@@ -338,14 +359,14 @@ export class MarginOverlay {
     cardTooltip.hideWithin(this.root);
     this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); }
     this.cards.clear(); this.anchors = []; this.layoutInput = undefined;
-    this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear();
+    this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear(); this.textObstacles?.invalidate();
   }
   destroy(): void {
     this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
     for (const menu of [...this.menus]) menu.hide(); this.menus.clear();
     const container = this.view.contentEl;
     container.removeEventListener('scroll', this.schedule, true); container.removeEventListener('pointermove', this.onPointerMove); container.removeEventListener('pointerleave', this.onLeave);
-    this.win.removeEventListener('resize', this.schedule); container.ownerDocument.fonts?.removeEventListener('loadingdone', this.schedule);
+    this.win.removeEventListener('resize', this.schedule); container.ownerDocument.fonts?.removeEventListener('loadingdone', this.onFontsLoaded);
     this.cardDrag.destroy(); this.drag.destroy(); this.clearCards(); this.root.remove(); container.classList.remove('margin-link-host');
   }
 }

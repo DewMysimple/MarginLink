@@ -117,7 +117,9 @@ try {
       const bridge = [...plugin.bridges].find(b => host.contains(b.cm.dom));
       const source = view.getMode() === 'source', content = source ? bridge.cm.contentDOM : view.previewMode.containerEl.querySelector('.markdown-preview-sizer');
       const scroller = source ? bridge.cm.scrollDOM : view.previewMode.containerEl;
-      const viewport = scroller.getBoundingClientRect(), body = content.getBoundingClientRect(), css = getComputedStyle(content);
+      const scrollBox = scroller.getBoundingClientRect();
+      const viewport = new DOMRect(scrollBox.left + scroller.clientLeft, scrollBox.top + scroller.clientTop, scroller.clientWidth, scroller.clientHeight);
+      const body = content.getBoundingClientRect(), css = getComputedStyle(content);
       const bodyLeft = body.left + parseFloat(css.paddingLeft), bodyRight = body.right - parseFloat(css.paddingRight);
       const boxes = range => [...range.getClientRects()].filter(r => r.width > 0.5 && r.height > 0);
       const referenceFor = occurrence => {

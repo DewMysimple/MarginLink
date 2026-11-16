@@ -6,6 +6,8 @@
 
 0.2.8 的 209 项测试、ESLint、TypeScript、构建、打包通过。覆盖手动卡 60→30 的自然裁切、六卡整体 -80px 位移、auto/free/snap、虚拟化移除/重入、新卡加入不推挤旧卡、原文参考变化、两视图隔离、零 UI 数据写入以及拖放边界保留。
 
+0.2.9 的 224 项测试、ESLint、TypeScript、构建及打包通过。新测试独立解析输出 SVG，覆盖左右同高、三线型、1/5px 线宽、长标题、行内代码、跨行别名、拥挤省略与空间恢复；5 项障碍缓存测试覆盖内容坐标、滚动复用、邻域边界、部分字形及 display: contents。真实字体加载和横向滚动会失效旧几何，当前绘制使用计入悬停增粗的安全线宽。新增 [最终桌面尝试](artifacts/scroll-routing-final.json) 为 blocked，零场景通过。
+
 本轮下载官方 Obsidian 1.10.6 并校验 SHA256（`1596c81d8645ff9f6506b5b3e1a6963250d9372ceb58eb037551e53bc1b16f72`）。使用本工程 test-profile 与 test-vault 隔离启动，进程退出 133：`process_singleton_posix.cc:294 socket() failed: Operation not permitted (1)`，发生在插件加载前。Chromium 管道模式亦被同类权限阻塞。桌面基线脚本 [报告](artifacts/scroll-routing-baseline-scroll.json) 明确为 blocked、零场景通过；没有将旧截图或历史报告作为本轮实测。
 
 待桌面复做：构建后仅将 dist/margin-link 安装到本工程 test-vault/.obsidian/plugins/margin-link；按 README 启动隔离实例并开放 CDP 9223。依次运行 `node scripts/desktop-scroll-routing.mjs final --scroll-only`、`node scripts/desktop-scroll-routing.mjs final`、`node scripts/desktop-stability.mjs final` 和 `npm run test:desktop`。新增脚本独立量取正文 Range 与 SVG 屏幕路径，覆盖阅读/实时预览/源码、部分裁切与点击穿透、拖放后返回、分屏及三种线型。旧稳定性脚本完整边界断言只用于侧栏缩放/拖放，仍保留。真实逐帧滚动、连线避字和图标观感未在当前环境验收。
