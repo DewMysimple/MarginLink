@@ -1,0 +1,794 @@
+{
+  "version": "0.2.22",
+  "baseline": "39fbdae671d97818cb93c288f5481d35a8a4d563",
+  "environment": "Windows Obsidian 1.15.1, default theme, 1614x838, DPR1,霞鹜文楷15px/22.5px, original ten UI positions; source and reading",
+  "method": "Actual Playwright pointer input, 48 identical paced moves for each style/card/mode. Wrap paintConnectors to include synchronous drag preview; regular render diagnostics do not time it. Probe three additional moved checkpoints outside timed windows. Timings measure connector painting, not input latency or total display FPS. The 12 paired cases use current ship/dives UI positions, both on the right. Two additional Scene Graph cases cover the left without baseline timing claims.",
+  "formalSHA256": "98d945f99aac8cdd3920cba8a034ebc7a7a4c7fc9172b73a126a5dfb5c4a7083",
+  "formalUnchanged": true,
+  "bundleSHA256": "b6416291c8aec15bf2be01299faac34515d51c1011419ffb134e900bc86da5a6",
+  "tests": {
+    "unitFiles": 42,
+    "unitPassed": 412,
+    "lint": "passed",
+    "package": "passed",
+    "desktopDragPassed": 16,
+    "desktopRouteRegressionPassed": 10
+  },
+  "comparisons": [
+    {
+      "name": "preview/straight/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 48,
+          "total": 87.40000002086163,
+          "p50": 2,
+          "p95": 2.5,
+          "max": 2.600000001490116,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 139,
+          "total": 815.2999999955355,
+          "p50": 5.599999999991269,
+          "p95": 10.69999999999709,
+          "max": 11.099999999991269,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 48,
+          "total": 29.100000008940697,
+          "p50": 0.6000000014901161,
+          "p95": 0.7999999970197678,
+          "max": 1,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 97,
+          "total": 532.6999999970212,
+          "p50": 5.599999999998545,
+          "p95": 5.700000000004366,
+          "max": 5.700000000004366,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "preview/straight/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 48,
+          "total": 83.90000000596046,
+          "p50": 1.3000000044703484,
+          "p95": 3,
+          "max": 6.100000001490116,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 132,
+          "total": 778.900000001493,
+          "p50": 5.599999999991269,
+          "p95": 10.700000000011642,
+          "max": 11.10000000000582,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 48,
+          "total": 23.400000005960464,
+          "p50": 0.5,
+          "p95": 0.6000000014901161,
+          "max": 0.7000000029802322,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 96,
+          "total": 530.4999999955326,
+          "p50": 5.599999999998545,
+          "p95": 5.700000000004366,
+          "max": 5.80000000000291,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "preview/elbow/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 48,
+          "total": 284.59999998658895,
+          "p50": 5.799999997019768,
+          "p95": 9,
+          "max": 12.299999997019768,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 157,
+          "total": 919.2999999970198,
+          "p50": 5.599999999991269,
+          "p95": 10.700000000011642,
+          "max": 11.200000000011642,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 48,
+          "total": 22.19999999552965,
+          "p50": 0.4000000059604645,
+          "p95": 0.6000000014901161,
+          "max": 1,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 97,
+          "total": 536.4999999970169,
+          "p50": 5.599999999998545,
+          "p95": 5.700000000004366,
+          "max": 5.80000000000291,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "preview/elbow/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 48,
+          "total": 307.69999995827675,
+          "p50": 5.200000002980232,
+          "p95": 10.699999995529652,
+          "max": 12.299999997019768,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 168,
+          "total": 1029.7999999955355,
+          "p50": 5.599999999991269,
+          "p95": 11.10000000000582,
+          "max": 11.5,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 48,
+          "total": 21.100000016391277,
+          "p50": 0.3999999985098839,
+          "p95": 0.6000000014901161,
+          "max": 0.7000000029802322,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 96,
+          "total": 530.8999999955267,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.7000000000116415,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "preview/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 48,
+          "total": 1222.7999999821186,
+          "p50": 25.899999998509884,
+          "p95": 35.400000005960464,
+          "max": 36.100000001490116,
+          "over16": 47,
+          "over50": 0
+        },
+        "frames": {
+          "count": 183,
+          "total": 1988,
+          "p50": 5.600000000005821,
+          "p95": 33.19999999999709,
+          "max": 38.60000000000582,
+          "over16": 38,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 48,
+          "total": 43.49999999254942,
+          "p50": 0.8999999985098839,
+          "p95": 1.2000000029802322,
+          "max": 1.7999999970197678,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 98,
+          "total": 539.3999999985099,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.7000000000116415,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "preview/curve/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 48,
+          "total": 3864.6999999806285,
+          "p50": 97.20000000298023,
+          "p95": 110.30000000447035,
+          "max": 124,
+          "over16": 48,
+          "over50": 36
+        },
+        "frames": {
+          "count": 181,
+          "total": 4619.10000000149,
+          "p50": 5.600000000005821,
+          "p95": 100.60000000000582,
+          "max": 122.30000000000291,
+          "over16": 47,
+          "over50": 36
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 48,
+          "total": 88.60000000149012,
+          "p50": 1.7000000029802322,
+          "p95": 3.5,
+          "max": 4.299999997019768,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 102,
+          "total": 563.7999999955355,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.69999999999709,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 36,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "source/straight/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 50,
+          "total": 116.90000000596046,
+          "p50": 2.1999999955296516,
+          "p95": 2.899999998509884,
+          "max": 7.899999998509884,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 159,
+          "total": 923.8999999955267,
+          "p50": 5.599999999991269,
+          "p95": 10.30000000000291,
+          "max": 11.19999999999709,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 49,
+          "total": 26.200000002980232,
+          "p50": 0.5,
+          "p95": 0.6000000014901161,
+          "max": 1.7000000029802322,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 97,
+          "total": 534.3999999955267,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.80000000000291,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "source/straight/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 49,
+          "total": 104.0999999716878,
+          "p50": 2.100000001490116,
+          "p95": 2.7999999970197678,
+          "max": 2.899999998509884,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 146,
+          "total": 830.199999997014,
+          "p50": 5.599999999991269,
+          "p95": 6,
+          "max": 11.200000000011642,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 49,
+          "total": 22.400000013411045,
+          "p50": 0.5,
+          "p95": 0.6000000014901161,
+          "max": 0.6000000014901161,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 97,
+          "total": 535.4999999985157,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.7000000000116415,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "source/elbow/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 49,
+          "total": 324.5,
+          "p50": 6,
+          "p95": 9,
+          "max": 10.100000001490116,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 169,
+          "total": 989.5999999955238,
+          "p50": 5.599999999991269,
+          "p95": 10.799999999988358,
+          "max": 11.19999999999709,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 49,
+          "total": 23,
+          "p50": 0.4000000059604645,
+          "p95": 0.7000000029802322,
+          "max": 1.1000000014901161,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 96,
+          "total": 529.7999999985041,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.7000000000116415,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "source/elbow/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 50,
+          "total": 340.299999974668,
+          "p50": 7.700000002980232,
+          "p95": 9.799999997019768,
+          "max": 10.799999997019768,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 185,
+          "total": 1109.4999999985157,
+          "p50": 5.600000000005821,
+          "p95": 10.900000000023283,
+          "max": 16.699999999982538,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 49,
+          "total": 19.900000005960464,
+          "p50": 0.3999999985098839,
+          "p95": 0.5,
+          "max": 0.6000000014901161,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 97,
+          "total": 535.7999999955355,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.7000000000116415,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "source/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 49,
+          "total": 1157.9000000357628,
+          "p50": 24.400000005960464,
+          "p95": 30.100000001490116,
+          "max": 42.599999994039536,
+          "over16": 38,
+          "over50": 0
+        },
+        "frames": {
+          "count": 184,
+          "total": 1919.5999999955238,
+          "p50": 5.600000000005821,
+          "p95": 27.79999999998836,
+          "max": 44.40000000002328,
+          "over16": 39,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 49,
+          "total": 44.49999997019768,
+          "p50": 0.8999999985098839,
+          "p95": 1.2999999970197678,
+          "max": 1.5999999940395355,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 98,
+          "total": 539.6999999940454,
+          "p50": 5.599999999991269,
+          "p95": 5.69999999999709,
+          "max": 5.80000000000291,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 0,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "name": "source/curve/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "baseline": {
+        "paint": {
+          "count": 50,
+          "total": 3440.9999999925494,
+          "p50": 79.89999999850988,
+          "p95": 93.10000000149012,
+          "max": 101.10000000149012,
+          "over16": 49,
+          "over50": 38
+        },
+        "frames": {
+          "count": 180,
+          "total": 4174.300000001502,
+          "p50": 5.600000000005821,
+          "p95": 88.89999999999418,
+          "max": 100.10000000000582,
+          "over16": 48,
+          "over50": 38
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "final": {
+        "paint": {
+          "count": 49,
+          "total": 79.09999999403954,
+          "p50": 1.5999999940395355,
+          "p95": 2.100000001490116,
+          "max": 4.699999995529652,
+          "over16": 0,
+          "over50": 0
+        },
+        "frames": {
+          "count": 98,
+          "total": 539.699999997014,
+          "p50": 5.599999999991269,
+          "p95": 5.600000000005821,
+          "max": 5.7000000000116415,
+          "over16": 0,
+          "over50": 0
+        },
+        "saves": 0,
+        "moves": 48
+      },
+      "longTasksBefore": 38,
+      "longTasksAfter": 0,
+      "passed": true,
+      "checkpoints": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    }
+  ],
+  "geometry": "All six source/card endpoint pairs and native SVG paths sampled at three real moved checkpoints per gesture; no text/card stroke collisions, disconnected routes or moved neighbouring cards. No pointermove saves. Escape restores initial layout. Two additional immediate release/plugin reload cases persist actual release positions.",
+  "releaseChecks": [
+    {
+      "name": "preview/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true
+    },
+    {
+      "name": "source/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true
+    }
+  ],
+  "regression": [
+    {
+      "name": "1614x838/preview/straight: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "1614x838/preview/elbow: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "preview: warmed native scroll performs no re-route, d write or layout save",
+      "passed": true,
+      "counts": {
+        "d": 0,
+        "saves": 0
+      },
+      "diagnostics": {
+        "renders": 82,
+        "measurements": 0,
+        "routes": 0,
+        "svgWrites": 0,
+        "markerWrites": 0
+      },
+      "workP95": 0.6000000014901161
+    },
+    {
+      "name": "1614x838/source/straight: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "1614x838/source/elbow: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "source: warmed native scroll performs no re-route, d write or layout save",
+      "passed": true,
+      "counts": {
+        "d": 0,
+        "saves": 0
+      },
+      "diagnostics": {
+        "renders": 82,
+        "measurements": 0,
+        "routes": 0,
+        "svgWrites": 0,
+        "markerWrites": 0
+      },
+      "workP95": 0.4000000059604645
+    },
+    {
+      "name": "1536x717/preview/straight: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "1536x717/preview/elbow: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "1536x717/source/straight: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    },
+    {
+      "name": "1536x717/source/elbow: 6 complete low-turn glyph-safe visible routes",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "limits": [
+    "One machine/default theme/font and selected original UE6 note; no other OS/minimum supported app/themes/popout/large-vault endurance coverage.",
+    "Playwright paced input is a repeatable performance comparison, not a claim of precise end-user FPS.",
+    "Truly blocked lanes retain paired continuation, and every reused path is rechecked against current cards.",
+    "Global shared-corridor optimization resumes after release/cancel; whole gesture end-to-end latency was not benchmarked."
+  ],
+  "extraLeftChecks": [
+    {
+      "name": "preview/curve/Scene Graph: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 48,
+        "total": 137.90000000596046,
+        "p50": 2.7999999970197678,
+        "p95": 3.399999998509884,
+        "max": 3.8000000044703484,
+        "over16": 0,
+        "over50": 0
+      },
+      "saves": 0
+    },
+    {
+      "name": "source/curve/Scene Graph: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 50,
+        "total": 130.5,
+        "p50": 2.5,
+        "p95": 2.8000000044703484,
+        "max": 10.299999997019768,
+        "over16": 0,
+        "over50": 0
+      },
+      "saves": 0
+    }
+  ],
+  "runtimeVersion": "0.2.22"
+}

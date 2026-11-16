@@ -1,0 +1,120 @@
+{
+  "baseline": "39fbdae",
+  "fixture": "tests/six-connectors.test.ts; 30 deterministic frames moving one of six cards",
+  "measurements": [
+    {
+      "version": "baseline",
+      "style": "straight",
+      "p50Ms": 1.854299999999995,
+      "p95Ms": 4.200500000000005,
+      "maxMs": 4.371700000000004,
+      "counts": {
+        "safe": 30487,
+        "routeAtClearance": 316
+      }
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "p50Ms": 1.8795000000000073,
+      "p95Ms": 2.404200000000003,
+      "maxMs": 3.5036999999999807,
+      "counts": {
+        "safe": 37687,
+        "routeAtClearance": 391
+      }
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "p50Ms": 19.951499999999896,
+      "p95Ms": 22.31110000000001,
+      "maxMs": 25.617599999999925,
+      "counts": {
+        "safe": 684581,
+        "clearCurve": 2331307,
+        "clearCubic": 1276731,
+        "routeAtClearance": 390
+      }
+    },
+    {
+      "version": "renderer-only",
+      "style": "straight",
+      "p50Ms": 1.2105999999998858,
+      "p95Ms": 1.7662000000000262,
+      "maxMs": 2.016600000000153,
+      "counts": {
+        "safe": 2104,
+        "routeAtClearance": 316
+      }
+    },
+    {
+      "version": "renderer-only",
+      "style": "elbow",
+      "p50Ms": 1.1791000000000622,
+      "p95Ms": 1.9006000000001677,
+      "maxMs": 2.8280999999999494,
+      "counts": {
+        "safe": 2149,
+        "routeAtClearance": 391
+      }
+    },
+    {
+      "version": "renderer-only",
+      "style": "curve",
+      "p50Ms": 11.769800000000032,
+      "p95Ms": 13.265399999999772,
+      "maxMs": 13.380800000000363,
+      "counts": {
+        "safe": 40133,
+        "clearCurve": 63298,
+        "clearCubic": 65640,
+        "routeAtClearance": 390
+      }
+    },
+    {
+      "version": "final",
+      "style": "straight",
+      "p50Ms": 0.2318000000000211,
+      "p95Ms": 0.45890000000008513,
+      "maxMs": 0.5221000000001368,
+      "counts": {
+        "safe": 924,
+        "routeAtClearance": 31
+      }
+    },
+    {
+      "version": "final",
+      "style": "elbow",
+      "p50Ms": 0.14940000000024156,
+      "p95Ms": 0.1878999999998996,
+      "maxMs": 0.2998999999999796,
+      "counts": {
+        "safe": 553,
+        "routeAtClearance": 31
+      }
+    },
+    {
+      "version": "final",
+      "style": "curve",
+      "p50Ms": 1.188799999999901,
+      "p95Ms": 1.5302000000001499,
+      "maxMs": 2.5585000000000946,
+      "counts": {
+        "safe": 12782,
+        "clearCurve": 16720,
+        "clearCubic": 36498,
+        "routeAtClearance": 30
+      }
+    }
+  ],
+  "geometry": {
+    "compared": 933,
+    "farCompared": 720,
+    "nearCompared": 213,
+    "available": 444,
+    "preExistingExceptions": 0,
+    "exactMatches": 933,
+    "seed": "0x221022"
+  }
+}

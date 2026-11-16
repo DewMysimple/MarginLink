@@ -344,7 +344,8 @@ export class MarginOverlay {
       return;
     }
     this.svg.style.display = '';
-    const signature = [this.geometryRevision, this.cards.size, prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision].join(':');
+    const optimizeShared = !this.cardDrag.dragging;
+    const signature = [this.geometryRevision, this.cards.size, prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision, optimizeShared].join(':');
     if (signature === this.batchSignature) return;
     const coverage = this.textObstacles.bounds;
     const bounds = { ...view, top: coverage?.top ?? view.top + this.scrollTop, bottom: coverage?.bottom ?? view.bottom + this.scrollTop };
@@ -361,7 +362,7 @@ export class MarginOverlay {
     // whitespace. Dense rows may use the compact budget; their full DOM text
     // rectangles remain protected throughout routing and batch validation.
     this.batch = connectorBatch(relations, prefs.lineStyle,
-      { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5 }, this.batch);
+      { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5, optimizeShared }, this.batch);
     this.batchSignature = signature;
     if (this.diagnostics) this.diagnostics.routes++;
     const keep = new Set(this.batch!.segments.map(s => s.id));

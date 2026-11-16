@@ -39,6 +39,9 @@ export interface ConnectorBatch {
 export interface BatchOptions extends ConnectorOptions {
   minSharedLength?: number;
   maxDetourRatio?: number;
+  /** Defer exploratory shared-corridor searches during a live gesture. Existing
+   * routes are still checked against every card and coincident ink is shared. */
+  optimizeShared?: boolean;
 }
 export interface RoutedConnector { input: BatchRelationInput; connector: Connector; side: Side; fingerprint: string }
 interface LineRecord { route: RoutedConnector; index: number; part: Segment; u: Point; offset: number; low: number; high: number }
@@ -198,8 +201,9 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
       ? old.connector : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.choice, own);
     if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint });
   }
-  const corridors: Partial<Record<Side, number>> = {};
-  for (const side of ['left', 'right'] as const) {
+  const corridors: Partial<Record<Side, number>> = options.optimizeShared === false ? { ...previous?.corridors } : {};
+  const sides: Side[] = options.optimizeShared === false ? [] : ['left', 'right'];
+  for (const side of sides) {
     const members = routes.filter(r => r.side === side); if (members.length < 2 || !options.body) continue;
     const gap = side === 'right' ? Math.min(...members.map(r => r.input.card.x)) - options.body.right : options.body.left - Math.max(...members.map(r => r.input.card.x + r.input.card.width));
     if (gap <= 4) continue;

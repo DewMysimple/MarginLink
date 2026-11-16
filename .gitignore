@@ -63,6 +63,9 @@ artifacts/*
 !artifacts/route-quality-elbow.png
 !artifacts/route-quality-straight.png
 !artifacts/release-0.2.21.json
+!artifacts/curve-drag-cpu.json
+!artifacts/curve-drag-0.2.22.json
+!artifacts/release-0.2.22.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

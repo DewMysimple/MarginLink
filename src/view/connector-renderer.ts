@@ -147,19 +147,28 @@ function sourceContact(a: Port, to: Point, box: Box): boolean {
 }
 function safe(parts: Segment[], source: Port, obstacles: readonly Box[], protectedBoxes: readonly Box[], card: Box,
   cards: readonly Box[] = [], bounds?: Box): boolean {
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
+  // Reject cheap failures before subdividing any curve. A blocked source lead,
+  // terminal approach or straight trunk invalidates every curved middle span.
+  for (const part of parts) {
     if (bounds && [part.from, part.to, ...(part.control ? [part.control] : []), ...(part.control2 ? [part.control2] : [])].some(p =>
       p.x < bounds.left || p.x > bounds.right || p.y < bounds.top || p.y > bounds.bottom)) return false;
-    if (!clearPart(part, cards)) return false;
-    if (!i) {
-      // Only the initial straight normal lead may touch the padded source.
-      // A curve's chord cannot establish that its actual arc leaves the glyph.
-      if (part.control || part.control2) return false;
-      if (obstacles.some((box, j) => crosses(part.from, part.to, protectedBoxes[j]) && !sourceContact(source, part.to, box))) return false;
-    } else if (!clearPart(part, protectedBoxes)) return false;
-    // Do not take a shortcut through the card to arrive at its far edge.
-    if (!clearPart(part, [card])) return false;
+  }
+  const first = parts[0];
+  // Only the initial straight normal lead may touch the padded source.
+  // A curve's chord cannot establish that its actual arc leaves the glyph.
+  if (!first || first.control || first.control2 || !clearLine(first.from, first.to, cards) || crosses(first.from, first.to, card)) return false;
+  if (obstacles.some((box, j) => crosses(first.from, first.to, protectedBoxes[j]) && !sourceContact(source, first.to, box))) return false;
+  for (let i = 1; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.control) continue;
+    if (!clearLine(part.from, part.to, protectedBoxes) || !clearLine(part.from, part.to, cards) || crosses(part.from, part.to, card)) return false;
+  }
+  // One subdivision against the union has the same conservative geometry as
+  // three independent checks, without walking a curve once per obstacle class.
+  const curved = parts.filter(part => part.control);
+  if (curved.length) {
+    const blocked = [...protectedBoxes, ...cards, card];
+    if (curved.some(part => !clearPart(part, blocked))) return false;
   }
   return true;
 }
@@ -202,6 +211,13 @@ function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'w
   const corridor = options.corridorX ?? (rightSide ? body.right + padding + 2 : body.left - padding - 2);
   let best: Connector | undefined, bestScore = Infinity;
   for (const { box, fragment } of sources) for (const a of ports(box).filter(port => !!port.ny)) {
+    // Every rounded candidate keeps this much normal lead; cubics keep more.
+    // A collinear source/card pair can be shorter, so leave that rare case to
+    // the exact candidate checks. Do not test the whole escape: rounding may
+    // turn before it, and rejecting that longer segment would lose safe arcs.
+    const minimumLead = padding + 0.1;
+    if (style === 'curve' && targets.every(b => distance(a, b) >= minimumLead) &&
+        !safe([{ from: a, to: { x: a.x, y: a.y + a.ny * minimumLead } }], a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
     for (const extra of style === 'curve' ? [0, 3, 7, 16, 32] : [0, 3, 7]) {
       const escape = { x: a.x, y: a.y + a.ny * (lead + extra) };
       for (const b of targets) for (const approachLength of style === 'curve' ? [Math.max(36, tail * 2), tail, lead] : [tail, lead]) {
@@ -220,8 +236,8 @@ function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'w
               ...(candidate === candidates[0] && points.length > 2 ? [0.35, 0.18, 0.08].map(scale => cubicTransition(a, escape, approach, b, scale)) : []),
               ...[24, 12, 6, 3, 1, 0.2, 0.05].map(radius => segments(points, radius, padding + 0.1))
             ] : [segments(points, 0)];
-          for (const parts of shapes) {
-            if (!parts || !safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
+          const scored = shapes.flatMap(parts => {
+            if (!parts) return [];
             let score = style === 'curve'
               ? parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2
               : routeScore(points);
@@ -232,6 +248,14 @@ function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'w
             if (lastLength < tail - 0.001) score += 100000;
             if (options.preferCorridor && points.some((p, i) => i > 0 && p.x === corridor && points[i - 1].x === corridor && Math.abs(p.y - points[i - 1].y) >= 24)) score -= 10000;
             if (previous?.fragment === fragment && previous.source === a.edge && previous.target === b.edge) score -= 4;
+            return [{ parts, score }];
+          });
+          // Keep the original first-safe-shape rule. Skip an entire candidate
+          // only when none of its shapes can improve the chosen route; skipping
+          // individual shapes could incorrectly select a later small radius.
+          if (scored.every(shape => shape.score >= bestScore)) continue;
+          for (const { parts, score } of scored) {
+            if (!safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
             if (score < bestScore) { bestScore = score; best = { path: connectorPath(parts), choice: { fragment, source: a.edge, target: b.edge }, segments: parts, points }; }
             break;
           }

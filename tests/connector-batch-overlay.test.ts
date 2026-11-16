@@ -41,6 +41,7 @@ interface OverlayProbe {
   batch?: ConnectorBatch;
   sharedPaths: Map<string, ElementStub>;
   scrollTop: number;
+  cardDrag: { dragging: boolean };
   diagnostics?: { renders: number; measurements: number; routes: number; svgWrites: number; markerWrites: number; work: number[] };
 }
 function fixture() {
@@ -53,7 +54,7 @@ function fixture() {
   }
   const host = { preferences: { ...DEFAULT_PREFERENCES, lineStyle: 'elbow' as const, lineWidth: 2 } };
   const overlay = Object.assign(Object.create(MarginOverlay.prototype) as object, {
-    hostRect, svg, host, cards, scrollTop: 0, sharedPaths: new Map(), batchSignature: '',
+    hostRect, svg, host, cards, scrollTop: 0, sharedPaths: new Map(), batchSignature: '', cardDrag: { dragging: false },
     layoutInput: { viewport: { left: 0, right: 1000, top: 0, bottom: 600 }, body: { left: 180, right: 820, top: 0, bottom: 600 } },
     obstacles: [120, 150, 180, 210, 240, 270, 300, 330, 360].map(top => ({ left: 180, right: 820, top, bottom: top + 20 })),
     textObstacles: { revision: 1 }, highlightedElements: [], view: { contentEl: { contains: () => true } }
@@ -83,6 +84,20 @@ function assertOrderedGeometry(f: ReturnType<typeof fixture>, key: string) {
 }
 
 describe('actual overlay shared-path drawing', () => {
+  it('optimizes after a gesture ends even when the final card coordinates have not changed', () => {
+    const f = fixture();
+    f.overlay.diagnostics = { renders: 0, measurements: 0, routes: 0, svgWrites: 0, markerWrites: 0, work: [] };
+    f.overlay.cardDrag.dragging = true; f.overlay.paintConnectors();
+    const preview = f.overlay.batch;
+    expect(preview!.relations.size).toBe(2);
+    f.overlay.cardDrag.dragging = false; f.overlay.paintConnectors();
+    expect(f.overlay.batch).not.toBe(preview);
+    expect(f.overlay.batch!.sharedCount).toBeGreaterThan(0);
+    expect(f.overlay.diagnostics.routes).toBe(2);
+    for (const key of f.cards.keys()) assertOrderedGeometry(f, key);
+    f.overlay.paintConnectors();
+    expect(f.overlay.diagnostics.routes).toBe(2);
+  });
   it('creates exactly one visible SVG path per stroke and publishes ordered occurrence references', () => {
     const f = fixture(); f.overlay.paintConnectors();
     expect(f.overlay.batch!.sharedCount).toBeGreaterThan(0);
