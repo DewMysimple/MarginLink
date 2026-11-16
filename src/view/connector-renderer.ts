@@ -75,7 +75,18 @@ function toward(a: Point, b: Point, amount: number): Point {
   return { x: a.x + (b.x - a.x) * amount / length, y: a.y + (b.y - a.y) * amount / length };
 }
 function clean(points: Point[]): Point[] {
-  return points.filter((p, i) => !i || distance(p, points[i - 1]) > 0.001);
+  const result: Point[] = [];
+  for (const point of points) {
+    if (result.length && distance(point, result[result.length - 1]) < 0.001) continue;
+    while (result.length > 1) {
+      const a = result[result.length - 2], b = result[result.length - 1];
+      const cross = (b.x - a.x) * (point.y - b.y) - (b.y - a.y) * (point.x - b.x);
+      if (Math.abs(cross) > 0.001) break;
+      result.pop(); // Collapse collinearity and immediate reversals before safety checks.
+    }
+    if (!result.length || distance(point, result[result.length - 1]) >= 0.001) result.push(point);
+  }
+  return result;
 }
 function segments(points: Point[], radius: number): Segment[] {
   const result: Segment[] = [];
@@ -137,6 +148,7 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
     .filter(box => validBox(box) && box.bottom + padding > minY && box.top - padding < maxY);
   const protectedBoxes = obstacles.map(box => padded(box, padding));
   const lead = padding + 0.5, targets = ports(cardBox);
+  const tail = Math.max(12, 3 * (options.lineWidth ?? 1.5));
   const body = options.body ?? {
     left: Math.min(...sources.map(s => s.box.left)), right: Math.max(...sources.map(s => s.box.right)), top: 0, bottom: 0
   };
@@ -146,8 +158,8 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
   for (const { box, fragment } of sources) for (const a of ports(box).filter(port => !!port.ny)) {
     for (const extra of [0, 3, 7]) {
       const escape = { x: a.x, y: a.y + a.ny * (lead + extra) };
-      for (const b of targets) {
-        const approach = { x: b.x + b.nx * lead, y: b.y + b.ny * lead };
+      for (const b of targets) for (const approachLength of [tail, lead]) {
+        const approach = { x: b.x + b.nx * approachLength, y: b.y + b.ny * approachLength };
         const candidates = [
           [a, escape, approach, b],
           [a, escape, { x: corridor, y: escape.y }, { x: corridor, y: approach.y }, approach, b]
@@ -161,6 +173,10 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
             const parts = segments(points, radius);
             if (!safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
             let score = parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2;
+            // The complete route may be long while its final decorative fold is
+            // only a few pixels. Prefer a clean normal entry, not a longer detour.
+            const lastLength = points.length > 2 ? distance(points[points.length - 2], points[points.length - 1]) : Infinity;
+            if (lastLength < tail - 0.001) score += 100000;
             if (options.preferCorridor && points.some((p, i) => i > 0 && p.x === corridor && points[i - 1].x === corridor && Math.abs(p.y - points[i - 1].y) >= 24)) score -= 10000;
             if (previous?.fragment === fragment && previous.source === a.edge && previous.target === b.edge) score -= 4;
             if (score < bestScore) { bestScore = score; best = { path: connectorPath(parts), choice: { fragment, source: a.edge, target: b.edge }, segments: parts, points }; }
@@ -173,7 +189,8 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
   if (best) return best;
   // Only expand after the inexpensive candidates fail. The rectilinear visibility
   // grid is induced by actual padded obstacle edges, not a fixed list of exits.
-  return searchRoute(sources, targets, allObstacles, otherCards, cardBox, lead, padding, corridor, style, previous, options);
+  return searchRoute(sources, targets, allObstacles, otherCards, cardBox, lead, padding, corridor, style, previous, options, tail)
+    ?? searchRoute(sources, targets, allObstacles, otherCards, cardBox, lead, padding, corridor, style, previous, options, lead);
 }
 
 /** Revalidate a complete path after shared-segment construction or subdivision. */
@@ -191,7 +208,7 @@ export function clearConnectorSegments(parts: Segment[], fragments: Box[], card:
 interface SearchStart { source: Port; escape: Point; fragment: number }
 interface SearchNode { index: number; cost: number; estimate: number; start: SearchStart; previous?: SearchNode }
 function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[], raw: Box[], cards: Box[], card: Box,
-  lead: number, padding: number, corridor: number, style: LineStyle, previous: PortChoice | undefined, options: ConnectorOptions): Connector | undefined {
+  lead: number, padding: number, corridor: number, style: LineStyle, previous: PortChoice | undefined, options: ConnectorOptions, approachLength: number): Connector | undefined {
   const paddedText = raw.map(b => padded(b, padding)), blocked = [...paddedText, ...cards, card];
   const starts: SearchStart[] = [];
   for (const { box, fragment } of sources) for (const source of ports(box).filter(p => !!p.ny)) {
@@ -199,7 +216,7 @@ function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[],
     if (safe([{ from: source, to: escape }], source, raw, paddedText, card, cards, options.bounds)) starts.push({ source, escape, fragment });
   }
   if (!starts.length) return;
-  const goals = targets.map(port => ({ port, point: { x: port.x + port.nx * lead, y: port.y + port.ny * lead } }))
+  const goals = targets.map(port => ({ port, point: { x: port.x + port.nx * approachLength, y: port.y + port.ny * approachLength } }))
     .filter(g => clearLine(g.point, g.port, [...paddedText, ...cards]) && !blocked.some(b => inside(g.point, b)));
   if (!goals.length) return;
   const points = [...starts.map(s => s.escape), ...goals.map(g => g.point)];
