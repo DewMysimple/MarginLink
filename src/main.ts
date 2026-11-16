@@ -8,9 +8,12 @@ import { MarginLinkSettings } from './ui/settings-tab';
 import { LayoutStore, readStoredData } from './core/layout-store';
 import { QuickControls, ConfirmAction } from './ui/quick-controls';
 import { MarginLinkSettingsView, SETTINGS_VIEW_TYPE } from './ui/settings-view';
+import { ATTACHMENT_VIEW_TYPE, FileRecognition } from './core/file-recognition';
+import { AttachmentView } from './view/attachment-view';
 
 export default class MarginLinkPlugin extends Plugin {
   preferences: Preferences = { ...DEFAULT_PREFERENCES };
+  readonly fileRecognition = new FileRecognition();
   bridges = new Set<EditorBridge>();
   reading!: ReadingAnchors;
   selection!: SelectionAction;
@@ -28,6 +31,7 @@ export default class MarginLinkPlugin extends Plugin {
   async onload(): Promise<void> {
     const data = readStoredData(await this.loadData());
     this.preferences = data.preferences;
+    this.registerView(ATTACHMENT_VIEW_TYPE, leaf => new AttachmentView(leaf, this.fileRecognition));
     this.layouts = new LayoutStore(data.layouts, () => { this.refresh(); this.queueSave(); });
     this.reading = new ReadingAnchors(this.app, () => this.refresh());
     this.selection = new SelectionAction(this.app, () => this.refresh(), () => this.preferences);
@@ -74,6 +78,9 @@ export default class MarginLinkPlugin extends Plugin {
     this.registerEvent(this.app.vault.on('modify', () => this.refresh()));
     this.app.workspace.onLayoutReady(() => {
       if (this.unloaded) return;
+      // Give dedicated file viewers loaded at startup first use of their extensions.
+      this.fileRecognition.register(this.preferences, ext => this.registerExtensions([ext], ATTACHMENT_VIEW_TYPE));
+      for (const listener of this.listeners) listener();
       this.sync();
       // Existing reading views also need the newly registered postprocessor.
       for (const view of this.overlays.keys()) if (view.getMode() === 'preview') view.previewMode.rerender(true);

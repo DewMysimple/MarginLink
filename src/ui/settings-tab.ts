@@ -4,14 +4,15 @@ import { DEFAULT_PREFERENCES, type Preferences } from '../types';
 import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
+import { renderFileTypeSettings } from './file-type-settings';
 import { ConfirmAction } from './quick-controls';
 import { renderFolderSettings } from './new-note-folders';
 
 export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin): () => void {
   container.empty(); container.addClass('margin-link-settings');
   container.createEl('h2', { text: 'MarginLink' });
-  container.createEl('p', { text: '关联始终来自原生双链。拖动只保存可清除的界面位置；删除插件数据只会恢复默认外观与自动排布。' });
-  const sync: (() => void)[] = [];
+  container.createEl('p', { text: '关联保存在笔记的原生双链中。卡片位置、文件类型和新建目录保存在插件设置中。' });
+  const sync: (() => void)[] = [renderFileTypeSettings(container, plugin)];
   const update = (key: keyof Preferences, value: unknown) => { Object.assign(plugin.preferences, { [key]: value }); void plugin.savePreferences(); };
   const dropdown = (key: keyof Preferences, name: string, options: Record<string, string>) => {
     const setting = new Setting(container).setName(name); setting.settingEl.dataset.marginKey = key;
@@ -46,7 +47,12 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   };
   const heading = (text: string) => container.createEl('h3', { text });
   heading('基础'); toggle('enabled', '启用边缘关联（打开笔记自动显示）');
-  new Setting(container).setName('恢复默认外观设置').setDesc('不删除已保存的位置；清除位置请使用布局分组。').addButton(b => b.setButtonText('恢复默认').onClick(() => new ConfirmAction(plugin.app, plugin, '恢复默认外观', '只恢复显示偏好，布局记录和原生双链均保留。', () => { plugin.preferences = { ...DEFAULT_PREFERENCES, newNoteFolders: plugin.preferences.newNoteFolders, newNoteDefault: plugin.preferences.newNoteDefault }; void plugin.savePreferences(); }).open()));
+  new Setting(container).setName('恢复默认外观设置').setDesc('只恢复外观，保留卡片位置、文件识别和新建目录设置。')
+    .addButton(b => b.setButtonText('恢复默认').onClick(() => new ConfirmAction(plugin.app, plugin, '恢复默认外观', '恢复默认外观并保留布局与文件设置。', () => {
+      const { recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault } = plugin.preferences;
+      plugin.preferences = { ...DEFAULT_PREFERENCES, recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault };
+      void plugin.savePreferences();
+    }).open()));
   heading('连线'); dropdown('lines', '连线显示', { none: '隐藏连线，保留卡片', hover: '悬停或聚焦时显示', always: '始终显示' });
   dropdown('lineStyle', '线型', { curve: '平滑曲线', straight: '直线', elbow: '直角折线' });
   slider('lineWidth', '线条粗细（px）', 1, 5, 0.5); slider('lineOpacity', '常驻透明度（0.1–1）', 0.1, 1, 0.05);

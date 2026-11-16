@@ -4,6 +4,7 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { runFileRecognitionScenario } from './desktop-file-recognition.mjs';
 import { runV2Scenarios } from './desktop-v2.mjs';
 import { runRemediationScenarios } from './desktop-remediation.mjs';
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
@@ -267,12 +268,8 @@ try {
     });
     await viewport(1680);
   });
-  await check('unhandled HTML is recognized but never launched externally by the card', async () => {
-    await mode('source', false);
-    await page.locator('.margin-link-card').filter({ hasText: 'Early Access HTML' }).click();
-    await page.waitForFunction(() => [...document.querySelectorAll('.notice')].some(n => n.textContent.includes('无法通过公开 API')));
-    assert.equal(await page.evaluate(() => app.workspace.getLeavesOfType('markdown')[0].view.file.path), 'MarginLink Demo.md');
-  });
+  await check('native file explorer recognizes HTML and XMind with independent settings and preserves attachment bytes', () =>
+    runFileRecognitionScenario({ page, mode, settings, closeSettings, flipToggle }));
   await check('switching the active file cancels a pending picker without a write', async () => {
     await select('中文文字'); await command('Link selected text to file');
     await page.evaluate(async () => {

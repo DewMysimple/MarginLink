@@ -12,9 +12,9 @@ vi.mock('obsidian', () => ({
     loadData = vi.fn(async () => null);
     saveData = vi.fn(async (_data: unknown) => {});
     addCommand = vi.fn(); addRibbonIcon = vi.fn(); addSettingTab = vi.fn();
-    registerView = vi.fn(); registerEvent = vi.fn(); registerEditorExtension = vi.fn(); registerMarkdownPostProcessor = vi.fn();
+    registerView = vi.fn(); registerExtensions = vi.fn(); registerEvent = vi.fn(); registerEditorExtension = vi.fn(); registerMarkdownPostProcessor = vi.fn();
   },
-  MarkdownView: class {}, Modal: class {}, Notice: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {}
+  MarkdownView: class {}, Modal: class {}, Notice: class {}, FileView: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {}
 }));
 vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} destroy() {} } }));
 vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { clear() {} } }));

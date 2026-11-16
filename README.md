@@ -1,12 +1,12 @@
 # MarginLink
 
-**Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
+**Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件或新建 Markdown，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.2.2**，Windows 桌面，最低 Obsidian **1.10.6**。本次整改让卡片与连线连续跟随分隔线，保留鼠标抓点，精简悬停提示，并改善设置可读性。首次启用默认使用常驻连线、自由拖动、正方形卡片。实际检查结果和未覆盖范围见 [VALIDATION.md](VALIDATION.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+**v0.2.7**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。插件可在原生文件列表识别 HTML 网页和 XMind 思维导图。两个独立开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.2.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.7.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
@@ -25,10 +25,12 @@ Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码
 
 ## 创建和打开原生双链
 
-1. 在 Live Preview 或源码模式选取普通行内文字。选区末端出现**链接手柄**；拖到正文左/右空白带，松手后搜索已有文件。也可用命令“将选中文字链接到文件 / Link selected text to file”，或聚焦手柄后按 Enter。
+1. 在 Live Preview 或源码模式选取普通行内文字。选区末端出现**链接手柄**；拖到正文左/右空白带，松手后可搜索已有文件，或选择“新建文件”创建 Markdown。也可用命令“将选中文字链接到文件 / Link selected text to file”，或聚焦手柄后按 Enter。
 2. 例如 `Early Access` → `[[References/stages.html|Early Access]]`。只替换原选区，保留空格、中文与 Unicode；一次撤销/重做对应一次创建。
 3. Esc、取消弹窗、非法放置、选区/文档版本/活动笔记变化都拒绝提交。不会错误包裹另一段文字。
 4. 点击卡片打开实际目标；Ctrl/Cmd 点击新标签，Tab/Enter 操作卡片。原生双链的点击与悬停预览不被截获。未解析卡片显示明确状态，不创建文件。
+
+新建笔记时可以在设置中预设三个存放目录。普通点击“创建并链接”后回到原文继续输入，按住 Ctrl 点击会立即在独立 Obsidian 窗口中编辑新笔记。文件名可修改，原选文字用作别名，例如 `[[详细分析/Vocabulary/model-assisted.md|model-assisted]]`。
 
 创建仍限一个连续的普通行内选区：允许软折行，拒绝硬换行、代码、属性、公式、嵌入、已有链接内部、多选区和不安全别名/文件名。**表格内创建暂不支持**，避免别名 `|` 破坏表格。含 `\|` 的转义 Wikilink 保守跳过。普通 Markdown 链接、外部 URL、`![[嵌入]]` 不生成卡片。
 
@@ -106,14 +108,11 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 
 文件选择仅来自 `Vault.getFiles()`，目标使用原生 `getFirstLinkpathDest()`，创建时验证精确完整路径以区分同名文件。标题/块子路径保留。Markdown、Canvas、Bases、PDF、原生图片/音视频通过 `WorkspaceLeaf.openFile(TFile)` 打开。
 
-**HTML/思维导图能解析不等于有查看器**：
+### HTML 和 XMind
 
-1. 在独立库添加 `References/stages.html`，写 `[[References/stages.html|Early Access]]`。
-2. 在文件选择器搜索路径；找不到只表示 Vault 未暴露，不能推断磁盘文件不存在。卡片未解析时不创建替身。
-3. 若可解析而无已确认查看器，卡片只提示，不启动系统应用、不执行 HTML、不转换 Markdown。
-4. 安装相应类型插件后，先用它打开一个同类文件并**保留兼容 FileView 标签**，公开 `canAcceptExtension()` 确认后再从卡片打开。
+在 **MarginLink → Obsidian 能识别的文件类型** 中独立选择 HTML 文件（.html、.htm）和 XMind 文件（.xmind）。首次使用和从旧版升级时，两项都开启。改动后，在“第三方插件”中关闭再启用 MarginLink 以应用。Obsidian 的“显示所有文件类型”和其他文件查看器也会影响文件列表中的可见性。
 
-公开 API 无法枚举尚未打开的第三方处理器，这一降级继续保留。用户主题、第三方 DOM/悬停预览插件、popout 编辑窗口、macOS/Linux、移动端、RTL 及全部媒体格式组合仍需人工验收。1.15.0 更新包与旧安装程序的独立设置窗口在 CDP 下会有宿主告警；无插件对照和未确认的具体原因见验证报告。
+在原生文件列表或笔记双链中打开附件时，MarginLink 的只读页会显示名称和类型。若已有查看器先接管某一扩展名，沿用该查看器。需要打开文件内容时，在文件列表右键选择“在默认应用中打开”，由浏览器或关联的 XMind 应用打开。HTML 内容不会在 MarginLink 中运行。HTML 卡片带有 HTML 字样，链接使用附件本身的路径，例如 `[[导图/项目规划.xmind|项目规划]]`。
 
 ## 源码与开发
 
@@ -141,7 +140,7 @@ npm test
 npm run lint
 npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.2.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.7.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。

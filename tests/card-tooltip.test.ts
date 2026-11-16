@@ -12,6 +12,7 @@ describe('file-only card descriptions', () => {
     ['product_release_stages.html', 'html', 'HTML 文件'],
     ['很长的中文文件名保留扩展名.md', 'md', 'Markdown 文件'],
     ['Board.canvas', 'canvas', 'Canvas 文件'],
+    ['导图.XMIND', 'XMIND', 'XMind 文件'],
     ['Mixed.HTML', 'HTML', 'HTML 文件']
   ])('uses the resolved TFile name for %s', (name, extension, type) => {
     expect(cardFileLabel(occurrence('Different alias#^block'), resolved(name, extension))).toBe(`${name} · ${type}`);

@@ -7,6 +7,7 @@ import type { LayoutStore } from '../core/layout-store';
 import { DragController } from '../editor/drag-controller';
 import { CardDragController, type CardDragContext } from './card-drag-controller';
 import { resolveLink } from '../core/link-resolver';
+import type { FileRecognition } from '../core/file-recognition';
 import { canOpenInObsidian } from '../core/file-capabilities';
 import { layoutCards, positionFromDrop, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
@@ -18,6 +19,7 @@ import { parseWikilinks } from '../core/wikilink-parser';
 
 interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice }
 export interface OverlayHost {
+  fileRecognition: FileRecognition;
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
   reading: ReadingAnchors; selection: SelectionAction; layouts: LayoutStore;
 }
@@ -264,8 +266,8 @@ export class MarginOverlay {
     const anchor = this.cards.get(key)?.anchor;
     if (!anchor || !this.view.file || this.view.file.path !== this.path || this.confirmedSource !== this.path) return;
     const resolved = resolveLink(this.host.app, anchor.occurrence.target, this.view.file.path);
-    if (!resolved.file) { new Notice('未解析目标：原生 Vault/链接解析器未找到文件。HTML 等格式可能需要文件类型插件；不会创建新笔记。'); return; }
-    if (!canOpenInObsidian(this.host.app, resolved.file.extension)) { new Notice('文件已被 Vault 识别，但无法通过公开 API 确认此类型的打开能力。请先用相应文件类型插件打开一个该类型文件并保留其标签，再点击卡片；也可使用正文原生双链。'); return; }
+    if (!resolved.file) { new Notice('未找到该文件。请核对链接路径，以及设置中的“Obsidian 能识别的文件类型”。'); return; }
+    if (!this.host.fileRecognition.canOpen(resolved.file.extension) && !canOpenInObsidian(this.host.app, resolved.file.extension)) { new Notice('文件已被 Vault 识别，但无法通过公开 API 确认此类型的打开能力。请先用相应文件类型插件打开一个该类型文件并保留其标签，再点击卡片；也可使用正文原生双链。'); return; }
     try {
       const leaf = event.ctrlKey || event.metaKey ? this.host.app.workspace.getLeaf('tab') : this.view.leaf;
       await leaf.openFile(resolved.file, { eState: resolved.subpath ? { subpath: resolved.subpath } : undefined });

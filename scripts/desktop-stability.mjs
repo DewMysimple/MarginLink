@@ -88,13 +88,23 @@ const startSampling = async () => page.evaluate(() => {
   const sample = time => {
     if (!window.stabilitySampling) return;
     const card = [...host.querySelectorAll('.margin-link-card')].find(c => c.textContent.includes('dives')), overlay = host.querySelector('.margin-link-overlay'), content = host.querySelector('.cm-content'), line = overlay?.querySelector('.margin-link-connector');
-    const h = host.getBoundingClientRect(), c = content.getBoundingClientRect(), s = getComputedStyle(content), r = card?.getBoundingClientRect(), d = line?.getAttribute('d'), n = d?.match(/-?\d+(?:\.\d+)?/g)?.map(Number), end = n?.slice(-2), side = r && r.left < h.left + h.width / 2 ? 'left' : 'right';
+    const h = host.getBoundingClientRect(), c = content.getBoundingClientRect(), s = getComputedStyle(content), r = card?.getBoundingClientRect();
+    let endpointError = null;
+    const screen = line?.getScreenCTM();
+    if (r && screen && line.getAttribute('d')) {
+      const endpoint = line.getPointAtLength(line.getTotalLength()).matrixTransform(screen);
+      const middleX = (r.left + r.right) / 2, middleY = (r.top + r.bottom) / 2;
+      const midpoints = [[r.left, middleY], [r.right, middleY], [middleX, r.top], [middleX, r.bottom]];
+      const closest = midpoints.reduce((best, next) => Math.hypot(endpoint.x - next[0], endpoint.y - next[1]) <
+        Math.hypot(endpoint.x - best[0], endpoint.y - best[1]) ? next : best);
+      endpointError = [endpoint.x - closest[0], endpoint.y - closest[1]];
+    }
     const body = { left: c.left + parseFloat(s.paddingLeft), right: c.right - parseFloat(s.paddingRight) }, scroller = host.querySelector('.cm-scroller').getBoundingClientRect();
     const anchor = [...host.querySelectorAll('.cm-line')].find(e => e.textContent.includes('dives'))?.getBoundingClientRect();
     const anchorVisible = !!anchor && anchor.top >= scroller.top && anchor.bottom <= scroller.bottom;
     const availableRight = Math.min(h.right, scroller.right) - 8 - body.right - 16;
     const visibility = overlay ? getComputedStyle(overlay).visibility : 'missing';
-    window.stabilityFrames.push({ time, host: { left: h.left, right: h.right, width: h.width }, body, scroller: scroller.toJSON(), anchor: anchor?.toJSON(), anchorVisible, availableRight, hiddenReason: visibility === 'hidden' ? 'whole-layer' : !anchorVisible ? 'anchor-outside-viewport' : !card && availableRight < 36 ? 'insufficient-space' : !card ? 'unexplained-missing' : null, rect: r?.toJSON(), shape: card?.parentElement.dataset.shape, sameNode: card === initial, visibility, missing: !card, overlayHidden: !overlay || overlay.hidden || visibility === 'hidden' || getComputedStyle(overlay).display === 'none', cardHidden: !card || getComputedStyle(card).visibility === 'hidden', lineOpacity: line ? +getComputedStyle(line).opacity : 0, endpointError: r && end ? [end[0] + h.left - (side === 'left' ? r.right : r.left), end[1] + h.top - (r.top + r.height / 2)] : null, safe: !!r && r.left >= h.left - 1 || false });
+    window.stabilityFrames.push({ time, host: { left: h.left, right: h.right, width: h.width }, body, scroller: scroller.toJSON(), anchor: anchor?.toJSON(), anchorVisible, availableRight, hiddenReason: visibility === 'hidden' ? 'whole-layer' : !anchorVisible ? 'anchor-outside-viewport' : !card && availableRight < 36 ? 'insufficient-space' : !card ? 'unexplained-missing' : null, rect: r?.toJSON(), shape: card?.parentElement.dataset.shape, sameNode: card === initial, visibility, missing: !card, overlayHidden: !overlay || overlay.hidden || visibility === 'hidden' || getComputedStyle(overlay).display === 'none', cardHidden: !card || getComputedStyle(card).visibility === 'hidden', lineOpacity: line ? +getComputedStyle(line).opacity : 0, endpointError, safe: !!r && r.left >= h.left - 1 || false });
     const record = window.stabilityFrames.at(-1); record.safe = !!r && r.left >= h.left - 1 && r.right <= h.right + 1 && r.top >= scroller.top - 1 && r.bottom <= scroller.bottom + 1 && (r.right <= body.left + 1 || r.left >= body.right - 1);
     requestAnimationFrame(time => setTimeout(() => sample(time), 0));
   }; requestAnimationFrame(time => setTimeout(() => sample(time), 0));

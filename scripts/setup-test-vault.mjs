@@ -14,10 +14,12 @@ const fixtures = {
   'Stability 长中文文件名称用于确认提示保留完整文件名.md': '# 中文目标\n',
   'Board.canvas': '{"nodes":[],"edges":[]}',
   'References/stages.html': '<!doctype html><title>Stages</title><p>This fixture is not executed by MarginLink.</p>',
+  'MarginLink 测试.HTM': '<!doctype html><title>MarginLink test fixture</title>',
+  'MarginLink 导图.XMind': await readFile(new URL('../tests/fixtures/native-attachments.xmind', import.meta.url)),
   'pixel.svg': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg>',
   '.obsidian/community-plugins.json': '["margin-link"]',
   '.obsidian/plugins/margin-link/data.json': JSON.stringify({ enabled: true, lines: 'hover', density: 'auto', layout: 'balanced' }),
-  '.obsidian/app.json': JSON.stringify({ readableLineLength: true, livePreview: true, defaultViewMode: 'source', useMarkdownLinks: false }),
+  '.obsidian/app.json': JSON.stringify({ readableLineLength: true, livePreview: true, defaultViewMode: 'source', useMarkdownLinks: false, showUnsupportedFiles: false }),
   '.obsidian/appearance.json': JSON.stringify({ theme: 'obsidian', cssTheme: '' }),
   '.obsidian/core-plugins.json': '["file-explorer","switcher","command-palette"]',
   '.obsidian/workspace.json': JSON.stringify({ main: { id: 'main', type: 'split', children: [{ id: 'tabs', type: 'tabs', children: [{ id: 'demo', type: 'leaf', state: { type: 'markdown', state: { file: 'MarginLink Demo.md', mode: 'source', source: false } } }] }], direction: 'vertical' }, active: 'demo', lastOpenFiles: ['MarginLink Demo.md'] })

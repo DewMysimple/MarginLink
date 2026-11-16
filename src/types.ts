@@ -26,6 +26,8 @@ export type CardShape = 'horizontal' | 'square' | 'icon';
 export type PlacementMode = 'auto' | 'free' | 'snap';
 export interface Preferences {
   enabled: boolean;
+  recognizeHtml: boolean;
+  recognizeXmind: boolean;
   lines: LineMode;
   density: 'auto' | 'compact';
   layout: 'balanced' | 'left' | 'right';
@@ -49,6 +51,7 @@ export interface Preferences {
   newNoteDefault: number;
 }
 export const DEFAULT_PREFERENCES: Preferences = {
+  recognizeHtml: true, recognizeXmind: true,
   enabled: true, lines: 'always', density: 'auto', layout: 'balanced', placementMode: 'free',
   lineStyle: 'curve', lineWidth: 1.5, lineOpacity: 0.65, lineColor: 'theme',
   cardShape: 'square', cardSize: 'medium', cardRadius: 8, cardBorder: true,
@@ -72,6 +75,7 @@ export function readPreferences(value: unknown): Preferences {
   const bool = (key: keyof Preferences) => typeof v[key] === 'boolean' ? v[key] as boolean : DEFAULT_PREFERENCES[key] as boolean;
   return {
     enabled: bool('enabled'),
+    recognizeHtml: bool('recognizeHtml'), recognizeXmind: bool('recognizeXmind'),
     lines: choice('lines', ['none', 'hover', 'always'], DEFAULT_PREFERENCES.lines),
     density: v.density === 'compact' ? 'compact' : 'auto',
     layout: choice('layout', ['balanced', 'left', 'right'], 'balanced'),
