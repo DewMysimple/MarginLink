@@ -1,0 +1,17 @@
+{
+  "baseline": "55f4033",
+  "result": [
+    {
+      "style": "straight",
+      "connected": false
+    },
+    {
+      "style": "elbow",
+      "connected": false
+    },
+    {
+      "style": "curve",
+      "connected": false
+    }
+  ]
+}

@@ -2,31 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Box, LineStyle } from '../src/types';
 import { connectorRoute } from '../src/view/connector-renderer';
 
-// Independent SVG evaluator: assertions inspect the emitted path itself, not
-// the router's candidate points or its collision helper.
-function samples(path: string): { x: number; y: number; command: number }[] {
-  const commands = [...path.matchAll(/([MLQ])\s+([^MLQ]+)/g)];
-  let current = { x: 0, y: 0 };
-  const points: { x: number; y: number; command: number }[] = [];
-  commands.forEach(([, command, numbers], index) => {
-    const values = numbers.trim().split(/[\s,]+/).map(Number);
-    if (command === 'M') { current = { x: values[0], y: values[1] }; points.push({ ...current, command: index }); return; }
-    const end = command === 'Q' ? { x: values[2], y: values[3] } : { x: values[0], y: values[1] };
-    const control = { x: values[0], y: values[1] };
-    const steps = Math.ceil(Math.hypot(current.x - end.x, current.y - end.y) * 5) + 8;
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps, u = 1 - t;
-      points.push({
-        x: command === 'Q' ? u * u * current.x + 2 * u * t * control.x + t * t * end.x : current.x + (end.x - current.x) * t,
-        y: command === 'Q' ? u * u * current.y + 2 * u * t * control.y + t * t * end.y : current.y + (end.y - current.y) * t,
-        command: index
-      });
-    }
-    current = end;
-  });
-  expect(points.every(p => Number.isFinite(p.x + p.y))).toBe(true);
-  return points;
-}
+import { svgSamples as samples } from './svg-path';
+
 function inside(p: { x: number; y: number }, box: Box, padding = 0): boolean {
   return p.x > box.left - padding + 0.001 && p.x < box.right + padding - 0.001 &&
     p.y > box.top - padding + 0.001 && p.y < box.bottom + padding - 0.001;

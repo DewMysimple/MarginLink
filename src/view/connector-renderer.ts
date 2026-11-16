@@ -2,7 +2,7 @@ import type { Box, LineStyle } from '../types';
 import type { Placement } from './layout-engine';
 
 type Edge = 'top' | 'right' | 'bottom' | 'left';
-interface Point { x: number; y: number }
+export interface Point { x: number; y: number }
 interface Port extends Point { edge: Edge; nx: number; ny: number }
 export interface PortChoice { fragment: number; source: Edge; target: Edge }
 export interface ConnectorOptions {
@@ -11,9 +11,15 @@ export interface ConnectorOptions {
   body?: Box;
   lineWidth?: number;
   clearance?: number;
+  /** Other cards are protected even during controlled contact with source text. */
+  cardObstacles?: readonly Box[];
+  /** Current content-coordinate draw area; an offscreen detour is not a connection. */
+  bounds?: Box;
+  corridorX?: number;
+  preferCorridor?: boolean;
 }
-interface Connector { path: string; choice: PortChoice }
-interface Segment { from: Point; to: Point; control?: Point }
+export interface Connector { path: string; choice: PortChoice; segments: Segment[]; points: Point[] }
+export interface Segment { from: Point; to: Point; control?: Point; control2?: Point }
 
 function validBox(box: Box): boolean {
   return Object.values(box).every(Number.isFinite) && box.right > box.left && box.bottom > box.top;
@@ -87,7 +93,7 @@ function segments(points: Point[], radius: number): Segment[] {
   }
   return result;
 }
-function pathFor(parts: Segment[]): string {
+export function connectorPath(parts: Segment[]): string {
   return `M ${parts[0].from.x} ${parts[0].from.y}` + parts.map(s => s.control
     ? ` Q ${s.control.x} ${s.control.y} ${s.to.x} ${s.to.y}` : ` L ${s.to.x} ${s.to.y}`).join('');
 }
@@ -96,9 +102,13 @@ function sourceContact(a: Port, to: Point, box: Box): boolean {
   return a.x >= box.left && a.x <= box.right && Math.abs(a.y - edge) <= 1 &&
     (to.y - a.y) * a.ny > 0 && !crosses(a, to, box);
 }
-function safe(parts: Segment[], source: Port, obstacles: readonly Box[], protectedBoxes: readonly Box[], card: Box): boolean {
+function safe(parts: Segment[], source: Port, obstacles: readonly Box[], protectedBoxes: readonly Box[], card: Box,
+  cards: readonly Box[] = [], bounds?: Box): boolean {
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
+    if (bounds && [part.from, part.to, ...(part.control ? [part.control] : [])].some(p =>
+      p.x < bounds.left || p.x > bounds.right || p.y < bounds.top || p.y > bounds.bottom)) return false;
+    if (part.control ? !clearCurve(part.from, part.control, part.to, cards) : !clearLine(part.from, part.to, cards)) return false;
     if (!i) {
       if (obstacles.some((box, j) => crosses(part.from, part.to, protectedBoxes[j]) && !sourceContact(source, part.to, box))) return false;
     } else if (part.control ? !clearCurve(part.from, part.control, part.to, protectedBoxes) : !clearLine(part.from, part.to, protectedBoxes)) return false;
@@ -121,7 +131,9 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
   const minY = Math.min(cardBox.top, ...sources.map(s => s.box.top)) - padding - 12;
   const maxY = Math.max(cardBox.bottom, ...sources.map(s => s.box.bottom)) + padding + 12;
   // Rows beyond the route's possible vertical extent cannot intersect it.
-  const obstacles = [...(options.obstacles ?? []), ...sources.map(s => s.box)]
+  const allObstacles = [...(options.obstacles ?? []), ...sources.map(s => s.box)].filter(validBox);
+  const otherCards = (options.cardObstacles ?? []).filter(validBox).map(box => padded(box, padding));
+  const obstacles = allObstacles
     .filter(box => validBox(box) && box.bottom + padding > minY && box.top - padding < maxY);
   const protectedBoxes = obstacles.map(box => padded(box, padding));
   const lead = padding + 0.5, targets = ports(cardBox);
@@ -129,7 +141,7 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
     left: Math.min(...sources.map(s => s.box.left)), right: Math.max(...sources.map(s => s.box.right)), top: 0, bottom: 0
   };
   const rightSide = (cardBox.left + cardBox.right) / 2 >= (body.left + body.right) / 2;
-  const corridor = rightSide ? body.right + padding + 2 : body.left - padding - 2;
+  const corridor = options.corridorX ?? (rightSide ? body.right + padding + 2 : body.left - padding - 2);
   let best: Connector | undefined, bestScore = Infinity;
   for (const { box, fragment } of sources) for (const a of ports(box).filter(port => !!port.ny)) {
     for (const extra of [0, 3, 7]) {
@@ -147,15 +159,116 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
           const points = clean(candidate);
           for (const radius of style === 'curve' ? [8, 3, 0] : [0]) {
             const parts = segments(points, radius);
-            if (!safe(parts, a, obstacles, protectedBoxes, cardBox)) continue;
+            if (!safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
             let score = parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2;
+            if (options.preferCorridor && points.some((p, i) => i > 0 && p.x === corridor && points[i - 1].x === corridor && Math.abs(p.y - points[i - 1].y) >= 24)) score -= 10000;
             if (previous?.fragment === fragment && previous.source === a.edge && previous.target === b.edge) score -= 4;
-            if (score < bestScore) { bestScore = score; best = { path: pathFor(parts), choice: { fragment, source: a.edge, target: b.edge } }; }
+            if (score < bestScore) { bestScore = score; best = { path: connectorPath(parts), choice: { fragment, source: a.edge, target: b.edge }, segments: parts, points }; }
             break;
           }
         }
       }
     }
   }
-  return best;
+  if (best) return best;
+  // Only expand after the inexpensive candidates fail. The rectilinear visibility
+  // grid is induced by actual padded obstacle edges, not a fixed list of exits.
+  return searchRoute(sources, targets, allObstacles, otherCards, cardBox, lead, padding, corridor, style, previous, options);
+}
+
+/** Revalidate a complete path after shared-segment construction or subdivision. */
+export function clearConnectorSegments(parts: Segment[], fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'width' | 'height'>, options: ConnectorOptions = {}): boolean {
+  if (!parts.length) return false;
+  const padding = Math.max(0.5, (options.lineWidth ?? 1.5) / 2) + Math.max(0, options.clearance ?? 1.5);
+  const raw = [...(options.obstacles ?? []), ...fragments].filter(validBox);
+  const start = parts[0].from;
+  const source = fragments.flatMap(box => ports(box).filter(port => !!port.ny)).find(port => distance(port, start) < 0.01);
+  return !!source && safe(parts, source, raw, raw.map(b => padded(b, padding)),
+    { left: card.x, right: card.x + card.width, top: card.y, bottom: card.y + card.height },
+    (options.cardObstacles ?? []).filter(validBox).map(b => padded(b, padding)), options.bounds);
+}
+
+interface SearchStart { source: Port; escape: Point; fragment: number }
+interface SearchNode { index: number; cost: number; estimate: number; start: SearchStart; previous?: SearchNode }
+function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[], raw: Box[], cards: Box[], card: Box,
+  lead: number, padding: number, corridor: number, style: LineStyle, previous: PortChoice | undefined, options: ConnectorOptions): Connector | undefined {
+  const paddedText = raw.map(b => padded(b, padding)), blocked = [...paddedText, ...cards, card];
+  const starts: SearchStart[] = [];
+  for (const { box, fragment } of sources) for (const source of ports(box).filter(p => !!p.ny)) {
+    const escape = { x: source.x, y: source.y + source.ny * lead };
+    if (safe([{ from: source, to: escape }], source, raw, paddedText, card, cards, options.bounds)) starts.push({ source, escape, fragment });
+  }
+  if (!starts.length) return;
+  const goals = targets.map(port => ({ port, point: { x: port.x + port.nx * lead, y: port.y + port.ny * lead } }))
+    .filter(g => clearLine(g.point, g.port, [...paddedText, ...cards]) && !blocked.some(b => inside(g.point, b)));
+  if (!goals.length) return;
+  const points = [...starts.map(s => s.escape), ...goals.map(g => g.point)];
+  const envelope = options.bounds ?? {
+    left: Math.min(...points.map(p => p.x), ...blocked.map(b => b.left)) - 16,
+    right: Math.max(...points.map(p => p.x), ...blocked.map(b => b.right)) + 16,
+    top: Math.min(...points.map(p => p.y), ...blocked.map(b => b.top)) - 16,
+    bottom: Math.max(...points.map(p => p.y), ...blocked.map(b => b.bottom)) + 16
+  };
+  const coordinates = (values: number[], min: number, max: number) => [...new Set(values.filter(v => Number.isFinite(v) && v >= min && v <= max))].sort((a, b) => a - b);
+  const xs = coordinates([envelope.left, envelope.right, corridor, ...points.map(p => p.x), ...blocked.flatMap(b => [b.left - 0.25, b.right + 0.25])], envelope.left, envelope.right);
+  const ys = coordinates([envelope.top, envelope.bottom, ...points.map(p => p.y), ...blocked.flatMap(b => [b.top - 0.25, b.bottom + 0.25])], envelope.top, envelope.bottom);
+  const width = xs.length;
+  const indexOf = (p: Point) => { const x = xs.indexOf(p.x), y = ys.indexOf(p.y); return x < 0 || y < 0 ? -1 : y * width + x; };
+  const position = (index: number): Point => ({ x: xs[index % width], y: ys[Math.floor(index / width)] });
+  const goalMap = new Map(goals.map(goal => [indexOf(goal.point), goal]));
+  const heuristic = (p: Point) => Math.min(...goals.map(goal => Math.abs(p.x - goal.point.x) + Math.abs(p.y - goal.point.y)));
+  const heap: SearchNode[] = [], costs = new Map<number, number>();
+  const push = (node: SearchNode) => {
+    let i = heap.length; heap.push(node);
+    while (i > 0) { const parent = (i - 1) >> 1; if (heap[parent].estimate <= node.estimate) break; heap[i] = heap[parent]; i = parent; }
+    heap[i] = node;
+  };
+  const pop = (): SearchNode => {
+    const first = heap[0], last = heap.pop()!;
+    if (heap.length) {
+      let i = 0;
+      while (i * 2 + 1 < heap.length) {
+        let child = i * 2 + 1;
+        if (child + 1 < heap.length && heap[child + 1].estimate < heap[child].estimate) child++;
+        if (heap[child].estimate >= last.estimate) break;
+        heap[i] = heap[child]; i = child;
+      }
+      heap[i] = last;
+    }
+    return first;
+  };
+  for (const start of starts) {
+    const index = indexOf(start.escape); if (index < 0) continue;
+    const cost = previous?.fragment === start.fragment && previous.source === start.source.edge ? 0 : 4;
+    if ((costs.get(index) ?? Infinity) <= cost) continue;
+    costs.set(index, cost); push({ index, cost, estimate: cost + heuristic(start.escape), start });
+  }
+  while (heap.length) {
+    const node = pop(); if (node.cost !== costs.get(node.index)) continue;
+    const point = position(node.index), goal = goalMap.get(node.index);
+    if (goal) {
+      const path: Point[] = [];
+      for (let at: SearchNode | undefined = node; at; at = at.previous) path.push(position(at.index));
+      path.reverse();
+      const routePoints = clean([node.start.source, ...path, goal.port]);
+      for (const radius of style === 'curve' ? [8, 3, 0] : [0]) {
+        const parts = segments(routePoints, radius);
+        if (safe(parts, node.start.source, raw, paddedText, card, cards, options.bounds)) return {
+          path: connectorPath(parts), choice: { fragment: node.start.fragment, source: node.start.source.edge, target: goal.port.edge }, segments: parts, points: routePoints
+        };
+      }
+    }
+    const x = node.index % width, y = Math.floor(node.index / width);
+    const next = [x > 0 ? node.index - 1 : -1, x + 1 < width ? node.index + 1 : -1,
+      y > 0 ? node.index - width : -1, y + 1 < ys.length ? node.index + width : -1];
+    for (const index of next) {
+      if (index < 0) continue;
+      const to = position(index), cost = node.cost + distance(point, to);
+      if (cost >= (costs.get(index) ?? Infinity) - 0.001 || !clearLine(point, to, blocked)) continue;
+      costs.set(index, cost); push({ index, cost, estimate: cost + heuristic(to), start: node.start, previous: node });
+    }
+  }
+}
+function inside(point: Point, box: Box): boolean {
+  return point.x > box.left && point.x < box.right && point.y > box.top && point.y < box.bottom;
 }

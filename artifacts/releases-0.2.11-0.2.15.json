@@ -1,0 +1,11 @@
+{
+  "baseline": "55f403362974850bc477887395da9e7e3c807af1",
+  "releases": [
+    {
+      "version": "0.2.11",
+      "testsPassed": 248,
+      "zipSHA256": "086635d196e160b434cad032cb86534879ab398ae0dbfeff2b0a2ff0c192e14c",
+      "checks": "test/lint/build/package/zip verified"
+    }
+  ]
+}

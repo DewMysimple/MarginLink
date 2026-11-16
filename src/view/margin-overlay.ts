@@ -18,8 +18,9 @@ import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
 import { StableLayout } from './stable-layout';
 import { TextObstacles } from './text-obstacles';
+import { continuationPair, containsBox } from './continuation';
 
-interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice; routeSignature?: string }
+interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement; ports?: PortChoice; routeSignature?: string; routeBounds?: Box; continuation?: [HTMLButtonElement, HTMLButtonElement] }
 export interface OverlayHost {
   fileRecognition: FileRecognition;
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
@@ -31,6 +32,8 @@ export class MarginOverlay {
   private drag: DragController;
   private cardDrag: CardDragController;
   private cards = new Map<string, Card>();
+  private continuationNumbers = new Map<string, number>();
+  private routePlacements: Placement[] = [];
   private menus = new Set<Menu>();
   private anchors: Anchor[] = [];
   private resize: ResizeObserver;
@@ -72,7 +75,12 @@ export class MarginOverlay {
     this.drag = new DragController(this.root, view, host.selection);
     this.cardDrag = new CardDragController(this.root, key => this.dragContext(key), (key, p) => {
       const card = this.cards.get(key);
-      if (card && p) this.place(card, p);
+      if (card && p) {
+        this.routePlacements = this.routePlacements.map(c => c.key === key ? p : c);
+        this.place(card, p);
+        for (const [id, other] of this.cards) if (id !== key) this.place(other, other.placement);
+        this.updateContinuations();
+      }
       else this.schedule();
     }, (key, relative) => this.savePosition(key, relative));
     this.mutation = new MutationObserver(records => {
@@ -199,8 +207,9 @@ export class MarginOverlay {
     };
     const placements = this.stableLayout.update(this.layoutInput, scrollTop, geometryKey)
       .filter(p => p.x + p.width > viewport.left && p.x < viewport.right && p.y + p.height > viewport.top && p.y < viewport.bottom);
+    this.routePlacements = placements;
     const keep = new Set(placements.map(p => p.key));
-    for (const [key, card] of this.cards) if (!keep.has(key)) { cardTooltip.hideWithin(card.button); card.shell.remove(); card.path.remove(); this.cards.delete(key); }
+    for (const [key, card] of this.cards) if (!keep.has(key)) { cardTooltip.hideWithin(card.button); card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); this.cards.delete(key); }
     const anchorMap = new Map(this.anchors.map(a => [a.key, a]));
     for (const p of placements) {
       const anchor = anchorMap.get(p.key)!;
@@ -211,7 +220,7 @@ export class MarginOverlay {
         const shell = this.root.createDiv({ cls: 'margin-link-card-shell' });
         const button = shell.createEl('button');
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.classList.add('margin-link-connector'); this.svg.appendChild(path);
+        path.classList.add('margin-link-connector'); path.dataset.members = JSON.stringify([p.key]); this.svg.appendChild(path);
         card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
         shell.addEventListener('pointerenter', e => { this.highlight(p.key); if (!e.buttons && !this.cardDrag.dragging) cardTooltip.show(button); });
         shell.addEventListener('pointerleave', () => { this.highlight(undefined); cardTooltip.hideWithin(button); });
@@ -233,6 +242,7 @@ export class MarginOverlay {
       else card.button.removeAttribute('aria-description');
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
+    this.updateContinuations();
     const selected = bridge?.cm.state.selection.main;
     this.highlight(this.highlighted ?? (selected ? this.anchors.find(a => selected.from < a.occurrence.end && selected.to > a.occurrence.start)?.key : undefined));
     this.drag.update(this.cardDrag.dragging ? undefined : bridge, hostRect, viewport, body);
@@ -267,6 +277,7 @@ export class MarginOverlay {
   private place(card: Card, p: Placement): void {
     const rect = this.hostRect;
     if (!rect) return;
+    card.placement = p;
     card.shell.dataset.shape = p.shape ?? 'horizontal'; card.button.classList.toggle('margin-link-compact', p.compact);
     card.shell.dataset.manual = String(!!p.manual);
     Object.assign(card.shell.style, { width: `${p.width}px`, height: `${p.height}px`, transform: `translate(${p.x}px, ${p.y}px)` });
@@ -278,16 +289,62 @@ export class MarginOverlay {
     }));
     const contentPlacement = { ...p, y: p.y + this.scrollTop };
     const prefs = this.host.preferences;
+    const otherCards = this.routePlacements.filter(c => c.key !== p.key).map(c => ({
+      left: c.x, right: c.x + c.width, top: c.y + this.scrollTop, bottom: c.y + c.height + this.scrollTop
+    }));
+    const view = this.layoutInput!.viewport;
+    const bounds = { ...view, top: view.top + this.scrollTop, bottom: view.bottom + this.scrollTop };
+    const endpointsVisible = fragments.some(f => containsBox(bounds, f)) && containsBox(bounds, {
+      left: p.x, right: p.x + p.width, top: contentPlacement.y, bottom: contentPlacement.y + p.height
+    });
+    const restricted = !card.path.getAttribute('d') || (card.routeBounds && !containsBox(bounds, card.routeBounds));
     const signature = JSON.stringify([fragments, contentPlacement.x, contentPlacement.y, p.width, p.height,
-      prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision]);
+      prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision, otherCards, endpointsVisible && restricted ? bounds : null]);
     if (card.routeSignature !== signature) {
       const route = connectorRoute(fragments, contentPlacement, prefs.lineStyle, card.ports, {
-        obstacles: this.obstacles, body: this.layoutInput?.body, lineWidth: prefs.lineWidth + 0.5
+        obstacles: this.obstacles, body: this.layoutInput?.body, lineWidth: prefs.lineWidth + 0.5, cardObstacles: otherCards, bounds: endpointsVisible ? bounds : undefined
       });
       card.ports = route?.choice; card.routeSignature = signature;
       card.path.setAttribute('d', route?.path ?? '');
+      card.routeBounds = route ? {
+        left: Math.min(...route.points.map(pt => pt.x)), right: Math.max(...route.points.map(pt => pt.x)),
+        top: Math.min(...route.points.map(pt => pt.y)), bottom: Math.max(...route.points.map(pt => pt.y))
+      } : undefined;
     }
     card.path.setAttribute('transform', `translate(0 ${-this.scrollTop})`);
+    card.shell.dataset.routeState = !fragments.length ? 'pending' : !endpointsVisible ? 'offscreen' : card.path.getAttribute('d') ? 'complete' : 'blocked';
+  }
+  private updateContinuations(): void {
+    const input = this.layoutInput, rect = this.hostRect;
+    if (!input || !rect) return;
+    const used: Box[] = [];
+    const obstacles = this.obstacles.map(b => ({ ...b, top: b.top - this.scrollTop, bottom: b.bottom - this.scrollTop }));
+    const cards = this.routePlacements.map(p => ({ left: p.x, right: p.x + p.width, top: p.y, bottom: p.y + p.height }));
+    for (const [key, card] of this.cards) {
+      card.continuation?.forEach(el => { el.hidden = true; el.tabIndex = -1; });
+      if (card.shell.dataset.routeState !== 'blocked' || this.host.preferences.lines === 'none') continue;
+      const source = card.anchor.fragments.map(b => ({ left: b.left - rect.left, right: b.right - rect.left, top: b.top - rect.top, bottom: b.bottom - rect.top })).find(b => containsBox(input.viewport, b));
+      const p = card.placement, target = { left: p.x, right: p.x + p.width, top: p.y, bottom: p.y + p.height };
+      if (!source) continue;
+      if (!this.continuationNumbers.has(key)) this.continuationNumbers.set(key, this.continuationNumbers.size + 1);
+      const number = this.continuationNumbers.get(key)!;
+      const pair = continuationPair(source, target, input.viewport, input.body, [...obstacles, ...cards], used, Math.max(20, String(number).length * 8 + 8));
+      if (!pair) continue;
+      card.shell.dataset.routeState = 'continuation'; used.push(...pair);
+      if (!card.continuation) card.continuation = ['source', 'target'].map(end => {
+        const button = this.root.createEl('button', { cls: 'margin-link-continuation' });
+        button.type = 'button'; button.dataset.relation = key; button.dataset.end = end;
+        button.setAttribute('aria-description', `关联续接：${card.anchor.occurrence.label}`);
+        button.addEventListener('pointerenter', () => this.highlight(key)); button.addEventListener('pointerleave', () => this.highlight(undefined));
+        button.addEventListener('focusin', () => this.highlight(key)); button.addEventListener('focusout', () => this.highlight(undefined));
+        return button;
+      }) as [HTMLButtonElement, HTMLButtonElement];
+      card.continuation.forEach((button, i) => {
+        button.textContent = String(number); button.dataset.number = String(number); button.hidden = false;
+        button.tabIndex = this.host.preferences.lines === 'always' ? 0 : -1;
+        Object.assign(button.style, { left: `${pair[i].left}px`, top: `${pair[i].top}px`, width: `${pair[i].right - pair[i].left}px`, height: '16px' });
+      });
+    }
   }
   private dragContext(key: string): CardDragContext | undefined {
     const card = this.cards.get(key), input = this.layoutInput;
@@ -342,6 +399,7 @@ export class MarginOverlay {
     for (const [id, card] of this.cards) {
       card.button.classList.toggle('margin-link-active', id === key && this.host.preferences.hoverFeedback);
       card.path.classList.toggle('margin-link-active', id === key);
+      card.continuation?.forEach(el => el.classList.toggle('margin-link-active', id === key));
       if (id !== key || !this.host.preferences.hoverFeedback) continue;
       let element = card.anchor.element;
       if (!element) {
@@ -357,8 +415,8 @@ export class MarginOverlay {
   }
   private clearCards(): void {
     cardTooltip.hideWithin(this.root);
-    this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); }
-    this.cards.clear(); this.anchors = []; this.layoutInput = undefined;
+    this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
+    this.cards.clear(); this.continuationNumbers?.clear(); this.routePlacements = []; this.anchors = []; this.layoutInput = undefined;
     this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear(); this.textObstacles?.invalidate();
   }
   destroy(): void {
