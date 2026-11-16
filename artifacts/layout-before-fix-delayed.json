@@ -1,0 +1,184 @@
+{
+  "host": "Remediation A - test-vault - Obsidian v1.10.6",
+  "bundleSHA256": "9c3813175c9334fc4ebf08108bcb51f27b4e978a3a65c8c7b7ff072b2fc40f59",
+  "dropped": {
+    "layouts": [
+      {
+        "source": "Remediation A.md",
+        "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+        "side": "right",
+        "xNormalized": 0.484251968503937,
+        "yOffset": 11.580729166666666,
+        "updated": 1794797059673
+      }
+    ],
+    "rect": {
+      "x": 1645,
+      "y": 504.4375,
+      "width": 196,
+      "height": 48,
+      "top": 504.4375,
+      "right": 1841,
+      "bottom": 552.4375,
+      "left": 1645
+    },
+    "line": "M 669.640625 172.0625 C 985.3203125 172.0625, 985.3203125 450, 1301 450"
+  },
+  "returned": {
+    "layouts": [],
+    "rect": {
+      "x": 594,
+      "y": 226.5,
+      "width": 196,
+      "height": 48,
+      "top": 226.5,
+      "right": 790,
+      "bottom": 274.5,
+      "left": 594
+    },
+    "line": "M 565.8125 172.0625 C 505.90625 172.0625, 505.90625 172.0625, 446 172.0625",
+    "trace": [
+      {
+        "source": "Remediation B.md",
+        "keys": [
+          "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a"
+        ],
+        "before": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "after": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "viewPath": "Remediation B.md",
+        "editorText": "# A\n\nSource A has [[Note A|Shared target]].\n"
+      },
+      {
+        "source": "Remediation B.md",
+        "keys": [
+          "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a"
+        ],
+        "before": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "after": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "viewPath": "Remediation B.md",
+        "editorText": "# A\n\nSource A has [[Note A|Shared target]].\n"
+      },
+      {
+        "source": "Remediation B.md",
+        "keys": [
+          "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a"
+        ],
+        "before": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "after": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "viewPath": "Remediation B.md",
+        "editorText": "# A\n\nSource A has [[Note A|Shared target]].\n"
+      },
+      {
+        "source": "Remediation A.md",
+        "keys": [
+          "29d94e0cfafc80c6091be1fb59634e41bfd4d3218d8fd853340ca71c53c0841a"
+        ],
+        "before": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "after": [],
+        "viewPath": "Remediation A.md",
+        "editorText": "# B\n\nSource B differently has [[Note A|Shared target]].\n"
+      },
+      {
+        "source": "Remediation A.md",
+        "keys": [
+          "29d94e0cfafc80c6091be1fb59634e41bfd4d3218d8fd853340ca71c53c0841a"
+        ],
+        "before": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "after": [],
+        "viewPath": "Remediation A.md",
+        "editorText": "# B\n\nSource B differently has [[Note A|Shared target]].\n"
+      },
+      {
+        "source": "Remediation A.md",
+        "keys": [
+          "29d94e0cfafc80c6091be1fb59634e41bfd4d3218d8fd853340ca71c53c0841a"
+        ],
+        "before": [
+          {
+            "source": "Remediation A.md",
+            "key": "29d94e0cfafc80c625c37f450232d5ffbfd4d3218d8fd853340ca71c53c0841a",
+            "side": "right",
+            "xNormalized": 0.484251968503937,
+            "yOffset": 11.580729166666666,
+            "updated": 1794797059673
+          }
+        ],
+        "after": [],
+        "viewPath": "Remediation A.md",
+        "editorText": "# B\n\nSource B differently has [[Note A|Shared target]].\n"
+      }
+    ]
+  }
+}

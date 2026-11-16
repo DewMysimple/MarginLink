@@ -10,14 +10,13 @@ export class ReadingAnchors {
   private children = new Set<MarkdownRenderChild>();
   // One current full source per rendered document, only in memory.
   private documents = new Map<string, { text: string; parsed: ParsedDocument; identities: Map<number, string>; users: number }>();
-  constructor(private app: App, private changed: () => void, private reconcile?: (source: string, keys: Set<string>) => void) {}
+  constructor(private app: App, private changed: () => void) {}
   process(element: HTMLElement, ctx: MarkdownPostProcessorContext): void {
     const info = ctx.getSectionInfo(element);
     if (!info) return;
     const existing = this.documents.get(ctx.docId);
     const parsed = existing?.text === info.text ? existing.parsed : parseDocument(info.text);
     const document = existing?.text === info.text ? existing : { text: info.text, parsed, identities: layoutIdentities(info.text, parsed.links), users: 0 };
-    if (existing !== document) this.reconcile?.(ctx.sourcePath, new Set(document.identities.values()));
     this.documents.set(ctx.docId, document);
     const lines = info.text.split('\n');
     const start = lines.slice(0, info.lineStart).reduce((n, line) => n + line.length + 1, 0);

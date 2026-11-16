@@ -1,0 +1,99 @@
+{
+  "passed": true,
+  "host": "Legacy CRLF layout - test-vault - Obsidian 1.15.1",
+  "pluginVersion": "0.2.1",
+  "bundleSHA256": "c3d342dc325260829adcc882442715c32a7bcd46ce740a1e9f3f52b46616233c",
+  "fixture": {
+    "source": "Legacy CRLF layout.md",
+    "key": "d38c9af9d54b808f964a6b513808dedb1e753158f074d8f6340ca71c53c0841a",
+    "side": "right",
+    "xNormalized": 0.72,
+    "yOffset": 12,
+    "updated": 1794798418501
+  },
+  "observations": [
+    {
+      "stage": "normal enable with v0.2 raw CRLF record",
+      "actual": {
+        "manual": "true",
+        "rect": {
+          "x": 1704.8800048828125,
+          "y": 514.5,
+          "width": 196,
+          "height": 48,
+          "top": 514.5,
+          "right": 1900.8800048828125,
+          "bottom": 562.5,
+          "left": 1704.8800048828125
+        },
+        "line": "M 620.09375 172.0625 L 1360.88 460.0625"
+      },
+      "records": [
+        {
+          "source": "Legacy CRLF layout.md",
+          "key": "d38c9af9d54b808f75d67c611a75e40bd6b038630ad5df71340ca71c53c0841a",
+          "side": "right",
+          "xNormalized": 0.72,
+          "yOffset": 12,
+          "updated": 1794798418501
+        }
+      ]
+    },
+    {
+      "stage": "reading after native LF normalization",
+      "actual": {
+        "manual": "true",
+        "rect": {
+          "x": 1704.8800048828125,
+          "y": 489.59375,
+          "width": 196,
+          "height": 48,
+          "top": 489.59375,
+          "right": 1900.8800048828125,
+          "bottom": 537.59375,
+          "left": 1704.8800048828125
+        },
+        "line": "M 620.09375 147.15625 L 1360.88 435.15625"
+      },
+      "records": [
+        {
+          "source": "Legacy CRLF layout.md",
+          "key": "d38c9af9d54b808f75d67c611a75e40bd6b038630ad5df71340ca71c53c0841a",
+          "side": "right",
+          "xNormalized": 0.72,
+          "yOffset": 12,
+          "updated": 1794798418501
+        }
+      ]
+    },
+    {
+      "stage": "source restored after navigation and normal plugin reload",
+      "actual": {
+        "manual": "true",
+        "rect": {
+          "x": 1704.8800048828125,
+          "y": 514.5,
+          "width": 196,
+          "height": 48,
+          "top": 514.5,
+          "right": 1900.8800048828125,
+          "bottom": 562.5,
+          "left": 1704.8800048828125
+        },
+        "line": "M 620.09375 172.0625 L 1360.88 460.0625"
+      },
+      "records": [
+        {
+          "source": "Legacy CRLF layout.md",
+          "key": "d38c9af9d54b808f75d67c611a75e40bd6b038630ad5df71340ca71c53c0841a",
+          "side": "right",
+          "xNormalized": 0.72,
+          "yOffset": 12,
+          "updated": 1794798418501
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "runtimeErrors": []
+}

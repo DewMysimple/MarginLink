@@ -2,7 +2,7 @@
 // This module is invoked only after desktop-test.mjs verifies the isolated vault.
 import assert from 'node:assert/strict';
 import { readFile, unlink } from 'node:fs/promises';
-export async function runV2Scenarios({ page, cdp, viewport, check, command, mode, persist, settings, closeSettings, flipToggle, phase }) {
+export async function runV2Scenarios({ page, cdp, viewport, check, command, mode, persist, settings, closeSettings, flipToggle, screenshotPrefix, phase }) {
   const note = 'MarginLink Demo.md';
   const diskText = () => readFile(`test-vault/${note}`, 'utf8');
   const data = async () => {
@@ -19,9 +19,19 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     }
     throw new Error(`UI data did not settle: ${JSON.stringify(last)}`);
   };
-  const frames = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const frames = () => page.evaluate(() => new Promise(resolve => {
+    let previous = '', count = 0;
+    const frame = () => {
+      const signature = [...document.querySelectorAll('.margin-link-host')].map(host => {
+        const r = host.getBoundingClientRect(); return [r.x, r.y, r.width, r.height, host.querySelector('.margin-link-overlay')?.style.visibility].join(':');
+      }).join('|');
+      count = signature === previous ? count + 1 : 0; previous = signature;
+      if (count >= 8) resolve(); else requestAnimationFrame(frame);
+    }; requestAnimationFrame(frame);
+  }));
   const quick = async () => { await command('Open quick controls'); await page.waitForSelector('.margin-link-quick-controls'); return page.locator('.margin-link-quick-controls'); };
-  const full = async () => { const q = await quick(); await q.getByRole('button', { name: '打开完整设置', exact: true }).click(); await page.waitForSelector('.margin-link-full-controls'); return page.locator('.margin-link-full-controls'); };
+  const full = async () => { const q = await quick(); await q.getByRole('button', { name: '打开完整设置', exact: true }).click(); await page.waitForSelector('.margin-link-settings-view'); return page.locator('.margin-link-settings-view'); };
+  const closeFull = async () => { await page.evaluate(() => { for (const leaf of app.workspace.getLeavesOfType('margin-link-settings')) leaf.detach(); app.workspace.rightSplit.collapse(); }); await frames(); };
   const configure = async values => {
     const panel = await full();
     for (const [key, value] of Object.entries(values)) {
@@ -34,11 +44,10 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
       }
       else await row.locator('select:not(.is-measuring)').selectOption(value);
     }
-    await page.keyboard.press('Escape'); await panel.waitFor({ state: 'hidden' }); await frames();
+    await closeFull(); await panel.waitFor({ state: 'detached' });
   };
   const card = (label = '同名文件') => page.locator('.margin-link-card').filter({ hasText: label }).first();
   const shell = (label = '同名文件') => card(label).locator('..');
-  const grip = (label = '同名文件') => shell(label).locator('.margin-link-card-grip');
   const bounds = async () => page.locator('.margin-link-host').first().evaluate(el => {
     const host = el.getBoundingClientRect();
     const body = [...el.querySelectorAll('.cm-content, .markdown-preview-sizer')].find(b => b.getBoundingClientRect().width > 0); const r = body.getBoundingClientRect(), style = getComputedStyle(body);
@@ -46,7 +55,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
   });
   const point = async (side, y = 500) => { const b = await bounds(); return { x: side === 'left' ? (b.x + b.left) / 2 : (b.right + b.x + b.width) / 2, y: b.y + Math.min(y, b.height - 90) }; };
   const beginDrag = async (label, destination) => {
-    const b = await grip(label).boundingBox(); assert(b, 'Move grip must be visible');
+    const b = await card(label).boundingBox(); assert(b, 'Card must be visible');
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
     await page.mouse.move(destination.x, destination.y, { steps: 12 });
   };
@@ -79,7 +88,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     assert((await owner.locator('.margin-link-settings-preview path.margin-link-connector').getAttribute('d')).includes(' H '));
     await closeSettings(owner);
     const panel = await full(); assert.equal(await panel.locator('[data-margin-key="lineStyle"] select:not(.is-measuring)').inputValue(), 'elbow');
-    await page.keyboard.press('Escape'); assert.equal(await diskText(), original);
+    await closeFull(); assert.equal(await diskText(), original);
   });
   await check('v2: all line modes/styles, widths, opacity and preset color render immediately', async () => {
     for (const lineStyle of ['curve', 'straight', 'elbow']) {
@@ -124,7 +133,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     const restored = await shell().boundingBox(); assert(Math.abs(restored.x - after.x) < 2 && Math.abs(restored.y - after.y) < 2);
     await assertSafe(); assert.equal(await diskText(), original);
   });
-  await check('v2: Esc, pointercancel, blur, invalid drop and grip click cancel without writes', async () => {
+  await check('v2: Esc, pointercancel, blur and invalid drop cancel without writes', async () => {
     const saved = (await data()).layouts, before = await shell().boundingBox();
     for (const reason of ['Escape', 'pointercancel', 'blur', 'invalid']) {
       await beginDrag('同名文件', await point('left', 300));
@@ -137,15 +146,14 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
       assert.deepEqual((await data()).layouts, saved);
       const actual = await shell().boundingBox(); assert(Math.abs(actual.x - before.x) < 2 && Math.abs(actual.y - before.y) < 2);
     }
-    await grip().click(); assert.equal(await page.locator('.prompt-input').count(), 0); assert.deepEqual((await data()).layouts, saved);
     assert.equal(await diskText(), original);
   });
   await check('v2: reading mode moves across margins; keyboard restore returns to auto', async () => {
     await mode('preview'); await card().waitFor();
     await drag('同名文件', 'left', 430); await waitData(d => d.layouts[0]?.side === 'left');
     assert.equal(await shell().getAttribute('data-manual'), 'true'); await assertSafe();
-    await grip().focus(); await page.keyboard.press('ArrowDown'); await frames();
-    await grip().focus(); await page.keyboard.press('Delete'); await waitData(d => d.layouts.length === 0);
+    await card().focus(); await page.keyboard.press('ArrowDown'); await frames();
+    await card().focus(); await page.keyboard.press('Delete'); await waitData(d => d.layouts.length === 0);
     await frames(); assert.equal(await shell().getAttribute('data-manual'), 'false');
     await mode('source', true); await drag('同名文件', 'right', 460); await waitData(d => d.layouts.length === 1);
     await mode('source', false); assert.equal(await shell().getAttribute('data-manual'), 'true');
@@ -154,11 +162,11 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     await configure({ placementMode: 'snap', cardShape: 'square', cardSize: 'medium' });
     await beginDrag('关键观点', await point('left', 620));
     assert.equal(await page.locator('.margin-link-snapped.margin-link-card-dragging').count(), 1);
-    await page.screenshot({ path: 'artifacts/v2-dragging.png' }); await page.mouse.up();
+    await page.screenshot({ path: `${screenshotPrefix}-v2-dragging.png` }); await page.mouse.up();
     await waitData(d => d.layouts.length === 2);
     await drag('产品路线图', 'left', 620); await waitData(d => d.layouts.length === 3);
     assert.equal(new Set((await data()).layouts.map(e => e.key)).size, 3); await assertSafe();
-    await page.screenshot({ path: 'artifacts/v2-square.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-v2-square.png` });
   });
   await check('v2: narrow/wide, font changes and device scaling preserve records safely', async () => {
     const saved = (await data()).layouts;
@@ -215,7 +223,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     await setText(source); await page.waitForFunction(() => document.querySelectorAll('.margin-link-card').length === 3);
     const cards = page.locator('.margin-link-card');
     for (let i = 0; i < 3; i++) {
-      const handle = cards.nth(i).locator('..').locator('.margin-link-card-grip'), b = await handle.boundingBox(), target = await point(i % 2 ? 'right' : 'left', 350 + i * 160);
+      const handle = cards.nth(i), b = await handle.boundingBox(), target = await point(i % 2 ? 'right' : 'left', 350 + i * 160);
       await page.mouse.move(b.x + 8, b.y + 8); await page.mouse.down(); await page.mouse.move(target.x, target.y, { steps: 8 }); await page.mouse.up(); await frames();
     }
     const saved = await waitData(d => d.layouts.length === 3);
@@ -227,9 +235,12 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     await waitData(d => d.layouts.length === 0);
     await setText(original); await persist();
   });
-  await check('v2: rename invalidation, active-view and document changes cancel drag safely', async () => {
+  await check('v2: unrelated rename preserves positions; active-view and document changes cancel drag', async () => {
     await drag('同名文件', 'left', 500); await waitData(d => d.layouts.length === 1);
+    const saved = (await data()).layouts;
     await page.evaluate(async () => { const f = await app.vault.create('Layout rename fixture.md', '# fixture'); await app.vault.rename(f, 'Layout renamed.md'); await app.vault.delete(app.vault.getFileByPath('Layout renamed.md')); });
+    assert.deepEqual((await data()).layouts, saved);
+    await command('Reset all layouts'); await page.locator('.margin-link-confirm').getByRole('button', { name: '确认', exact: true }).click();
     await waitData(d => d.layouts.length === 0);
     await beginDrag('同名文件', await point('right', 500));
     await page.evaluate(async () => app.workspace.getLeavesOfType('markdown')[0].openFile(app.vault.getFileByPath('Note A.md'))); await page.mouse.up(); await frames();
@@ -256,11 +267,11 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
     await owner.locator('.setting-item').filter({ hasText: /Base color scheme|基础颜色/ }).locator('select:not(.is-measuring)').first().selectOption('moonstone');
     phase('theme: closing light settings'); await closeSettings(owner); await page.waitForSelector('body.theme-light'); await frames(); await assertSafe();
     assert.equal(await page.locator('.margin-link-connector').first().evaluate(e => getComputedStyle(e).transitionDuration), '0s');
-    await page.screenshot({ path: 'artifacts/v2-light.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-v2-light.png` });
     await configure({ cardShape: 'icon' }); await assertSafe();
     owner = await settings('Appearance'); await owner.locator('.setting-item').filter({ hasText: /Base color scheme|基础颜色/ }).locator('select:not(.is-measuring)').first().selectOption('obsidian');
     phase('theme: closing dark settings'); await closeSettings(owner); await page.waitForSelector('body.theme-dark'); await frames(); await assertSafe();
-    await page.screenshot({ path: 'artifacts/v2-icon.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-v2-icon.png` });
   });
   await check('v2: disabling mid-drag and closing quick controls cleans captured UI state', async () => {
     await configure({ cardShape: 'horizontal', placementMode: 'free' });
@@ -277,7 +288,7 @@ export async function runV2Scenarios({ page, cdp, viewport, check, command, mode
   await check('v2: UI-only data clearing/reload rebuilds links and resets appearance', async () => {
     // Use the native settings action; no external application/profile writes.
     const panel = await full(); await panel.getByRole('button', { name: '恢复默认', exact: true }).click();
-    await page.locator('.margin-link-confirm').getByRole('button', { name: '确认', exact: true }).click(); await page.keyboard.press('Escape');
+    await page.locator('.margin-link-confirm').getByRole('button', { name: '确认', exact: true }).click(); await closeFull();
     await waitData(d => d.preferences.placementMode === 'auto' && d.layouts.length === 0);
     await persist(); await unlink('test-vault/.obsidian/plugins/margin-link/data.json');
     await page.reload(); await page.waitForSelector('.margin-link-card');

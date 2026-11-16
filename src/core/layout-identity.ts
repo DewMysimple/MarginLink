@@ -1,4 +1,5 @@
 import type { WikilinkOccurrence } from '../types';
+import { parseWikilinks } from './wikilink-parser';
 
 // Two independent 32-bit accumulators: a matching hint, never a guaranteed unique ID.
 export function fingerprint(value: string): string {
@@ -10,7 +11,7 @@ export function fingerprint(value: string): string {
   return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
 }
 
-export function layoutIdentities(text: string, links: WikilinkOccurrence[]): Map<number, string> {
+export function legacyLayoutIdentities(text: string, links: WikilinkOccurrence[]): Map<number, string> {
   const populations = new Map<string, number>();
   for (const link of links) populations.set(link.raw, (populations.get(link.raw) ?? 0) + 1);
   const candidates = links.map(link => ({ start: link.start, key:
@@ -21,4 +22,43 @@ export function layoutIdentities(text: string, links: WikilinkOccurrence[]): Map
   for (const c of candidates) counts.set(c.key, (counts.get(c.key) ?? 0) + 1);
   // An ordinal or absolute offset cannot distinguish identical contexts safely.
   return new Map(candidates.filter(c => counts.get(c.key) === 1).map(c => [c.start, c.key]));
+}
+
+export function layoutIdentities(text: string, links: WikilinkOccurrence[]): Map<number, string> {
+  if (!text.includes('\r')) return legacyLayoutIdentities(text, links);
+  const normalized = text.replace(/\r\n?/g, '\n');
+  const removed = [...text.matchAll(/\r\n/g)].map(match => match.index);
+  const offset = (raw: number) => {
+    let low = 0, high = removed.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (removed[middle] < raw) low = middle + 1; else high = middle;
+    }
+    return raw - low;
+  };
+  const normalizedLinks = links.map(link => ({ ...link, start: offset(link.start), end: offset(link.end) }));
+  const identities = legacyLayoutIdentities(normalized, normalizedLinks);
+  // Keep source offsets for DOM mapping; only the identity's context is normalized.
+  // Identity ambiguity is still checked over the complete normalized document.
+  return new Map(links.flatMap((link, i) => {
+    const key = identities.get(normalizedLinks[i].start);
+    return key ? [[link.start, key] as const] : [];
+  }));
+}
+
+export function legacyLayoutAliases(text: string, links: WikilinkOccurrence[]): Map<string, string> {
+  // The host can normalize a CRLF file before the first overlay confirms it.
+  // Its exact CRLF equivalent is the only additional legacy document considered.
+  const legacyText = text.includes('\r') ? text : text.replaceAll('\n', '\r\n');
+  if (legacyText === text && !text.includes('\r')) return new Map();
+  const legacyLinks = legacyText === text ? links : parseWikilinks(legacyText);
+  if (legacyLinks.length !== links.length) return new Map();
+  const canonical = layoutIdentities(text, links), legacy = legacyLayoutIdentities(legacyText, legacyLinks);
+  return new Map(links.flatMap((link, i) => {
+    const key = canonical.get(link.start);
+    // This maps the same occurrence across a line-ending conversion, not two
+    // occurrences inferred from their order or a saved numeric offset.
+    const oldKey = legacyLinks[i].raw === link.raw ? legacy.get(legacyLinks[i].start) : undefined;
+    return key && oldKey && oldKey !== key ? [[key, oldKey] as const] : [];
+  }));
 }

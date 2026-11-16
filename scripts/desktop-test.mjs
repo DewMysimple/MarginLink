@@ -4,6 +4,7 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { runV2Scenarios } from './desktop-v2.mjs';
+import { runRemediationScenarios } from './desktop-remediation.mjs';
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
 const page = browser.contexts().flatMap(c => c.pages()).find(p => p.url().startsWith('app://obsidian.md/'));
 assert(page, 'Isolated Obsidian is not running');
@@ -14,6 +15,7 @@ const errors = [];
 const results = [];
 const hostVersion = /Obsidian v?([\d.]+)/.exec(await page.title())?.[1] ?? 'unknown';
 const pluginVersion = JSON.parse(await readFile('manifest.json', 'utf8')).version;
+const screenshotPrefix = `artifacts/desktop-${pluginVersion}-${hostVersion}`;
 let currentScenario = 'setup';
 page.on('pageerror', error => errors.push({ message: String(error), stack: error.stack, scenario: currentScenario }));
 const cdp = await page.context().newCDPSession(page);
@@ -110,7 +112,7 @@ try {
     await page.locator('.margin-link-card').first().hover();
     assert.equal(await page.locator('.margin-link-connector.margin-link-active').count(), 1);
     assert.equal(await page.locator('.margin-link-anchor-active').count(), 1);
-    await page.screenshot({ path: 'artifacts/live-preview-hover.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-live-preview-hover.png` });
   });
   await check('command creates an exact native Wikilink and preserves surrounding text', async () => {
     await select('Early Access to create');
@@ -151,10 +153,10 @@ try {
     await page.mouse.move(start.x + 13, start.y + 12); await page.mouse.down();
     await page.mouse.move(body.x + body.width + 75, start.y + 12, { steps: 12 });
     await page.waitForSelector('.margin-link-drop-right.margin-link-drop-active');
-    await page.screenshot({ path: 'artifacts/dragging.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-dragging.png` });
     await page.mouse.up(); await page.waitForSelector('.prompt-input'); await choose();
     assert.equal(await text(), original.replace('中文文字', '[[Folder/Note A.md|中文文字]]'));
-    await page.screenshot({ path: 'artifacts/created.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-created.png` });
     await page.evaluate(() => app.workspace.getLeavesOfType('markdown')[0].view.editor.undo());
   });
   await check('drag onto body is canceled without a modal or write', async () => {
@@ -170,12 +172,12 @@ try {
     assert.equal(await page.locator('.margin-link-handle:not([hidden])').count(), 0);
     await page.locator('.margin-link-card').first().hover();
     assert.equal(await page.locator('a.internal-link.margin-link-anchor-active').count(), 1);
-    await page.screenshot({ path: 'artifacts/reading.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-reading.png` });
   });
   await check('Source mode uses actual visible source token positions', async () => {
     await mode('source', true); await page.waitForFunction(() => document.querySelectorAll('.margin-link-card').length === 7);
     assert((await page.locator('.cm-content').innerText()).includes('[[Note A|关键观点]]'));
-    await page.screenshot({ path: 'artifacts/source.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-source.png` });
   });
   await check('unresolved card does not create or open a missing file', async () => {
     const count = await page.evaluate(() => app.vault.getFiles().length);
@@ -197,13 +199,13 @@ try {
     const sets = await page.locator('.margin-link-overlay').evaluateAll(es => es.map(e => [...e.querySelectorAll('.margin-link-card-label')].map(x => x.textContent)));
     assert(sets.some(labels => labels.length === 1 && labels[0] === 'MarginLink Demo'));
     assert(sets.some(labels => labels.length === 7));
-    await page.screenshot({ path: 'artifacts/split.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-split.png` });
   });
   await check('narrow panes safely hide cards without horizontal overflow', async () => {
     await viewport(920);
     await page.waitForFunction(() => document.querySelectorAll('.margin-link-card').length === 0);
     assert(await page.evaluate(() => [...document.querySelectorAll('.margin-link-host')].every(el => el.scrollWidth <= el.clientWidth + 1)));
-    await page.screenshot({ path: 'artifacts/narrow.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-narrow.png` });
     await page.evaluate(() => {
       const leaves = app.workspace.getLeavesOfType('markdown'); leaves.find(l => l.view.file.path === 'Note A.md').detach();
     });
@@ -266,7 +268,7 @@ try {
       e.setCursor(e.offsetToPos(e.getValue().length)); e.scrollIntoView({ from: e.getCursor(), to: e.getCursor() }, true);
     }, original);
     await page.waitForFunction(() => document.querySelectorAll('.margin-link-card').length === 1 && document.querySelector('.margin-link-card-label')?.textContent === 'End target');
-    await page.screenshot({ path: 'artifacts/scroll.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-scroll.png` });
     await page.evaluate(original => {
       const e = app.workspace.getLeavesOfType('markdown')[0].view.editor; e.setValue(original); e.setCursor({ line: 0, ch: 0 });
     }, original);
@@ -301,7 +303,7 @@ try {
     await closeSettings(owner); await page.waitForSelector('body.theme-light');
     currentScenario = 'theme: capturing light';
     if (!control) await page.locator('.margin-link-card').first().hover();
-    await page.screenshot({ path: 'artifacts/light.png' });
+    await page.screenshot({ path: `${screenshotPrefix}-light.png` });
     currentScenario = 'theme: opening dark settings';
     owner = await settings('Appearance');
     currentScenario = 'theme: selecting dark';
@@ -334,7 +336,8 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.margin-link-overlay').length === 1 && document.querySelectorAll('.margin-link-card').length === 7);
     await mode('source', false); assert.equal(await text(), original);
   });
-  await runV2Scenarios({ page, cdp, viewport, check, command, mode, persist, settings, closeSettings, flipToggle, phase: name => { currentScenario = name; } });
+  await runV2Scenarios({ page, cdp, viewport, check, command, mode, persist, settings, closeSettings, flipToggle, screenshotPrefix, phase: name => { currentScenario = name; } });
+  await runRemediationScenarios({ page, cdp, viewport, check, command, persist });
   // This exact native Electron/CDP diagnostic is also reproduced after removing
   // ALL community plugins and reloading (MARGINLINK_THEME_CONTROL=1). Keep it visible
   // in the report, but do not mislabel it as a failure of plugin behavior assertions.
@@ -351,15 +354,13 @@ try {
   await mode('source', false);
   await page.evaluate(() => app.workspace.getLeavesOfType('markdown')[0].view.editor.setCursor({ line: 0, ch: 0 }));
   await page.locator('.margin-link-card').first().hover();
-  await page.screenshot({ path: 'artifacts/final-preview.png' });
+  await page.screenshot({ path: `${screenshotPrefix}-final-preview.png` });
   await persist();
   const report = JSON.stringify({ pluginVersion, hostVersion, results, errors: unexpectedErrors, hostWarnings, controlRun: process.env.MARGINLINK_THEME_CONTROL === '1' }, null, 2);
-  await writeFile('artifacts/desktop-results.json', report);
-  await writeFile(`artifacts/desktop-v2-${hostVersion}.json`, report);
+  await writeFile(`artifacts/desktop-${pluginVersion}-${hostVersion}.json`, report);
   console.log(`${results.length} desktop scenarios passed; ${hostWarnings.length} known host/CDP warnings (also reproduced without the plugin).`);
 } finally {
   const diagnostics = JSON.stringify({ pluginVersion, hostVersion, errors, runtimeErrors }, null, 2);
-  await writeFile('artifacts/desktop-diagnostics.json', diagnostics);
-  await writeFile(`artifacts/desktop-v2-diagnostics-${hostVersion}.json`, diagnostics);
+  await writeFile(`artifacts/desktop-diagnostics-${pluginVersion}-${hostVersion}.json`, diagnostics);
   await browser.close();
 }

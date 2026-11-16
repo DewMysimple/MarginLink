@@ -2,11 +2,11 @@
 
 **Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.2.0 · Spatial Layout & Personalization**，Windows 桌面，最低 Obsidian **1.10.6**。本轮四项核心能力：可调连线、可保存的卡片自由布局、三种卡片形状、分组设置与快捷控制。具体客户端版本、检查结果和未覆盖范围见 [VALIDATION.md](VALIDATION.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+**v0.2.1**，Windows 桌面，最低 Obsidian **1.10.6**。提供可调连线、可保存的卡片自由布局、三种卡片形状和分组设置。本次整改加入左侧图标直达右侧完整设置、整卡拖动及切页位置保护。实际检查结果和未覆盖范围见 [VALIDATION.md](VALIDATION.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.0.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.1.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
@@ -34,17 +34,17 @@ Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码
 
 ## 移动已有卡片
 
-这是独立于“选中文字建链”的操作：从**卡片右上角握柄**开始，不会编辑笔记。
+在自由/吸附模式，按住**卡片图标、文件名或空白处**即可拖动，不会编辑笔记。已有卡片没有独立握柄；正文选中文字后的链接手柄继续用于创建双链。
 
 | 模式 | 行为 |
 | --- | --- |
-| `auto` 自动 | 确定性排列、左右平衡或优先；不写自由坐标，握柄隐藏；已保存的位置保留，切回手动模式可恢复 |
+| `auto` 自动 | 确定性排列、左右平衡或优先；不拖动、不写自由坐标；已保存的位置保留，切回手动模式可恢复 |
 | `free` 自由 | 在当前 MarkdownView 的左右空白带进行二维放置，可跨侧移动；冲突时就近避让，空间不足则省略 |
 | `snap` 吸附 | 自由放置加栅格/邻近卡片对齐、边界提示和碰撞避让 |
 
-拖动达到 5px 才进入移动状态；单击握柄不会打开文件。正文上可以显示提示，最终位置必须落在本 leaf 的空白带内。松手保存，**Esc、pointercancel、失焦、焦点进入其他控件、滚动、窗口 resize、切换笔记/模式、文档变化或卸载会取消**。非法或无空间的放置恢复原位置。
+移动达到约 5 个 CSS 像素才开始拖动；单击卡片任意位置打开文件，Ctrl/Cmd 单击新标签。合法松手立即提交内存位置并抑制本次拖动产生的点击，下一次单击正常打开。正文上可以显示提示，最终位置必须落在本 leaf 的空白带内。**Esc、pointercancel、失焦、焦点进入其他控件、滚动、窗口 resize、切换笔记/模式、文档变化或卸载会取消**。非法或无空间的放置恢复原位置。
 
-键盘操作：Tab 聚焦握柄，方向键移动，Shift+左右键换侧，Delete/Backspace 恢复此卡片自动位置。右键卡片也可恢复单个位置。设置、快捷面板及命令提供“整理/清除当前笔记布局”和“清除所有布局”，清除需确认，双链不受影响。
+键盘操作：Tab 聚焦卡片自身，Enter/Space 打开，方向键移动，Shift+左右键换侧，Delete/Backspace 恢复此卡片自动位置。右键卡片也可恢复单个位置。设置、快捷面板及命令提供“整理/清除当前笔记布局”和“清除所有布局”，清除需确认，双链不受影响。
 
 同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。字体/窗口变化后重新合法化；锚点离屏时卡片和连线移除，可见锚点的超界位置安全裁剪。侧栏动画中短暂隐藏，几何稳定后重现，不用 `position: fixed` 挂在无关段落上。
 
@@ -57,7 +57,9 @@ Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码
 - **布局**：三种模式、左右优先、正文边缘留白、吸附栅格/范围；可清除当前或全部笔记的位置。
 - **辅助**：高亮反馈、移动提示、减少动画。系统 `prefers-reduced-motion` 始终生效；不禁止全局文字选择。
 
-命令“打开快捷控制 / Open quick controls”提供显示、连线常驻、模式、形状、当前笔记整理及完整设置入口。完整设置入口用公开 Modal 呈现与原生设置页共用的表单；两处共用同一状态并即时同步，没有私有设置 API 或额外框架。快捷入口不占侧栏，也不强制增加 Ribbon 图标。
+单击左侧竖排工具栏的链接图标（“打开 MarginLink 设置”），即可展开右侧栏并选中 MarginLink 完整设置标签。连续点击复用同一面板，关闭标签后可以重开；自行收起侧栏或拖动标签后，插件不会主动搬回或展开。面板与原生设置页共用同一表单、偏好和实时预览。“当前笔记”指最近操作的 Markdown 视图，进入设置后仍可整理刚才的笔记，多分屏也按最近操作判定。
+
+命令“打开快捷控制 / Open quick controls”保留轻量 Modal，提供显示、连线常驻、模式、形状、当前笔记整理及右侧完整设置入口。全部入口即时同步，不调用私有设置导航 API。
 
 | 命令 ID | 用途 |
 | --- | --- |
@@ -65,6 +67,7 @@ Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码
 | `margin-link:link-selection` | 将选中文字链接到已有文件 |
 | `margin-link:refresh` | 刷新当前视图 |
 | `margin-link:quick-controls` | 打开快捷控制 |
+| `margin-link:open-settings` | 打开并激活完整设置标签 |
 | `margin-link:reset-note-layout` | 确认后清除当前笔记布局 |
 | `margin-link:reset-all-layouts` | 确认后清除全部布局 |
 
@@ -81,11 +84,13 @@ data.json
   layouts: [{ source, key, side, xNormalized, yOffset, updated }]
 ```
 
-`source` 是源笔记的 Vault 相对路径；`key` 是原生双链原文、前后各最多 48 字符上下文、相同原文链接数量的组合散列。不保存正文副本、明文别名、目标关系表或稳定 ID，也不向 Markdown 写 ID。散列只用于弱匹配，不是唯一性或隐私加密保证。
+`source` 是源笔记的 Vault 相对路径；`key` 是原生双链原文、前后各最多 48 字符上下文、相同原文链接数量的组合散列。上下文统一 LF 换行、阅读锚点保留原始偏移；确认完整源文时安全迁移可匹配的旧 CRLF 阅读位置，坐标与时间保留，宿主归一换行后仍能恢复。不保存正文副本、明文别名、目标关系表或稳定 ID，也不向 Markdown 写 ID。散列只用于弱匹配，不是唯一性或隐私加密保证。
 
 恢复前必须重新解析当前双链，并且该上下文散列在整篇文档中唯一，才能应用位置。删除链接不会从旧记录产生卡片。重复完全相同上下文无法区分时拒绝保存；局部上下文、同原文链接数量改变或大幅编辑会使位置失效，宁可自动排布也不猜测另一条链接。远离锚点的前文插入通常不影响匹配。
 
-首版采用保守策略：**任何 Vault 文件/文件夹重命名或删除都会失效全部自定义位置**，避免在缺少可靠迁移依据时错配；不会自行改写 Markdown。普通编辑仅清理当前笔记不再匹配的记录。布局最多 500 条、每笔记 100 条，90 天过期；容错读取、去重和限额，记录缺失或损坏时回退。drop 后约 250ms 合并保存，不在每个 pointermove 写盘；关闭时提交待保存 UI 数据。
+切页、加载中的空白编辑器和局部阅读渲染仅影响显示，不清理位置。清理依据是明确绑定源文件的完整文档变更；删除双链后不再生成卡片。重命名源笔记/目录仅迁移对应源路径，删除源笔记/目录仅删除对应记录，无关附件操作保留其他位置。原生自动更新双链导致其原文或上下文变化时，受影响的引用仍可安全回退，不会自行改写 Markdown。
+
+布局最多 500 条、每笔记 100 条，90 天过期；容错读取、去重和限额，记录缺失或损坏时回退。合法 drop 先同步更新内存，立即切页无需等待；约 250ms 合并落盘，串行写入防止旧快照覆盖新位置，不在每个 pointermove 写盘；关闭时提交待保存 UI 数据。窗口或侧栏变化仅调整当次绘制，空间恢复后使用原相对位置。
 
 清除位置仅回到自动布局；恢复默认外观不删除位置。删除整个 `data.json` 或使用旧版会丢失/重置个性化显示与位置，**原生关联及笔记内容完全保留**。从 v0.1 恢复到 v0.2 时也不能依赖旧程序保留新 schema。
 
@@ -94,6 +99,8 @@ data.json
 ## 三种笔记模式、文件类型与兼容性
 
 Live Preview / 源码用 CM6 可见范围和真实 DOM 坐标，解析缓存只在文档变化时更新；阅读模式用官方 Markdown 后处理器、section 源范围与 DOM 顺序映射。重复引用各有独立锚点和卡片；普通 Markdown/参考式链接参与消歧。第三方 DOM 改写使数量不一致时省略该目标组。
+
+CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 1.10.6 自身切换编辑/阅读模式可能把 CRLF 保存为 LF，无插件对照见验证报告；单纯打开设置、拖动和导航不由本插件写回笔记。
 
 每个 MarkdownView 有独立 overlay、SVG、观察器及坐标系。滚动、字体和主题变化合并到 rAF；只显示可见锚点，自己的 DOM/CSS 更新不触发无限重绘。窄窗或密集区域允许省略卡片，不挤压正文、不强制修改“限制行宽”。
 
@@ -119,8 +126,8 @@ Live Preview / 源码用 CM6 可见范围和真实 DOM 坐标，解析缓存只�
 | `src/view/layout-engine.ts` | 相对坐标、形状尺寸、碰撞/吸附与裁剪纯函数 |
 | `src/view/card-drag-controller.ts` | 已有卡片移动及取消，独立于建链手柄 |
 | `src/view/margin-overlay.ts`, `appearance.ts` | 每视图协调、局部几何与主题变量 |
-| `src/ui/settings-tab.ts`, `quick-controls.ts` | 共享原生表单、实时预览、快捷 Modal 与确认 |
-| `scripts/desktop-test.mjs`, `desktop-v2.mjs` | 隔离库客户端回归与 v0.2 场景 |
+| `src/ui/settings-tab.ts`, `settings-view.ts`, `quick-controls.ts` | 共享原生表单、右侧 ItemView、实时预览、快捷 Modal 与确认 |
+| `scripts/desktop-test.mjs`, `desktop-v2.mjs`, `desktop-remediation.mjs` | 隔离库客户端回归、整改即时切页及延迟加载场景 |
 
 Node 24 / npm 12，安装与常规检查：
 
@@ -130,7 +137,7 @@ npm test
 npm run lint
 npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.0.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.2.1.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。
@@ -149,6 +156,8 @@ npm run test:desktop
 
 `node scripts/host-window-control.mjs` 是编辑器设置窗口的卸载插件对照；`node scripts/restart-layout-check.mjs prepare` → 完全关闭并重新启动隔离实例 → `verify`，检查实际卡片恢复和所有 Markdown 哈希。上述脚本都有独立库校验，不运行于正式库。
 
+`node scripts/legacy-layout-migration.mjs` 专测旧 CRLF 布局：通过原生设置禁用插件后预置已有 UI 数据夹具，正常启用，验证迁移、跨模式、导航与重载；同样仅允许在本工程隔离库运行。
+
 协作规则见 [AGENTS.md](AGENTS.md)，[standard 工程记忆](wiki_memory/README.md) 保存状态与决策。每轮有项目修改均验证、同步必要记忆、提交并推送已核实 upstream；无变化不造空提交。源码仓库为 [DewMysimple/MarginLink](https://github.com/DewMysimple/MarginLink)。
 
 ## 人工验收
@@ -156,11 +165,11 @@ npm run test:desktop
 1. 打开独立库，切 Live Preview / 源码 / 阅读模式，已有双链逐次显示；代码、嵌入、普通链接不显示卡片。
 2. 原生选区手柄与命令都只生成精确 `[[...|原文字]]`，检查取消、过期快照、撤销/重做、中文与同名文件。
 3. 在三种模式调节线型、宽度、透明度、颜色，`none` 留下卡片，设置预览与实际页面同步。
-4. 在 free/snap 中拖卡片跨侧、上下及横向移动；确认正文/其他 pane 无遮挡，Esc、失焦和界外放置恢复。
+4. 左侧图标一次展开完整设置，连续点击只有一个标签；选 free/snap，从卡片图标、文字和空白处跨侧拖动，放下后立即切走返回、单击卡片后退；确认位置和连线恢复，Esc、失焦和正文内松手恢复原位。
 5. 完全退出再启动，在足够宽的视图恢复位置；缩窄后安全隐藏，放宽后恢复；滚动时跟随正确锚点，离屏没有漂浮连线。
 6. 切三形状与小中大尺寸、明暗主题、字体、缩放、侧栏、限制行宽、不同文件分屏及同文件多个 leaf。
 7. 重复同目标/同别名分别移动；远处编辑前文，删除/增加同原文链接、改变周围文字、重命名文件，确认不会把旧位置套给别的锚点。
-8. 键盘打开卡片、操作握柄、恢复单卡/当前笔记/全部位置；确认其他笔记仅在全局清理或明确的重命名/删除失效策略下变化。
+8. 键盘打开和移动卡片、恢复单卡/当前笔记/全部位置；重命名/删除无关附件应保留其他笔记的位置。
 9. 在自己的 HTML/思维导图处理器、Page Preview/主题组合下验证特殊格式提示及原生打开。
 10. 清除布局、删除 data.json、禁用/卸载：Markdown 字节和双链保留，无幽灵关系、overlay、pointer capture、监听或附加类。
 
@@ -168,17 +177,13 @@ npm run test:desktop
 
 ## 实际截图
 
-以下来自隔离 Obsidian 的实际 Electron 渲染，不是设计稿：
+以下为 v0.2.1 隔离 Obsidian 的实际 Electron 渲染：
 
-![正方形卡片与自由布局](artifacts/v2-square.png)
+![整卡拖动后的布局](artifacts/remediation-final.png)
 
-![吸附拖动反馈](artifacts/v2-dragging.png)
+![右侧完整设置](artifacts/remediation-settings.png)
 
-![浅色主题](artifacts/v2-light.png)
-
-![极简图标](artifacts/v2-icon.png)
-
-另有阅读、源码、分屏和窄窗截图及版本化 JSON 结果。当前没有操作动图。
+旧版阅读、源码、分屏、窄窗截图与版本化 JSON 保留在验证报告的历史记录中。当前没有操作动图。
 
 ## 参考
 

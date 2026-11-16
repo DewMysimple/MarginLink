@@ -32,11 +32,8 @@
 .margin-link-card-shell[data-shape="square"] .margin-link-card-icon svg { width: 25px; height: 25px; }
 .margin-link-card-shell[data-shape="square"] .margin-link-card-text { width: 100%; }
 .margin-link-card-shell[data-shape="square"] .margin-link-card-path, .margin-link-no-path .margin-link-card-path { display: none; }
-.margin-link-card-grip { position: absolute; right: 1px; top: 1px; z-index: 2; width: 17px; height: 18px; padding: 1px; margin: 0; color: var(--text-muted); background: var(--background-secondary); box-shadow: none; border: none; border-radius: 4px; cursor: grab; pointer-events: auto; touch-action: none; opacity: .72; }
-.margin-link-card-grip svg { width: 14px; height: 14px; }
-.margin-link-card-grip:hover, .margin-link-card-grip:focus-visible { opacity: 1; color: var(--text-accent); outline: 2px solid var(--interactive-accent); }
-.margin-link-card-grip[hidden] { display: none; }
-.margin-link-card-dragging .margin-link-card-grip { cursor: grabbing; }
+.margin-link-card-movable { cursor: grab; touch-action: none; user-select: none; }
+.margin-link-card-dragging .margin-link-card-movable { cursor: grabbing; }
 .margin-link-position-ghost { display: none; position: absolute; top: 0; left: 0; max-width: 160px; padding: 5px 8px; color: var(--text-normal); background: var(--background-primary); border: 1px solid var(--interactive-accent); border-radius: 6px; font-size: var(--font-ui-smaller); z-index: 5; }
 .margin-link-position-band { display: none; position: absolute; box-sizing: border-box; border: 1px dashed var(--interactive-accent); background: var(--background-modifier-hover); opacity: .35; border-radius: 5px; }
 .margin-link-card-dragging .margin-link-position-ghost, .margin-link-card-dragging .margin-link-position-band { display: block; }
@@ -52,5 +49,7 @@
 .margin-link-settings-preview { position: relative; width: 400px; max-width: 100%; height: 150px; overflow: hidden; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-secondary); margin: 12px 0 20px; }
 .margin-link-preview-anchor { position: absolute; left: 16px; top: 58px; color: var(--text-accent); text-decoration: underline; }
 .margin-link-settings h3 { margin-top: 28px; padding-bottom: 8px; border-bottom: 1px solid var(--background-modifier-border); }
-.margin-link-full-controls { width: min(780px, 90vw); max-height: 90vh; }
-.margin-link-full-controls .modal-content { overflow-y: auto; }
+.margin-link-settings-view { overflow-y: auto; padding: 16px; }
+.margin-link-settings-view .setting-item { flex-wrap: wrap; gap: 8px; }
+.margin-link-settings-view .setting-item-info { min-width: 150px; }
+.margin-link-settings-view .setting-item-control { padding: 0; }

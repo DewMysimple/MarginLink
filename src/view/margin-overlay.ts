@@ -1,4 +1,4 @@
-import { MarkdownView, Menu, Notice, setIcon, type App } from 'obsidian';
+import { MarkdownView, Menu, Notice, type App } from 'obsidian';
 import type { Anchor, Preferences, RelativePosition } from '../types';
 import type { EditorBridge } from '../editor/editor-extension';
 import type { ReadingAnchors } from '../reading/reading-anchors';
@@ -12,8 +12,10 @@ import { layoutCards, positionFromDrop, type Box, type LayoutInput, type Placeme
 import { renderCard } from './card-renderer';
 import { connectorPath } from './connector-renderer';
 import { applyAppearance } from './appearance';
+import { legacyLayoutAliases } from '../core/layout-identity';
+import { parseWikilinks } from '../core/wikilink-parser';
 
-interface Card { shell: HTMLDivElement; button: HTMLButtonElement; grip: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement }
+interface Card { shell: HTMLDivElement; button: HTMLButtonElement; path: SVGPathElement; signature: string; anchor: Anchor; placement: Placement }
 export interface OverlayHost {
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
   reading: ReadingAnchors; selection: SelectionAction; layouts: LayoutStore;
@@ -33,6 +35,12 @@ export class MarginOverlay {
   private path = '';
   private mode = '';
   private revision = -1;
+  private confirmedSource = '';
+  private sourceGeneration = 0;
+  private checkingSource = false;
+  private sourceRetries = 0;
+  private sourceRetryTimer?: number;
+  private legacyLayoutKeys = new Map<string, string>();
   private layoutInput?: LayoutInput;
   private geometrySignature = '';
   private highlighted?: string;
@@ -79,6 +87,11 @@ export class MarginOverlay {
     const container = this.view.contentEl;
     const mode = this.view.getMode();
     if (this.path !== this.view.file?.path || this.mode !== mode) {
+      if (this.path !== this.view.file?.path) {
+        this.confirmedSource = ''; this.sourceGeneration++; this.checkingSource = false; this.sourceRetries = 0;
+        this.legacyLayoutKeys.clear();
+        this.win.clearTimeout(this.sourceRetryTimer); this.sourceRetryTimer = undefined;
+      }
       this.path = this.view.file?.path ?? ''; this.mode = mode; this.revision = -1;
       this.cancelInteractions(); this.clearCards();
     }
@@ -86,9 +99,14 @@ export class MarginOverlay {
     this.root.hidden = !prefs.enabled || !this.path || hostRect.width < 1 || hostRect.height < 1;
     if (this.root.hidden) { this.cancelInteractions(); this.clearCards(); return; }
     const bridge = mode === 'source' ? this.bridge() : undefined;
+    // MarkdownView.file can already name the next note while CodeMirror still
+    // contains the old one. Do not draw or accept a drop until that source's
+    // complete loaded text has been confirmed; this never prunes UI records.
+    if ((mode === 'source' && !bridge) || !this.sourceReady()) {
+      this.cancelInteractions(); this.clearCards(); return;
+    }
     if (bridge && this.revision !== bridge.revision) {
       this.cardDrag.cancel(); this.revision = bridge.revision;
-      this.host.layouts.reconcile(this.path, new Set(bridge.identities.values()));
     }
     const scroller = bridge?.cm.scrollDOM ?? this.view.previewMode.containerEl;
     const bodyEl = bridge?.cm.contentDOM ?? this.view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-sizer');
@@ -117,7 +135,7 @@ export class MarginOverlay {
       width: hostRect.width, height: hostRect.height, body, viewport, density: prefs.density, layout: prefs.layout, preferences: prefs,
       lineHeight: Math.max(12, Math.min(72, parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.6 || 24)),
       anchors: this.anchors.map(a => ({ key: a.key, x: (a.rect.left + a.rect.right) / 2 - hostRect.left, y: a.rect.bottom + 2 - hostRect.top,
-        preferred: bridge?.preferred(a.occurrence.start, a.occurrence.target), manual: this.host.layouts.get(this.path, a.layoutKey) }))
+        preferred: bridge?.preferred(a.occurrence.start, a.occurrence.target), manual: this.host.layouts.get(this.path, a.layoutKey, this.legacyLayoutKeys.get(a.layoutKey ?? '')) }))
     };
     const placements = layoutCards(this.layoutInput), keep = new Set(placements.map(p => p.key));
     for (const [key, card] of this.cards) if (!keep.has(key)) { card.shell.remove(); card.path.remove(); this.cards.delete(key); }
@@ -130,31 +148,58 @@ export class MarginOverlay {
       if (!card) {
         const shell = this.root.createDiv({ cls: 'margin-link-card-shell' });
         const button = shell.createEl('button');
-        const grip = shell.createEl('button', { cls: 'margin-link-card-grip', attr: { type: 'button', 'aria-label': '移动卡片：方向键调整，Shift 加方向键跨侧，Delete 恢复自动位置', title: '拖动调整位置 · 方向键移动 · Shift+左右键跨侧 · Delete 恢复自动' } });
-        setIcon(grip, 'grip-vertical');
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.classList.add('margin-link-connector'); this.svg.appendChild(path);
-        card = { shell, button, grip, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
+        card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
         shell.addEventListener('pointerenter', () => this.highlight(p.key)); shell.addEventListener('pointerleave', () => this.highlight(undefined));
         shell.addEventListener('focusin', () => this.highlight(p.key)); shell.addEventListener('focusout', () => this.highlight(undefined));
-        button.addEventListener('click', event => { void this.open(p.key, event); });
-        grip.addEventListener('pointerdown', e => { this.drag.cancel(); this.cardDrag.start(e, p.key, grip); });
-        grip.addEventListener('keydown', e => this.onGripKey(e, p.key));
+        button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, p.key)) void this.open(p.key, event); });
+        button.addEventListener('pointerdown', e => { this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
+        button.addEventListener('keydown', e => this.onCardKey(e, p.key));
         shell.addEventListener('contextmenu', e => {
           e.preventDefault(); const menu = new Menu(); this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
           menu.addItem(item => item.setTitle('恢复此卡片自动位置').setIcon('rotate-ccw').onClick(() => {
-            const key = this.cards.get(p.key)?.anchor.layoutKey; if (key) this.host.layouts.clear(this.path, key);
+            const key = this.cards.get(p.key)?.anchor.layoutKey; if (key) this.host.layouts.clear(this.path, key, this.legacyLayoutKeys.get(key));
           })); menu.showAtMouseEvent(e);
         });
       }
       card.anchor = anchor; card.placement = p;
       if (card.signature !== signature) { card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
-      card.grip.hidden = prefs.placementMode === 'auto';
+      card.button.classList.toggle('margin-link-card-movable', prefs.placementMode !== 'auto');
+      if (prefs.placementMode !== 'auto') card.button.setAttribute('aria-description', '拖动调整位置；方向键移动，Shift+左右键跨侧，Delete 恢复自动位置，Enter 打开文件');
+      else card.button.removeAttribute('aria-description');
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
     const selected = bridge?.cm.state.selection.main;
     this.highlight(this.highlighted ?? (selected ? this.anchors.find(a => selected.from < a.occurrence.end && selected.to > a.occurrence.start)?.key : undefined));
     this.drag.update(this.cardDrag.dragging ? undefined : bridge, hostRect, viewport, body);
+  }
+  private sourceReady(): boolean {
+    if (this.confirmedSource === this.path) return true;
+    const file = this.view.file;
+    if (!file || this.checkingSource) return false;
+    const source = this.path, generation = this.sourceGeneration;
+    this.checkingSource = true;
+    void this.host.app.vault.cachedRead(file).then(text => {
+      if (this.stopped || generation !== this.sourceGeneration) return;
+      this.checkingSource = false;
+      const currentText = this.view.getMode() === 'source' ? this.bridge()?.text : this.view.data;
+      // CodeMirror normalizes line endings even when the Vault file uses CRLF.
+      const normalize = (value: string) => value.replace(/\r\n?/g, '\n');
+      if (this.view.file?.path === source && currentText !== undefined && normalize(currentText) === normalize(text)) {
+        this.win.clearTimeout(this.sourceRetryTimer); this.sourceRetryTimer = undefined;
+        this.legacyLayoutKeys = legacyLayoutAliases(text, parseWikilinks(text));
+        this.host.layouts.migrateAliases(source, this.legacyLayoutKeys);
+        this.confirmedSource = source; this.schedule();
+      } else if (this.sourceRetries < 6 && this.sourceRetryTimer === undefined) {
+        // The last editor update can occur while this read is pending. Retry
+        // a few times without turning loading/unsaved text into an rAF read loop.
+        this.sourceRetryTimer = this.win.setTimeout(() => {
+          this.sourceRetryTimer = undefined; this.schedule();
+        }, Math.min(50 * 2 ** this.sourceRetries++, 800));
+      }
+    }).catch(() => { if (generation === this.sourceGeneration) this.checkingSource = false; });
+    return false;
   }
   private place(card: Card, p: Placement): void {
     const rect = this.view.contentEl.getBoundingClientRect();
@@ -166,21 +211,25 @@ export class MarginOverlay {
   }
   private dragContext(key: string): CardDragContext | undefined {
     const card = this.cards.get(key), input = this.layoutInput;
-    if (!card || !input || this.host.preferences.placementMode === 'auto') return;
+    if (!card || !input || this.host.preferences.placementMode === 'auto' || this.confirmedSource !== this.path || this.view.file?.path !== this.path || this.view.getMode() !== this.mode) return;
     const source = this.path, mode = this.mode, bridge = this.bridge(), revision = bridge?.revision;
     const layoutKey = card.anchor.layoutKey;
     return { input, anchor: input.anchors.find(a => a.key === key)!, occupied: [...this.cards].filter(([id]) => id !== key).map(([, c]) => c.placement),
       valid: () => !this.stopped && this.view.file?.path === source && this.view.getMode() === mode && (!bridge || bridge.revision === revision) && this.cards.get(key)?.anchor.layoutKey === layoutKey };
   }
   private savePosition(key: string, relative: RelativePosition): void {
+    if (this.confirmedSource !== this.path || this.view.file?.path !== this.path || this.view.getMode() !== this.mode) { this.schedule(); return; }
     const card = this.cards.get(key);
     if (!card?.anchor.layoutKey) { new Notice('重复链接的上下文无法唯一辨别，未保存位置。请为它们提供不同的周围文字后重试。'); this.schedule(); return; }
-    this.host.layouts.set(this.path, card.anchor.layoutKey, relative); this.schedule();
+    this.host.layouts.set(this.path, card.anchor.layoutKey, relative, this.legacyLayoutKeys.get(card.anchor.layoutKey)); this.schedule();
   }
-  private onGripKey(event: KeyboardEvent, key: string): void {
+  private onCardKey(event: KeyboardEvent, key: string): void {
+    if (this.cardDrag.dragging && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete', 'Backspace'].includes(event.key)) {
+      event.preventDefault(); event.stopPropagation(); return;
+    }
     const card = this.cards.get(key), context = this.dragContext(key);
     if (!card || !context) return;
-    if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); if (card.anchor.layoutKey) this.host.layouts.clear(this.path, card.anchor.layoutKey); return; }
+    if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); if (card.anchor.layoutKey) this.host.layouts.clear(this.path, card.anchor.layoutKey, this.legacyLayoutKeys.get(card.anchor.layoutKey)); return; }
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation();
     let x = card.placement.x + card.placement.width / 2, y = card.placement.y + card.placement.height / 2;
@@ -191,7 +240,7 @@ export class MarginOverlay {
   }
   private async open(key: string, event: MouseEvent): Promise<void> {
     const anchor = this.cards.get(key)?.anchor;
-    if (!anchor || !this.view.file) return;
+    if (!anchor || !this.view.file || this.view.file.path !== this.path || this.confirmedSource !== this.path) return;
     const resolved = resolveLink(this.host.app, anchor.occurrence.target, this.view.file.path);
     if (!resolved.file) { new Notice('未解析目标：原生 Vault/链接解析器未找到文件。HTML 等格式可能需要文件类型插件；不会创建新笔记。'); return; }
     if (!canOpenInObsidian(this.host.app, resolved.file.extension)) { new Notice('文件已被 Vault 识别，但无法通过公开 API 确认此类型的打开能力。请先用相应文件类型插件打开一个该类型文件并保留其标签，再点击卡片；也可使用正文原生双链。'); return; }
@@ -231,7 +280,7 @@ export class MarginOverlay {
     this.cards.clear(); this.anchors = []; this.layoutInput = undefined;
   }
   destroy(): void {
-    this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.resize.disconnect(); this.mutation.disconnect();
+    this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
     for (const menu of [...this.menus]) menu.hide(); this.menus.clear();
     const container = this.view.contentEl;
     container.removeEventListener('scroll', this.schedule, true); container.removeEventListener('pointermove', this.onPointerMove); container.removeEventListener('pointerleave', this.onLeave);

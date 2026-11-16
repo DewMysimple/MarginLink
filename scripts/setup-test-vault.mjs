@@ -7,6 +7,8 @@ const fixtures = {
   'MarginLink Demo.md': await readFile(new URL('../tests/fixtures/demo.md', import.meta.url), 'utf8'),
   'Note A.md': '# Note A\n\n## Discussion\n\nAn existing note.\n\nReturn to [[MarginLink Demo]].\n',
   'Folder/Note A.md': '# Another Note A\n\nA distinct file with the same basename.\n',
+  'Remediation A.md': '# Remediation A\n\nSource A has [[Folder/Note A|Shared target]] in its own context.\n',
+  'Remediation B.md': '# Remediation B\n\nSource B independently has [[Folder/Note A|Shared target]] here.\n',
   'Board.canvas': '{"nodes":[],"edges":[]}',
   'References/stages.html': '<!doctype html><title>Stages</title><p>This fixture is not executed by MarginLink.</p>',
   'pixel.svg': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg>',

@@ -27,6 +27,17 @@ artifacts/*
 !artifacts/v2-icon.png
 !artifacts/v2-settings.png
 !artifacts/v2-quick.png
+!artifacts/layout-before-fix-delayed.json
+!artifacts/desktop-0.2.1-1.10.6.json
+!artifacts/desktop-diagnostics-0.2.1-1.10.6.json
+!artifacts/desktop-remediation.json
+!artifacts/remediation-restart.json
+!artifacts/remediation-final.png
+!artifacts/remediation-settings.png
+!artifacts/crlf-host-control.json
+!artifacts/desktop-0.2.1-1.15.1.json
+!artifacts/desktop-diagnostics-0.2.1-1.15.1.json
+!artifacts/legacy-layout-migration.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

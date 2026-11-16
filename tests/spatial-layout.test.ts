@@ -23,6 +23,18 @@ describe('relative spatial layout', () => {
     expect(layoutCards(saved)).toHaveLength(1);
     expect(layoutCards({ ...saved, anchors: [{ ...saved.anchors[0], y: -200 }] })).toEqual([]);
   });
+  it('restores the exact original rectangle after temporary viewport constraints', () => {
+    const moved = positionFromDrop(input, input.anchors[0], 1270, 660, [])!;
+    const manual = { ...moved.relative };
+    const saved = { ...input, anchors: [{ ...input.anchors[0], manual }] };
+    const original = layoutCards(saved);
+    const narrowed = { ...saved, width: 1120, viewport: { ...input.viewport, right: 1120, bottom: 400 } };
+    for (const p of layoutCards(narrowed)) {
+      expect(p.x).toBeGreaterThan(input.body.right); expect(p.y + p.height).toBeLessThanOrEqual(392);
+    }
+    expect(manual).toEqual(moved.relative);
+    expect(layoutCards(saved)).toEqual(original);
+  });
   it('ignores saved positions in auto mode and respects manually positioned cards first', () => {
     const manual = { side: 'right' as const, xNormalized: 0.3, yOffset: 5 };
     const data = { ...input, anchors: [{ ...input.anchors[0], manual }] };

@@ -1,6 +1,5 @@
 import { Modal, Setting, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
-import { renderSettings } from './settings-tab';
 
 class ManagedModal extends Modal {
   constructor(app: App, protected plugin: MarginLinkPlugin) { super(app); plugin.dialogs.add(this); }
@@ -14,11 +13,6 @@ export class ConfirmAction extends ManagedModal {
     new Setting(this.contentEl).addButton(b => b.setButtonText('取消').onClick(() => this.close()))
       .addButton(b => b.setButtonText('确认').setCta().onClick(() => { this.action(); this.close(); }));
   }
-}
-class FullControls extends ManagedModal {
-  private dispose?: () => void;
-  onOpen(): void { this.modalEl.addClass('margin-link-full-controls'); this.dispose = renderSettings(this.contentEl, this.plugin); }
-  onClose(): void { this.dispose?.(); super.onClose(); }
 }
 export class QuickControls extends ManagedModal {
   private dispose?: () => void;
@@ -41,9 +35,11 @@ export class QuickControls extends ManagedModal {
       d.addOptions({ horizontal: '横向卡片', square: '正方形', icon: '极简图标' }).setValue(this.plugin.preferences.cardShape).onChange(v => { Object.assign(this.plugin.preferences, { cardShape: v }); void this.plugin.savePreferences(); });
       refresh.push(() => d.setValue(this.plugin.preferences.cardShape));
     });
-    const source = this.plugin.activeSource();
-    new Setting(this.contentEl).setName('整理当前笔记').addButton(b => b.setButtonText('恢复自动位置').setDisabled(!source).onClick(() => { if (source) this.plugin.confirmReset(source); }));
-    new Setting(this.contentEl).setName('完整设置').setDesc('与 Obsidian 原生 MarginLink 设置页共用全部选项；也可在设置 → MarginLink 打开。').addButton(b => b.setButtonText('打开完整设置').onClick(() => { this.close(); new FullControls(this.app, this.plugin).open(); }));
+    new Setting(this.contentEl).setName('整理当前笔记').addButton(b => {
+      b.setButtonText('恢复自动位置').onClick(() => { const source = this.plugin.activeSource(); if (source) this.plugin.confirmReset(source); });
+      const sync = () => b.setDisabled(!this.plugin.activeSource()); refresh.push(sync); sync();
+    });
+    new Setting(this.contentEl).setName('完整设置').setDesc('在右侧 MarginLink 标签中调整全部选项；也可在设置 → MarginLink 打开。').addButton(b => b.setButtonText('打开完整设置').onClick(() => { this.close(); void this.plugin.openSettingsPanel(); }));
     this.dispose = this.plugin.subscribe(() => refresh.forEach(fn => fn()));
   }
   onClose(): void { this.dispose?.(); super.onClose(); }

@@ -1,0 +1,14 @@
+{
+  "host": "Remediation A - test-vault - Obsidian v1.10.6",
+  "pluginLoaded": false,
+  "raw": "# CRLF control\r\n\r\nLine [[Folder/Note A]].\r\n",
+  "source": "# CRLF control\r\n\r\nLine [[Folder/Note A]].\r\n",
+  "preview": "# CRLF control\n\nLine [[Folder/Note A]].\n",
+  "returned": "# CRLF control\n\nLine [[Folder/Note A]].\n",
+  "hashes": {
+    "raw": "feba11c2ccba6bf3c4ad2ae41f26590292efe0d13787f8fc7f2ac1dd3ef3b427",
+    "source": "feba11c2ccba6bf3c4ad2ae41f26590292efe0d13787f8fc7f2ac1dd3ef3b427",
+    "preview": "08e1124972551bc2d72b1fc2f919137764070839e60e45730b1470f3fd116791",
+    "returned": "08e1124972551bc2d72b1fc2f919137764070839e60e45730b1470f3fd116791"
+  }
+}

@@ -1,4 +1,6 @@
 import { readPreferences, type PersistedLayout, type RelativePosition, type StoredData } from '../types';
+import { layoutIdentities, legacyLayoutAliases, legacyLayoutIdentities } from './layout-identity';
+import { parseWikilinks } from './wikilink-parser';
 
 export const MAX_LAYOUTS = 500;
 export const MAX_NOTE_LAYOUTS = 100;
@@ -38,21 +40,59 @@ export class LayoutStore {
   private records: PersistedLayout[];
   constructor(records: PersistedLayout[], private changed: () => void) { this.records = readLayouts(records); }
   snapshot(): PersistedLayout[] { return readLayouts(this.records); }
-  get(source: string, key?: string): RelativePosition | undefined {
-    const e = this.records.find(e => e.source === source && e.key === key && Date.now() - e.updated <= MAX_LAYOUT_AGE);
+  get(source: string, key?: string, legacyKey?: string): RelativePosition | undefined {
+    const e = this.records.find(e => e.source === source && (e.key === key || e.key === legacyKey) && Date.now() - e.updated <= MAX_LAYOUT_AGE);
     return e ? { side: e.side, xNormalized: e.xNormalized, yOffset: e.yOffset } : undefined;
   }
-  set(source: string, key: string, position: RelativePosition): void {
-    this.records = readLayouts([{ source, key, ...position, updated: Date.now() }, ...this.records.filter(e => e.source !== source || e.key !== key)]);
+  set(source: string, key: string, position: RelativePosition, legacyKey?: string): void {
+    this.records = readLayouts([{ source, key, ...position, updated: Date.now() }, ...this.records.filter(e => e.source !== source || (e.key !== key && e.key !== legacyKey))]);
     this.changed();
   }
-  clear(source?: string, key?: string): void {
-    const next = this.records.filter(e => source !== undefined && (e.source !== source || (key !== undefined && e.key !== key)));
+  clear(source?: string, key?: string, legacyKey?: string): void {
+    const next = this.records.filter(e => source !== undefined && (e.source !== source || (key !== undefined && e.key !== key && e.key !== legacyKey)));
     if (next.length === this.records.length) return;
     this.records = next; this.changed();
+  }
+  migrateAliases(source: string, aliases: ReadonlyMap<string, string>): void {
+    const canonical = new Map<string, string>(), ambiguous = new Set<string>();
+    for (const [key, legacy] of aliases) {
+      if (key === legacy) continue;
+      if (canonical.has(legacy)) ambiguous.add(legacy);
+      canonical.set(legacy, key);
+    }
+    for (const key of ambiguous) canonical.delete(key);
+    if (!this.records.some(e => e.source === source && canonical.has(e.key))) return;
+    // Preserve coordinates and timestamps. readLayouts merges duplicates by the
+    // latest update when both old preview and canonical records already exist.
+    this.records = readLayouts(this.records.map(e => e.source === source && canonical.has(e.key) ? { ...e, key: canonical.get(e.key)! } : e));
+    this.changed();
   }
   reconcile(source: string, valid: Set<string>): void {
     const next = this.records.filter(e => e.source !== source || valid.has(e.key));
     if (next.length !== this.records.length) { this.records = next; this.changed(); }
+  }
+  // Call only with the complete source text delivered for this file by the
+  // metadata cache. A view's loading editor or preview section is not evidence
+  // that links have been deleted from that source note.
+  reconcileDocument(source: string, text: string): void {
+    if (!this.records.some(e => e.source === source)) return;
+    const links = parseWikilinks(text);
+    this.migrateAliases(source, legacyLayoutAliases(text, links));
+    const keys = new Set(layoutIdentities(text, links).values());
+    // Keep both historical raw preview keys and CodeMirror's LF-normalized keys.
+    // These still come only from real occurrences in this complete document.
+    if (text.includes('\r')) for (const key of legacyLayoutIdentities(text, links).values()) keys.add(key);
+    this.reconcile(source, keys);
+  }
+  renameSource(oldPath: string, newPath: string): void {
+    const belongs = (source: string) => source === oldPath || source.startsWith(oldPath + '/');
+    if (!this.records.some(e => belongs(e.source))) return;
+    this.records = readLayouts(this.records.map(e => belongs(e.source) ? { ...e, source: newPath + e.source.slice(oldPath.length) } : e));
+    this.changed();
+  }
+  deleteSource(path: string): void {
+    const next = this.records.filter(e => e.source !== path && !e.source.startsWith(path + '/'));
+    if (next.length === this.records.length) return;
+    this.records = next; this.changed();
   }
 }

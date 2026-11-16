@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_PREFERENCES, readPreferences } from '../src/types';
 import { LayoutStore, readLayouts, readStoredData, MAX_LAYOUTS, MAX_LAYOUT_AGE } from '../src/core/layout-store';
-import { layoutIdentities } from '../src/core/layout-identity';
+import { layoutIdentities, legacyLayoutIdentities } from '../src/core/layout-identity';
 import { parseWikilinks } from '../src/core/wikilink-parser';
 
 const now = Date.now();
@@ -72,5 +72,51 @@ describe('weak occurrence identity and UI-only store', () => {
     store.reconcile('B.md', new Set()); expect(store.snapshot()).toEqual([]);
     expect(changes).toBe(4);
     expect(readStoredData(null).layouts).toEqual([]);
+  });
+  it('commits each source immediately and reconciles only its complete document', () => {
+    const a = 'A context [[Shared|same target]] A tail', b = 'B context [[Shared|same target]] B tail';
+    const keyA = [...ids(a).values()][0], keyB = [...ids(b).values()][0];
+    const store = new LayoutStore([], () => {});
+    const aPosition = { side: 'right' as const, xNormalized: 0.8, yOffset: 12 };
+    const bPosition = { side: 'left' as const, xNormalized: 0.2, yOffset: -3 };
+    store.set('A.md', keyA, aPosition);
+    store.set('B.md', keyB, bPosition);
+    // No timer, flush, or persistence round trip is necessary for A → B → A.
+    store.reconcileDocument('B.md', b);
+    expect(store.get('B.md', keyB)).toEqual(bPosition);
+    store.reconcileDocument('A.md', a);
+    expect(store.get('A.md', keyA)).toEqual(aPosition);
+    store.reconcileDocument('A.md', a.replace('[[Shared|same target]]', 'removed'));
+    expect(store.get('A.md', keyA)).toBeUndefined();
+    expect(store.get('B.md', keyB)).toEqual(bPosition);
+  });
+  it('preserves LF editor and historical CRLF preview identities until actual deletion', () => {
+    const lf = 'Context before\n[[Shared|same target]]\nContext after';
+    const crlf = lf.replaceAll('\n', '\r\n');
+    const store = new LayoutStore([], () => {});
+    const keys = [...ids(lf).values(), ...legacyLayoutIdentities(crlf, parseWikilinks(crlf)).values()];
+    for (const key of keys) store.set('A.md', key, { side: 'right', xNormalized: 0.5, yOffset: 2 });
+    store.reconcileDocument('A.md', crlf);
+    expect(store.snapshot()).toHaveLength(1);
+    store.reconcileDocument('A.md', crlf.replace('[[Shared|same target]]', 'removed'));
+    expect(store.snapshot()).toEqual([]);
+  });
+  it('keeps unrelated layouts on rename/delete and migrates only matching source paths', () => {
+    let changes = 0;
+    const store = new LayoutStore([], () => changes++), key = 'd'.repeat(64);
+    const position = { side: 'right' as const, xNormalized: 0.6, yOffset: 7 };
+    for (const source of ['Folder/A.md', 'Folder/Nested/B.md', 'Folder2/C.md']) store.set(source, key, position);
+    const saved = store.snapshot();
+    store.renameSource('unrelated.png', 'unrelated-new.png'); store.deleteSource('unrelated-new.png');
+    expect(store.snapshot()).toEqual(saved); expect(changes).toBe(3);
+    store.renameSource('Folder', 'Moved');
+    expect(store.get('Moved/A.md', key)).toEqual(position);
+    expect(store.get('Moved/Nested/B.md', key)).toEqual(position);
+    expect(store.get('Folder2/C.md', key)).toEqual(position);
+    store.renameSource('Moved/A.md', 'Moved/Renamed.md');
+    expect(store.get('Moved/A.md', key)).toBeUndefined();
+    expect(store.get('Moved/Renamed.md', key)).toEqual(position);
+    store.deleteSource('Moved');
+    expect(store.snapshot().map(e => e.source)).toEqual(['Folder2/C.md']);
   });
 });
