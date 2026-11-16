@@ -21,7 +21,7 @@
 
 升级时只替换发布文件，保留原 `data.json`。旧平铺配置与当前嵌套配置中的合法选择逐项保留，包括“悬停”“自动排列”“横向卡片”；只有缺失或无效的字段采用新默认。新安装和“恢复默认外观设置”统一为 `lines=always`、`placementMode=free`、`cardShape=square`。恢复默认不删除卡片位置。`layout` 继续代表左右优先，`placementMode` 控制拖动模式。
 
-Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码后运行 `npm ci`、`npm run package` 生成安装目录；ZIP 命令见开发章节。此版本没有代替用户发布 GitHub Release 或提交 Obsidian 社区目录。
+Git 仓库不跟踪 `main.js`、`dist/`、依赖或隔离 profile。克隆源码后可双击 `buildStart.cmd` 一键更新并生成 ZIP，也可运行 `npm ci`、`npm run package` 生成安装目录；具体命令见开发章节。此版本没有代替用户发布 GitHub Release 或提交 Obsidian 社区目录。
 
 ## 创建和打开原生双链
 
@@ -129,7 +129,11 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 | `src/ui/settings-tab.ts`, `settings-view.ts`, `quick-controls.ts` | 共享原生表单、右侧 ItemView、实时预览、快捷 Modal 与确认 |
 | `scripts/desktop-test.mjs`, `desktop-v2.mjs`, `desktop-remediation.mjs`, `desktop-stability.mjs` | 隔离库客户端回归、即时切页、逐帧分隔线/抓点和长悬停场景 |
 
-Node 24 / npm 12，安装与常规检查：
+Windows 一键构建：安装 Git、Node 24（含 npm）后，双击项目根目录的 [buildStart.cmd](buildStart.cmd)。脚本通过 [build-latest.ps1](scripts/build-latest.ps1) 依次拉取 `origin/main`（仅快进）、按锁文件安装依赖、编译打包，并自动读取版本号生成 `dist/margin-link-<版本号>.zip`。窗口会保留成功路径或失败原因；项目路径可以包含空格和中文，从其他工作目录启动也可用。
+
+运行前需处于 `main` 分支，已跟踪文件没有待提交修改。本地历史分叉、存在未推送提交或任一步骤失败都会停止，不自动切换分支或处理本地修改。构建失败时，已有 ZIP 可能仍是旧包，以窗口中的成功结果为准。终端自动运行可使用 `buildStart.cmd --no-pause`。
+
+Node 24 / npm 12，手动安装与常规检查：
 
 ```powershell
 npm ci

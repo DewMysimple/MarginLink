@@ -4,4 +4,4 @@
 
 v0.2.2 让卡片和连线连续跟随分隔线，拖动保留鼠标抓点且没有跟随文字；悬停只显示“文件名称 · 文件类型”。新安装/恢复默认统一为常驻连线、自由拖动和正方形卡片，已有合法偏好与手动位置保留。右侧完整设置、原生设置页和快捷 Modal 继续共用偏好。原生 Wikilink 仍是唯一关联来源。
 
-可安装目录 `dist/margin-link/`，ZIP `dist/margin-link-0.2.2.zip`，生成入口 `npm run package`（ZIP 命令见完整 README）。真实测试结果见 [VALIDATION.md](VALIDATION.md)，变化记录见 [CHANGELOG.md](CHANGELOG.md)。
+可安装目录 `dist/margin-link/`，ZIP `dist/margin-link-0.2.2.zip`。Windows 可双击 [buildStart.cmd](buildStart.cmd) 拉取最新代码并自动生成版本 ZIP；手动生成入口为 `npm run package`（ZIP 命令见完整 README）。真实测试结果见 [VALIDATION.md](VALIDATION.md)，变化记录见 [CHANGELOG.md](CHANGELOG.md)。
