@@ -1,0 +1,187 @@
+{
+  "version": "0.2.7",
+  "one": [
+    {
+      "key": "manual",
+      "side": "right",
+      "x": 836,
+      "y": 18,
+      "shape": "square",
+      "width": 84,
+      "height": 84,
+      "compact": false,
+      "manual": true
+    },
+    {
+      "key": "manual",
+      "side": "right",
+      "x": 836,
+      "y": 8,
+      "shape": "square",
+      "width": 84,
+      "height": 84,
+      "compact": false,
+      "manual": true
+    },
+    {
+      "key": "manual",
+      "side": "right",
+      "x": 836,
+      "y": 8,
+      "shape": "square",
+      "width": 84,
+      "height": 84,
+      "compact": false,
+      "manual": true
+    },
+    {
+      "key": "manual",
+      "side": "right",
+      "x": 836,
+      "y": 8,
+      "shape": "square",
+      "width": 84,
+      "height": 84,
+      "compact": false,
+      "manual": true
+    }
+  ],
+  "six": [
+    [
+      {
+        "key": "dives",
+        "side": "right",
+        "x": 836,
+        "y": 138,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "Early Access",
+        "side": "left",
+        "x": 80,
+        "y": 138,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "model-assisted",
+        "side": "right",
+        "x": 836,
+        "y": 232,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "Scene Graph",
+        "side": "left",
+        "x": 80,
+        "y": 232,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "Verse",
+        "side": "left",
+        "x": 80,
+        "y": 44,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "ship",
+        "side": "right",
+        "x": 836,
+        "y": 44,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      }
+    ],
+    [
+      {
+        "key": "dives",
+        "side": "right",
+        "x": 836,
+        "y": 58,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "Early Access",
+        "side": "left",
+        "x": 80,
+        "y": 58,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "model-assisted",
+        "side": "right",
+        "x": 836,
+        "y": 152,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "Scene Graph",
+        "side": "left",
+        "x": 80,
+        "y": 152,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "Verse",
+        "side": "left",
+        "x": 80,
+        "y": 246,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      },
+      {
+        "key": "ship",
+        "side": "right",
+        "x": 836,
+        "y": 246,
+        "shape": "square",
+        "width": 84,
+        "height": 84,
+        "compact": false,
+        "manual": false
+      }
+    ]
+  ]
+}

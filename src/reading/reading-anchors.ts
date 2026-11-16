@@ -52,7 +52,8 @@ export class ReadingAnchors {
     ctx.addChild(child);
     this.changed();
   }
-  anchors(view: MarkdownView): Anchor[] {
+  anchors(view: MarkdownView, overscan = 2400): Anchor[] {
+    const viewport = view.previewMode.containerEl.getBoundingClientRect();
     const result: Anchor[] = [];
     const seen = new Set<HTMLElement>();
     for (const entry of this.entries.values()) {
@@ -60,6 +61,10 @@ export class ReadingAnchors {
       for (const { element, occurrence } of entry.links) {
         if (!element.isConnected || seen.has(element)) continue;
         seen.add(element);
+        // Reading mode may keep an entire long document mounted. Measure full
+        // text Ranges only near this pane; retain old slots in the overlay cache.
+        const bounds = element.getBoundingClientRect();
+        if (bounds.bottom < viewport.top - overscan || bounds.top > viewport.bottom + overscan) continue;
         const rects = Array.from(element.getClientRects());
         const rect = rects.at(-1);
         if (!rect) continue;

@@ -6,13 +6,13 @@ const base: LayoutInput = {
   anchors: Array.from({ length: 50 }, (_, i) => ({ key: String(i), x: 300 + i * 5, y: 300 + i * 2 })),
   density: 'auto', layout: 'balanced'
 };
-describe('bounded deterministic margin layout', () => {
-  it('never overlaps cards, covers body, or overflows even under saturation', () => {
+describe('content-coordinate deterministic margin layout', () => {
+  it('never overlaps cards or covers body under saturation; viewport crops display', () => {
     const cards = layoutCards(base);
     expect(cards.length).toBeGreaterThan(0);
     for (const p of cards) {
-      expect(p.x).toBeGreaterThanOrEqual(0); expect(p.y).toBeGreaterThanOrEqual(8);
-      expect(p.x + p.width).toBeLessThanOrEqual(base.width); expect(p.y + p.height).toBeLessThanOrEqual(712);
+      expect(p.x).toBeGreaterThanOrEqual(0); expect(Number.isFinite(p.y)).toBe(true);
+      expect(p.x + p.width).toBeLessThanOrEqual(base.width);
       expect(p.side === 'left' ? p.x + p.width <= base.body.left : p.x >= base.body.right).toBe(true);
     }
     for (const side of ['left', 'right']) {
@@ -30,7 +30,7 @@ describe('bounded deterministic margin layout', () => {
   it('handles non-finite, negative and offscreen inputs', () => {
     expect(layoutCards({ ...base, width: NaN })).toEqual([]);
     expect(layoutCards({ ...base, height: -1 })).toEqual([]);
-    expect(layoutCards({ ...base, anchors: [{ key: 'bad', x: NaN, y: 300 }, { key: 'hidden', x: 400, y: -100 }] })).toEqual([]);
+    expect(layoutCards({ ...base, anchors: [{ key: 'bad', x: NaN, y: 300 }] })).toEqual([]);
   });
   it('honors an in-memory drop side without modifying deterministic defaults', () => {
     const cards = layoutCards({ ...base, anchors: [{ key: 'one', x: 300, y: 300, preferred: 'right' }] });

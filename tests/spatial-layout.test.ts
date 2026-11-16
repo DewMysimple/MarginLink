@@ -57,7 +57,7 @@ describe('relative spatial layout', () => {
     const saved = { ...input, anchors: [{ ...input.anchors[0], manual: { side: 'right' as const, xNormalized: 0.5, yOffset: 2 } }] };
     expect(layoutCards({ ...saved, body: { ...input.body, right: 1380 } })).toEqual([]);
     expect(layoutCards(saved)).toHaveLength(1);
-    expect(layoutCards({ ...saved, anchors: [{ ...saved.anchors[0], y: -200 }] })).toEqual([]);
+    expect(layoutCards({ ...saved, anchors: [{ ...saved.anchors[0], y: -200 }] })[0].y).toBeLessThan(0);
   });
   it('restores the exact original rectangle after temporary viewport constraints', () => {
     const moved = positionFromDrop(input, input.anchors[0], 1270, 660, [])!;
@@ -66,7 +66,7 @@ describe('relative spatial layout', () => {
     const original = layoutCards(saved);
     const narrowed = { ...saved, width: 1120, viewport: { ...input.viewport, right: 1120, bottom: 400 } };
     for (const p of layoutCards(narrowed)) {
-      expect(p.x).toBeGreaterThan(input.body.right); expect(p.y + p.height).toBeLessThanOrEqual(392);
+      expect(p.x).toBeGreaterThan(input.body.right); expect(p.y + p.height / 2).toBe(original[0].y + original[0].height / 2);
     }
     expect(manual).toEqual(moved.relative);
     expect(layoutCards(saved)).toEqual(original);
@@ -95,13 +95,13 @@ describe('relative spatial layout', () => {
     const second = positionFromDrop(p, { key: 'b', x: 700, y: 320 }, 1200, 500, [first.placement])!;
     expect(second.snapped).toBe(true); expect(overlapsCard(first.placement, second.placement)).toBe(false);
   });
-  it('scales vertical offsets with line height and clips at the current viewport', () => {
+  it('scales vertical offsets with line height without clamping static display', () => {
     const manual = { side: 'left' as const, xNormalized: 1, yOffset: 2 };
     const normal = layoutCards({ ...input, anchors: [{ ...input.anchors[0], manual }] })[0];
     const larger = layoutCards({ ...input, lineHeight: 36, anchors: [{ ...input.anchors[0], manual }] })[0];
     expect(larger.y - normal.y).toBe(24);
     const clipped = layoutCards({ ...input, anchors: [{ ...input.anchors[0], manual: { ...manual, yOffset: 80 } }] })[0];
-    expect(clipped.y + clipped.height).toBeLessThanOrEqual(input.viewport.bottom - 8);
+    expect(clipped.y + clipped.height / 2).toBe(input.anchors[0].y + 80 * 24);
   });
 });
 describe('connector geometry', () => {
