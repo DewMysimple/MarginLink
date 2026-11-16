@@ -357,7 +357,11 @@ export class MarginOverlay {
       const both = fragments.some(f => containsBox(bounds, f)) && containsBox(bounds, box); visible.set(key, both);
       return { key, fragments, card: { ...p, y: p.y + this.scrollTop }, previous: card.ports, bounds };
     });
-    this.batch = connectorBatch(relations, prefs.lineStyle, { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5 }, this.batch);
+    // Reserve the widest highlighted stroke as well as at least .5px of real
+    // whitespace. Dense rows may use the compact budget; their full DOM text
+    // rectangles remain protected throughout routing and batch validation.
+    this.batch = connectorBatch(relations, prefs.lineStyle,
+      { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5 }, this.batch);
     this.batchSignature = signature;
     if (this.diagnostics) this.diagnostics.routes++;
     const keep = new Set(this.batch!.segments.map(s => s.id));

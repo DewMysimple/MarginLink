@@ -1,5 +1,24 @@
 # MarginLink 验证记录
 
+## 0.2.21 密集行间缺线与多转折 · 2026-11-16
+
+基线为干净 main `3451ba135b87f5c52557dab6da0396b7004a5620`（0.2.20）。正式 AnyTime 库只读，选定原笔记和十个双链目标复制到项目 test-vault；使用原十条卡片位置与偏好、霞鹜文楷 15px、22.5px 行高、700px 正文、默认主题、缩放 100%、DPR 1。实际宿主为 Windows Obsidian 1.15.1。没有向正式库安装或写入测试内容，原笔记 SHA256 前后一致。
+
+基线在 1614×838、1536×717 的阅读和编辑模式均复现 Verse、Scene Graph、model-assisted 三条缺线，只剩配对编号。三个源端上下文字框间距均为 3.5px，而旧固定留白加最大描边需双侧 5px，源出口被封住；备用网格搜索仅保存位置和距离，同长路线被拆为任意交替横竖步。ship 阅读为 8 折、编辑为 7 折。
+
+整改集中在 connector-renderer 与 connector-batch：首选 1.5px 额外留白，失败后尝试 0.5px，始终保护完整 DOM 文字框和悬停加粗描边；直线/直角可使用精确安全边界，曲线保留圆角所需法向引线。搜索状态加入进入方向，每次转弯计 48 CSSpx 代价；直线中间跨度再做经安全校验的可见性简化。共享方案不能增加任何成员的转折，缓存按实际留白重验。曲线的完整障碍校验也修复了按端点纵向范围预过滤、遗漏真实曲线外凸碰撞的问题。
+
+- `npm test`：40 文件、401 项通过（新增 17 项）。`npm run lint`、`npm run package`（含 tsc/build）通过；ZIP 五文件、逐字节、版本及第三方许可核对通过。
+- `node scripts/desktop-route-quality.mjs final`：原 1.5px 配置 10/10。两尺寸×读写×直/直角，每组六条实际可见 SVG 连线完整，端点/共享接缝误差 <0.001px，途中不离开视口，无续接编号，独立完整文字 Range 与卡片描边碰撞为 0。直线和直角均为 2–3 折，ship 降至 2 折。
+- `node scripts/desktop-route-quality.mjs final --width=2`：18/18。相同八组与暖滚动通过，另含 48 次逐卡聚焦，实测最大描边 2.5px，全部仍连续可见且无文字/卡片碰撞。探针使用 CSSNumericValue 解析实际 `calc(2.5px)`，避免 parseFloat 将已绘制的路径误判为不可见；未降低任何验收门槛。
+- `node scripts/desktop-route-quality.mjs final --intro`：另8/8。开头 glimpse、fellow、reinvented、evolving 四条在两尺寸×读写×直/直角均为完整可见、无碰撞的2–3折连线；只调整滚动，保留原卡位置。至此全文十处双链均覆盖，本轮桌面合计60/60。
+- 两宽度均显式预热后滚动 90 rAF 步，读写 overlay 工作 p95 约 0.4ms，求路、障碍测量、SVG d 写入、编号位置写入和保存均 0。基线路由截图后才加入显式预热，故不将其旧暖计数作性能对照，也不从此推断冷布局和长期大型库性能。
+- 编号/四显示方式/重复出现/键盘高亮/设置共用及三线型×2/5px×读写真实回归 24/24。执行的是原 `desktop-number-modes.mjs` 的同内容副本，仅输出改为 `artifacts/route-quality/regression/`，保留此前历史报告。
+
+[本轮结果摘要](artifacts/route-quality-0.2.21.json)、[发布收据](artifacts/release-0.2.21.json)、[直角实图](artifacts/route-quality-elbow.png)、[直线实图](artifacts/route-quality-straight.png)。最终安装目录、ZIP 和实际验收 bundle SHA256 均为 `94595fb31b75b2256d4be0b7b0ecbdbc641abd1fed5dba705397eedcbdb0f603`。原笔记全文及复制目标仅在忽略的本地证据中保留，不进入 Git。
+
+范围限制：本轮覆盖用户报告的字号、布局、两种尺寸与 1.5/2px；实际几何封闭、过粗线宽、其他字体/主题和第三方 DOM 组合仍可能使用配对续接。最低声明宿主 1.10.6 与其他系统未重测。旧验证章节保留其当时范围与结果。
+
 ## 0.2.16–0.2.20 关联文件与滚动性能 · 2026-11-16
 
 基线为干净的 `main`，`27c4e2d31f6aa3e0f169a6637e653558c39d084a`（0.2.15）。本轮仅操作项目 test-vault/test-profile；Windows、Node 24.16.0、npm 12.0.1、最终 Obsidian 1.15.1、Intel i7-14700KF、RTX 5070 Ti，显示器报告 180 Hz，默认主题，缩放 100%，CDP 1800×1100、DPR 1。最初宿主为 1.15.0，隔离重启后应用已有更新升为 1.15.1，最终性能基线与新实现均在 1.15.1 重跑。每版均运行完整单测、lint、含 tsc 的 build/package，并核对五个发布文件和 ZIP 摘要；17–19 从 Git 暂存树独立构建，避免并行开发混入后续版本。

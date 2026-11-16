@@ -1,0 +1,846 @@
+{
+  "version": "0.2.21",
+  "baselineCommit": "3451ba135b87f5c52557dab6da0396b7004a5620",
+  "bundleSHA256": "94595fb31b75b2256d4be0b7b0ecbdbc641abd1fed5dba705397eedcbdb0f603",
+  "host": "The road to Unreal Engine 6. Read about our plans and timeline - test-vault - Obsidian 1.15.1",
+  "font": {
+    "family": "霞鹜文楷, \"??\", ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, \"Segoe UI\", \"Google Sans Flex\", Roboto, \"Inter Variable\", Inter, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", sans-serif",
+    "size": "15px",
+    "lineHeight": "22.5px"
+  },
+  "contentWidth": 700,
+  "fixtureSHA256": "98d945f99aac8cdd3920cba8a034ebc7a7a4c7fc9172b73a126a5dfb5c4a7083",
+  "formalNoteUnchanged": true,
+  "sourceGapAboveAndBelowPx": {
+    "Verse": [
+      [
+        3.5,
+        3.5
+      ]
+    ],
+    "Scene Graph": [
+      [
+        3.5,
+        3.5
+      ]
+    ],
+    "model-assisted": [
+      [
+        3.5,
+        3.5
+      ]
+    ]
+  },
+  "baseline": {
+    "bundleSHA256": "eb0ac3ba728f4b7a11020aaf78ea19d3d05f8f4954331e580720fb61dcf171f7",
+    "routeCases": [
+      {
+        "case": "1614x838/preview/straight: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 8
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 7.62939453125e-06
+      },
+      {
+        "case": "1614x838/preview/elbow: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 8
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 7.62939453125e-06
+      },
+      {
+        "case": "1614x838/source/straight: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 7
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      },
+      {
+        "case": "1614x838/source/elbow: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 7
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      },
+      {
+        "case": "1536x717/preview/straight: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 8
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      },
+      {
+        "case": "1536x717/preview/elbow: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 8
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      },
+      {
+        "case": "1536x717/source/straight: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 7
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      },
+      {
+        "case": "1536x717/source/elbow: six complete low-turn glyph-safe visible routes",
+        "complete": 3,
+        "states": {
+          "Early Access": "complete",
+          "dives": "complete",
+          "Verse": "continuation",
+          "Scene Graph": "continuation",
+          "model-assisted": "continuation",
+          "ship": "complete"
+        },
+        "turns": {
+          "Early Access": 4,
+          "dives": 3,
+          "Verse": null,
+          "Scene Graph": null,
+          "model-assisted": null,
+          "ship": 7
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      }
+    ],
+    "warmComparison": "Not compared: explicit warm-up was added after the baseline route capture."
+  },
+  "final": [
+    {
+      "lineWidth": 1.5,
+      "passed": 10,
+      "routeCases": [
+        {
+          "case": "1614x838/preview/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1614x838/preview/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1614x838/source/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1614x838/source/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/preview/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/preview/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/source/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/source/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        }
+      ],
+      "highlightChecks": 0,
+      "highlightWidths": [],
+      "warmScroll": [
+        {
+          "case": "preview: warmed native scroll performs no re-route, d write or layout save",
+          "workP95Ms": 0.4000000059604645,
+          "diagnostics": {
+            "renders": 82,
+            "measurements": 0,
+            "routes": 0,
+            "svgWrites": 0,
+            "markerWrites": 0
+          },
+          "counts": {
+            "d": 0,
+            "saves": 0
+          }
+        },
+        {
+          "case": "source: warmed native scroll performs no re-route, d write or layout save",
+          "workP95Ms": 0.4000000059604645,
+          "diagnostics": {
+            "renders": 82,
+            "measurements": 0,
+            "routes": 0,
+            "svgWrites": 0,
+            "markerWrites": 0
+          },
+          "counts": {
+            "d": 0,
+            "saves": 0
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "lineWidth": 2,
+      "passed": 18,
+      "routeCases": [
+        {
+          "case": "1614x838/preview/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1614x838/preview/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1614x838/source/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1614x838/source/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/preview/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/preview/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/source/straight: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 3,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 3,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        },
+        {
+          "case": "1536x717/source/elbow: six complete low-turn glyph-safe visible routes",
+          "complete": 6,
+          "states": {
+            "Early Access": "complete",
+            "dives": "complete",
+            "Verse": "complete",
+            "Scene Graph": "complete",
+            "model-assisted": "complete",
+            "ship": "complete"
+          },
+          "turns": {
+            "Early Access": 2,
+            "dives": 2,
+            "Verse": 3,
+            "Scene Graph": 3,
+            "model-assisted": 2,
+            "ship": 2
+          },
+          "collisionCount": 0,
+          "maximumEndpointError": 3.0517578125e-05
+        }
+      ],
+      "highlightChecks": 48,
+      "highlightWidths": [
+        2.5
+      ],
+      "warmScroll": [
+        {
+          "case": "preview: warmed native scroll performs no re-route, d write or layout save",
+          "workP95Ms": 0.4000000059604645,
+          "diagnostics": {
+            "renders": 82,
+            "measurements": 0,
+            "routes": 0,
+            "svgWrites": 0,
+            "markerWrites": 0
+          },
+          "counts": {
+            "d": 0,
+            "saves": 0
+          }
+        },
+        {
+          "case": "source: warmed native scroll performs no re-route, d write or layout save",
+          "workP95Ms": 0.4000000059604645,
+          "diagnostics": {
+            "renders": 82,
+            "measurements": 0,
+            "routes": 0,
+            "svgWrites": 0,
+            "markerWrites": 0
+          },
+          "counts": {
+            "d": 0,
+            "saves": 0
+          }
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "regression": {
+    "passed": 24,
+    "cases": [
+      "source: dense original has six exact source/card pairs in parse order",
+      "preview: dense original has six exact source/card pairs in parse order",
+      "source: enabling numbers from disabled performs zero routing, SVG d writes and obstacle reads",
+      "preview: enabling numbers from disabled performs zero routing, SVG d writes and obstacle reads",
+      "all four modes switch without residual markers; line style and occurrence numbers remain stable",
+      "light: keyboard focus highlights both number endpoints, the card and the original text",
+      "dark: keyboard focus highlights both number endpoints, the card and the original text",
+      "a clipped source endpoint retains its visible target and unchanged occurrence number",
+      "duplicate appearances have separate deterministic numbers across redraw, reading mode and reopen",
+      "both complete settings entries and quick controls expose the same four display choices",
+      "source: original dense connectors explicitly report a complete route or a paired continuation for every visible relation",
+      "preview: original dense connectors explicitly report a complete route or a paired continuation for every visible relation",
+      "source/straight/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "source/straight/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "source/elbow/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "source/elbow/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "source/curve/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "source/curve/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "preview/straight/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "preview/straight/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "preview/elbow/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "preview/elbow/5px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "preview/curve/2px: known-safe 32px rows yield six independently traced, glyph-safe routes",
+      "preview/curve/5px: known-safe 32px rows yield six independently traced, glyph-safe routes"
+    ],
+    "errors": []
+  },
+  "checks": {
+    "unitTests": 401,
+    "lint": "passed",
+    "typecheckBuildPackage": "passed",
+    "zipFilesAndBytes": "passed",
+    "desktopScenarios": 60
+  },
+  "limits": [
+    "Tests use only test-vault/test-profile; formal note was read, copied and hash-verified, never edited.",
+    "Two reported viewport sizes, font and saved card positions covered; other fonts/themes and thick strokes in physically closed gaps may require paired continuation.",
+    "Warm measurements cover 90 rAF steps after prewarming, not cold-layout or large-vault performance."
+  ],
+  "intro": {
+    "passed": 8,
+    "routeCases": [
+      {
+        "case": "1614x838/preview/straight: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 3,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 6.823937919616058e-05
+      },
+      {
+        "case": "1614x838/preview/elbow: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 2,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 6.823937919616058e-05
+      },
+      {
+        "case": "1614x838/source/straight: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 3,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 3.0517578125e-05
+      },
+      {
+        "case": "1614x838/source/elbow: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 2,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 3.0517578125e-05
+      },
+      {
+        "case": "1536x717/preview/straight: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 3,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 6.103515625e-05
+      },
+      {
+        "case": "1536x717/preview/elbow: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 2,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 6.103515625e-05
+      },
+      {
+        "case": "1536x717/source/straight: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 3,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      },
+      {
+        "case": "1536x717/source/elbow: 4 complete low-turn glyph-safe visible routes",
+        "complete": 4,
+        "states": {
+          "glimpse": "complete",
+          "fellow": "complete",
+          "reinvented": "complete",
+          "evolving": "complete"
+        },
+        "turns": {
+          "glimpse": 2,
+          "fellow": 3,
+          "reinvented": 2,
+          "evolving": 2
+        },
+        "collisionCount": 0,
+        "maximumEndpointError": 0
+      }
+    ],
+    "errors": []
+  }
+}

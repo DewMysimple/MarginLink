@@ -11,6 +11,8 @@ export interface ConnectorOptions {
   body?: Box;
   lineWidth?: number;
   clearance?: number;
+  /** Explicit compact fallback; stroke radius remains protected at both tiers. */
+  minimumClearance?: number;
   /** Other cards are protected even during controlled contact with source text. */
   cardObstacles?: readonly Box[];
   /** Current content-coordinate draw area; an offscreen detour is not a connection. */
@@ -18,7 +20,7 @@ export interface ConnectorOptions {
   corridorX?: number;
   preferCorridor?: boolean;
 }
-export interface Connector { path: string; choice: PortChoice; segments: Segment[]; points: Point[] }
+export interface Connector { path: string; choice: PortChoice; segments: Segment[]; points: Point[]; clearance?: number }
 export interface Segment { from: Point; to: Point; control?: Point; control2?: Point }
 
 function validBox(box: Box): boolean {
@@ -87,6 +89,13 @@ function clean(points: Point[]): Point[] {
     if (!result.length || distance(point, result[result.length - 1]) >= 0.001) result.push(point);
   }
   return result;
+}
+// Equal-length Manhattan routes often have very different numbers of corners.
+// Charge for a turn in both candidate selection and search, rather than relying
+// on heap order to choose a visually coherent route.
+const BEND_COST = 48;
+function routeScore(points: Point[]): number {
+  return points.slice(1).reduce((sum, point, i) => sum + distance(points[i], point), 0) + Math.max(0, points.length - 2) * BEND_COST;
 }
 function segments(points: Point[], radius: number, minimumLead = 0): Segment[] | undefined {
   const result: Segment[] = [];
@@ -160,20 +169,31 @@ function safe(parts: Segment[], source: Port, obstacles: readonly Box[], protect
  * local to this connector; it does not move cards or mutate a saved layout. */
 export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'width' | 'height'>,
   style: LineStyle = 'curve', previous?: PortChoice, options: ConnectorOptions = {}): Connector | undefined {
+  const clearance = Math.max(0, options.clearance ?? 1.5);
+  const preferred = routeAtClearance(fragments, card, style, previous, { ...options, clearance });
+  if (preferred) return { ...preferred, clearance };
+  const minimum = options.minimumClearance;
+  if (minimum === undefined || !Number.isFinite(minimum) || minimum < 0 || minimum >= clearance) return;
+  const compact = routeAtClearance(fragments, card, style, previous, { ...options, clearance: minimum });
+  return compact ? { ...compact, clearance: minimum } : undefined;
+}
+
+function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'width' | 'height'>,
+  style: LineStyle, previous: PortChoice | undefined, options: ConnectorOptions): Connector | undefined {
   const cardBox = { left: card.x, right: card.x + card.width, top: card.y, bottom: card.y + card.height };
   if (!validBox(cardBox)) return;
   const sources = fragments.map((box, fragment) => ({ box, fragment })).filter(({ box }) => validBox(box));
   if (!sources.length) return;
   const padding = Math.max(0.5, (options.lineWidth ?? 1.5) / 2) + Math.max(0, options.clearance ?? 1.5);
-  const minY = Math.min(cardBox.top, ...sources.map(s => s.box.top)) - padding - 12;
-  const maxY = Math.max(cardBox.bottom, ...sources.map(s => s.box.bottom)) + padding + 12;
-  // Rows beyond the route's possible vertical extent cannot intersect it.
   const allObstacles = [...(options.obstacles ?? []), ...sources.map(s => s.box)].filter(validBox);
   const otherCards = (options.cardObstacles ?? []).filter(validBox).map(box => padded(box, padding));
-  const obstacles = allObstacles
-    .filter(box => validBox(box) && box.bottom + padding > minY && box.top - padding < maxY);
+  // Curve controls can leave the source/card envelope. Validate against the
+  // complete measured neighbourhood; curve subdivision prunes its own hull.
+  const obstacles = allObstacles;
   const protectedBoxes = obstacles.map(box => padded(box, padding));
-  const lead = padding + 0.5, targets = ports(cardBox);
+  // Straight/elbow routes may use the exact clearance boundary. Curves need
+  // a little extra normal lead so their first corner can genuinely round off.
+  const lead = padding + (style === 'curve' ? 0.25 : 0), targets = ports(cardBox);
   const tail = Math.max(12, 3 * (options.lineWidth ?? 1.5));
   const body = options.body ?? {
     left: Math.min(...sources.map(s => s.box.left)), right: Math.max(...sources.map(s => s.box.right)), top: 0, bottom: 0
@@ -202,7 +222,9 @@ export function connectorRoute(fragments: Box[], card: Pick<Placement, 'x' | 'y'
             ] : [segments(points, 0)];
           for (const parts of shapes) {
             if (!parts || !safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
-            let score = parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2;
+            let score = style === 'curve'
+              ? parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2
+              : routeScore(points);
             if (parts.some(part => part.control2)) score -= 24;
             // The complete route may be long while its final decorative fold is
             // only a few pixels. Prefer a clean normal entry, not a longer detour.
@@ -237,7 +259,29 @@ export function clearConnectorSegments(parts: Segment[], fragments: Box[], card:
 }
 
 interface SearchStart { source: Port; escape: Point; fragment: number }
-interface SearchNode { index: number; cost: number; estimate: number; start: SearchStart; previous?: SearchNode }
+interface SearchNode { index: number; axis: 0 | 1; cost: number; estimate: number; start: SearchStart; previous?: SearchNode }
+
+/** Ordered visibility shortcuts preserve the source's normal lead and the
+ * card's normal entry. Only the middle span may become diagonal in straight
+ * mode. Every complete result still passes the same stroke safety check. */
+function visibleShortcuts(points: Point[], blocked: readonly Box[]): Point[] {
+  if (points.length <= 4) return points;
+  const end = points.length - 2;
+  const counts = Array<number>(points.length).fill(Infinity), lengths = [...counts], next = Array<number>(points.length).fill(-1);
+  counts[end] = 0; lengths[end] = 0;
+  for (let from = end - 1; from >= 1; from--) for (let to = from + 1; to <= end; to++) {
+    if (!Number.isFinite(counts[to]) || !clearLine(points[from], points[to], blocked)) continue;
+    const count = counts[to] + 1, length = lengths[to] + distance(points[from], points[to]);
+    if (count < counts[from] || count === counts[from] && length < lengths[from]) {
+      counts[from] = count; lengths[from] = length; next[from] = to;
+    }
+  }
+  if (next[1] < 0) return points;
+  const result = [points[0], points[1]];
+  for (let at = 1; at !== end;) { at = next[at]; result.push(points[at]); }
+  result.push(points.at(-1)!);
+  return clean(result);
+}
 function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[], raw: Box[], cards: Box[], card: Box,
   lead: number, padding: number, corridor: number, style: LineStyle, previous: PortChoice | undefined, options: ConnectorOptions, approachLength: number): Connector | undefined {
   const paddedText = raw.map(b => padded(b, padding)), blocked = [...paddedText, ...cards, card];
@@ -263,9 +307,14 @@ function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[],
   const width = xs.length;
   const indexOf = (p: Point) => { const x = xs.indexOf(p.x), y = ys.indexOf(p.y); return x < 0 || y < 0 ? -1 : y * width + x; };
   const position = (index: number): Point => ({ x: xs[index % width], y: ys[Math.floor(index / width)] });
-  const goalMap = new Map(goals.map(goal => [indexOf(goal.point), goal]));
+  const goalMap = new Map<number, typeof goals>();
+  for (const goal of goals) {
+    const index = indexOf(goal.point), at = goalMap.get(index) ?? [];
+    at.push(goal); goalMap.set(index, at);
+  }
   const heuristic = (p: Point) => Math.min(...goals.map(goal => Math.abs(p.x - goal.point.x) + Math.abs(p.y - goal.point.y)));
   const heap: SearchNode[] = [], costs = new Map<number, number>();
+  const stateKey = (index: number, axis: 0 | 1) => index * 2 + axis;
   const push = (node: SearchNode) => {
     let i = heap.length; heap.push(node);
     while (i > 0) { const parent = (i - 1) >> 1; if (heap[parent].estimate <= node.estimate) break; heap[i] = heap[parent]; i = parent; }
@@ -288,22 +337,32 @@ function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[],
   for (const start of starts) {
     const index = indexOf(start.escape); if (index < 0) continue;
     const cost = previous?.fragment === start.fragment && previous.source === start.source.edge ? 0 : 4;
-    if ((costs.get(index) ?? Infinity) <= cost) continue;
-    costs.set(index, cost); push({ index, cost, estimate: cost + heuristic(start.escape), start });
+    // Both allowed source ports leave vertically. Direction belongs to the
+    // search state: arriving horizontally and vertically are not equivalent.
+    const key = stateKey(index, 1);
+    if ((costs.get(key) ?? Infinity) <= cost) continue;
+    costs.set(key, cost); push({ index, axis: 1, cost, estimate: cost + heuristic(start.escape), start });
   }
+  let best: Connector | undefined, bestCost = Infinity;
   while (heap.length) {
-    const node = pop(); if (node.cost !== costs.get(node.index)) continue;
-    const point = position(node.index), goal = goalMap.get(node.index);
-    if (goal) {
+    const node = pop(); if (node.cost !== costs.get(stateKey(node.index, node.axis))) continue;
+    if (node.estimate >= bestCost) break;
+    const point = position(node.index);
+    for (const goal of goalMap.get(node.index) ?? []) {
+      const arrival = goal.port.nx ? 0 : 1;
+      const completeCost = node.cost + distance(goal.point, goal.port) + (node.axis === arrival ? 0 : BEND_COST);
       const path: Point[] = [];
       for (let at: SearchNode | undefined = node; at; at = at.previous) path.push(position(at.index));
       path.reverse();
-      const routePoints = clean([node.start.source, ...path, goal.port]);
+      const orthogonal = clean([node.start.source, ...path, goal.port]);
+      const routePoints = style === 'straight' ? visibleShortcuts(orthogonal, blocked) : orthogonal;
       for (const radius of style === 'curve' ? [24, 12, 6, 3, 1, 0.2, 0.05] : [0]) {
         const parts = segments(routePoints, radius, padding + 0.1);
-        if (parts && safe(parts, node.start.source, raw, paddedText, card, cards, options.bounds)) return {
-          path: connectorPath(parts), choice: { fragment: node.start.fragment, source: node.start.source.edge, target: goal.port.edge }, segments: parts, points: routePoints
-        };
+        if (completeCost < bestCost && parts && safe(parts, node.start.source, raw, paddedText, card, cards, options.bounds)) {
+          bestCost = completeCost;
+          best = { path: connectorPath(parts), choice: { fragment: node.start.fragment, source: node.start.source.edge, target: goal.port.edge }, segments: parts, points: routePoints };
+          break;
+        }
       }
     }
     const x = node.index % width, y = Math.floor(node.index / width);
@@ -311,11 +370,14 @@ function searchRoute(sources: { box: Box; fragment: number }[], targets: Port[],
       y > 0 ? node.index - width : -1, y + 1 < ys.length ? node.index + width : -1];
     for (const index of next) {
       if (index < 0) continue;
-      const to = position(index), cost = node.cost + distance(point, to);
-      if (cost >= (costs.get(index) ?? Infinity) - 0.001 || !clearLine(point, to, blocked)) continue;
-      costs.set(index, cost); push({ index, cost, estimate: cost + heuristic(to), start: node.start, previous: node });
+      const axis = (Math.floor(index / width) === y ? 0 : 1) as 0 | 1;
+      const key = stateKey(index, axis), to = position(index);
+      const cost = node.cost + distance(point, to) + (node.axis === axis ? 0 : BEND_COST);
+      if (cost >= (costs.get(key) ?? Infinity) - 0.001 || !clearLine(point, to, blocked)) continue;
+      costs.set(key, cost); push({ index, axis, cost, estimate: cost + heuristic(to), start: node.start, previous: node });
     }
   }
+  return best;
 }
 function inside(point: Point, box: Box): boolean {
   return point.x > box.left && point.x < box.right && point.y > box.top && point.y < box.bottom;

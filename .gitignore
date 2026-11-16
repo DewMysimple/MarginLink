@@ -59,6 +59,10 @@ artifacts/*
 !artifacts/source-scroll-analysis.json
 !artifacts/releases-0.2.16-0.2.20.json
 !artifacts/iteration-final-numbers.png
+!artifacts/route-quality-0.2.21.json
+!artifacts/route-quality-elbow.png
+!artifacts/route-quality-straight.png
+!artifacts/release-0.2.21.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

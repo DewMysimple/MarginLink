@@ -1,0 +1,14 @@
+{
+  "version": "0.2.21",
+  "baselineCommit": "3451ba135b87f5c52557dab6da0396b7004a5620",
+  "sourceCommitLookup": "git log -1 --format=%H -- manifest.json",
+  "zip": "dist/margin-link-0.2.21.zip",
+  "zipSHA256": "c05a32ddf7edc7a262c0ff6479ebeb6745535755663c055bc06224a8ccaec5a6",
+  "filesSHA256": {
+    "main.js": "94595fb31b75b2256d4be0b7b0ecbdbc641abd1fed5dba705397eedcbdb0f603",
+    "manifest.json": "0a214f402614a65bee0a5bdfbf4c0f4e62b5516bd25a30f999ac9e9507f30a38",
+    "styles.css": "7586c61728ea92508d1ac444e45100c2deefab3d0afb10d1882dca87cc6b2da1",
+    "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+    "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+  }
+}

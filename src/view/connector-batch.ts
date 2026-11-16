@@ -62,6 +62,19 @@ function primitiveLength(part: Segment): number {
   return length;
 }
 const routeLength = (route: Connector) => route.segments.reduce((sum, part) => sum + primitiveLength(part), 0);
+// Shared ink is useful only if each member stays just as easy to follow. Count
+// the route's geometric turns, not SVG primitives (rounded corners and shared
+// interval cuts introduce primitives without adding a turn).
+function routeTurns(route: Connector): number {
+  const points = route.points.filter((point, i, all) => !i || !samePoint(point, all[i - 1]));
+  let turns = 0;
+  for (let i = 1; i + 1 < points.length; i++) {
+    const a = { x: points[i].x - points[i - 1].x, y: points[i].y - points[i - 1].y };
+    const b = { x: points[i + 1].x - points[i].x, y: points[i + 1].y - points[i].y };
+    if (Math.abs(a.x * b.y - a.y * b.x) > EPSILON * Math.hypot(a.x, a.y) * Math.hypot(b.x, b.y) || dot(a, b) < 0) turns++;
+  }
+  return turns;
+}
 const cardBox = (card: BatchRelationInput['card']): Box => ({ left: card.x, right: card.x + card.width, top: card.y, bottom: card.y + card.height });
 function sideOf(input: BatchRelationInput, body?: Box): Side {
   const middle = body ? (body.left + body.right) / 2 : input.fragments.reduce((sum, b) => sum + (b.left + b.right) / 2, 0) / Math.max(1, input.fragments.length);
@@ -174,14 +187,14 @@ export function partitionConnectorRoutes(routes: RoutedConnector[], minimum: num
 /** A batch is ephemeral drawing data scoped to one view. No relation or layout
  * records are written. Safe existing routes are reused when another card moves. */
 export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, options: BatchOptions = {}, previous?: ConnectorBatch): ConnectorBatch {
-  const geometry = JSON.stringify([options.obstacles ?? [], options.cardObstacles ?? [], options.body, options.bounds, options.lineWidth, options.clearance]);
+  const geometry = JSON.stringify([options.obstacles ?? [], options.cardObstacles ?? [], options.body, options.bounds, options.lineWidth, options.clearance, options.minimumClearance]);
   const minimum = Math.max(1, options.minSharedLength ?? 24), cards = inputs.map(i => ({ key: i.key, box: cardBox(i.card) }));
   const perInput = (input: BatchRelationInput): ConnectorOptions => ({ ...options, bounds: input.bounds ?? options.bounds, cardObstacles: [...(options.cardObstacles ?? []), ...cards.filter(c => c.key !== input.key).map(c => c.box)] });
   let routes: RoutedConnector[] = [];
   for (const input of inputs) {
-    const fingerprint = JSON.stringify([style, input.fragments, input.card, input.bounds, options.lineWidth, options.clearance, options.body]);
+    const fingerprint = JSON.stringify([style, input.fragments, input.card, input.bounds, options.lineWidth, options.clearance, options.minimumClearance, options.body]);
     const old = previous?.relations.get(input.key), own = perInput(input);
-    const connector = previous?.geometry === geometry && old?.fingerprint === fingerprint && clearConnectorSegments(old.connector.segments, input.fragments, input.card, own)
+    const connector = previous?.geometry === geometry && old?.fingerprint === fingerprint && clearConnectorSegments(old.connector.segments, input.fragments, input.card, { ...own, clearance: old.connector.clearance ?? own.clearance })
       ? old.connector : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.choice, own);
     if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint });
   }
@@ -204,8 +217,9 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
         if (route.connector.segments.some(part => !part.control && Math.abs(part.from.x - corridorX) < EPSILON &&
           Math.abs(part.to.x - corridorX) < EPSILON && Math.abs(part.to.y - part.from.y) >= minimum)) return route;
         const connector = connectorRoute(route.input.fragments, route.input.card, style, route.connector.choice,
-          { ...perInput(route.input), corridorX, preferCorridor: true });
-        if (!connector || routeLength(connector) > routeLength(route.connector) * (options.maxDetourRatio ?? 1.35) + minimum) return route;
+          { ...perInput(route.input), clearance: route.connector.clearance ?? options.clearance, corridorX, preferCorridor: true });
+        if (!connector || routeTurns(connector) > routeTurns(route.connector) ||
+            routeLength(connector) > routeLength(route.connector) * (options.maxDetourRatio ?? 1.35) + minimum) return route;
         return { ...route, connector };
       });
       const candidateRoutes = routes.map(route => proposed.find(r => r.input.key === route.input.key) ?? route);
