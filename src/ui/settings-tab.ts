@@ -1,6 +1,6 @@
 import { PluginSettingTab, Setting, setIcon, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
-import { DEFAULT_PREFERENCES, LINE_MODE_OPTIONS, type Preferences } from '../types';
+import { DEFAULT_PREFERENCES, LINE_MODE_OPTIONS, PLACEMENT_MODE_OPTIONS, type PlacementMode, type Preferences } from '../types';
 import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
@@ -13,18 +13,31 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   container.createEl('h2', { text: 'MarginLink' });
   container.createEl('p', { text: '关联保存在笔记的原生双链中。卡片位置、文件类型和新建目录保存在插件设置中。' });
   const sync: (() => void)[] = [renderFileTypeSettings(container, plugin)];
-  const update = (key: keyof Preferences, value: unknown) => { Object.assign(plugin.preferences, { [key]: value }); void plugin.savePreferences(); };
-  const dropdown = (key: keyof Preferences, name: string, options: Record<string, string>) => {
+  const update = (key: keyof Preferences, value: unknown) => {
+    if (key === 'placementMode') { void plugin.setPlacementMode(value as PlacementMode); return; }
+    Object.assign(plugin.preferences, { [key]: value }); void plugin.savePreferences();
+  };
+  const dropdown = (key: keyof Preferences, name: string, options: Record<string, string>, disabled?: () => boolean) => {
     const setting = new Setting(container).setName(name); setting.settingEl.dataset.marginKey = key;
-    setting.addDropdown(d => { d.addOptions(options).setValue(String(plugin.preferences[key])).onChange(v => update(key, v)); sync.push(() => d.setValue(String(plugin.preferences[key]))); });
+    setting.addDropdown(d => {
+      d.addOptions(options).onChange(v => update(key, v));
+      const refresh = () => d.setValue(String(plugin.preferences[key])).setDisabled(disabled?.() ?? false);
+      sync.push(refresh); refresh();
+    });
+    return setting;
   };
   const toggle = (key: keyof Preferences, name: string) => {
     const setting = new Setting(container).setName(name); setting.settingEl.dataset.marginKey = key;
     setting.addToggle(t => { t.setValue(plugin.preferences[key] as boolean).onChange(v => update(key, v)); sync.push(() => t.setValue(plugin.preferences[key] as boolean)); });
   };
-  const slider = (key: keyof Preferences, name: string, min: number, max: number, step: number) => {
+  const slider = (key: keyof Preferences, name: string, min: number, max: number, step: number, disabled?: () => boolean) => {
     const setting = new Setting(container).setName(name); setting.settingEl.dataset.marginKey = key;
-    setting.addSlider(s => { s.setLimits(min, max, step).setValue(plugin.preferences[key] as number).setDynamicTooltip().onChange(v => update(key, v)); sync.push(() => s.setValue(plugin.preferences[key] as number)); });
+    setting.addSlider(s => {
+      s.setLimits(min, max, step).setDynamicTooltip().onChange(v => update(key, v));
+      const refresh = () => s.setValue(plugin.preferences[key] as number).setDisabled(disabled?.() ?? false);
+      sync.push(refresh); refresh();
+    });
+    return setting;
   };
   const preview = container.createDiv({ cls: 'margin-link-settings-preview', attr: { 'aria-label': '实时外观预览，不修改笔记' } });
   const refreshPreview = () => {
@@ -55,26 +68,34 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   };
   const heading = (text: string) => container.createEl('h3', { text });
   heading('基础'); toggle('enabled', '启用边缘关联（打开笔记自动显示）');
-  new Setting(container).setName('恢复默认外观设置').setDesc('只恢复外观，保留卡片位置、文件识别和新建目录设置。')
-    .addButton(b => b.setButtonText('恢复默认').onClick(() => new ConfirmAction(plugin.app, plugin, '恢复默认外观', '恢复默认外观并保留布局与文件设置。', () => {
-      const { recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault } = plugin.preferences;
-      plugin.preferences = { ...DEFAULT_PREFERENCES, recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault };
+  new Setting(container).setName('恢复默认外观设置').setDesc('只恢复外观，保留布局模式、卡片位置、文件识别和新建目录设置。')
+    .addButton(b => b.setButtonText('恢复默认').onClick(() => new ConfirmAction(plugin.app, plugin, '恢复默认外观', '恢复默认外观，保留当前布局模式、卡片位置与文件设置。', () => {
+      const { placementMode, layout, snapGrid, recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault } = plugin.preferences;
+      plugin.preferences = { ...DEFAULT_PREFERENCES, placementMode, layout, snapGrid, recognizeHtml, recognizeXmind, newNoteFolders, newNoteDefault };
       void plugin.savePreferences();
     }).open()));
   heading('连线'); dropdown('lines', '连线显示', LINE_MODE_OPTIONS);
   dropdown('lineStyle', '线型', { curve: '平滑曲线', straight: '直线', elbow: '直角折线' });
   slider('lineWidth', '线条粗细（px）', 1, 5, 0.5); slider('lineOpacity', '常驻透明度（0.1–1）', 0.1, 1, 0.05);
   dropdown('lineColor', '连线颜色', { theme: '主题强调色', purple: '紫色', blue: '蓝色', green: '绿色', gray: '灰色' });
-  heading('布局'); dropdown('placementMode', '卡片布局模式', { auto: '自动排列', free: '自由拖动', snap: '智能吸附' });
-  dropdown('layout', '左右优先', { balanced: '自动平衡', left: '优先左侧', right: '优先右侧' });
-  slider('edgePadding', '正文边缘留白（px）', 8, 32, 2); slider('snapGrid', '吸附栅格间距（px）', 4, 32, 2);
-  const noteReset = new Setting(container).setName('一键整理 / 清除当前笔记布局');
+  heading('布局'); dropdown('placementMode', '卡片布局模式', PLACEMENT_MODE_OPTIONS)
+    .setDesc('完全手动不自动平衡或避让；自由拖动和智能吸附只在首次显示时自动初排，随后保留位置。');
+  dropdown('layout', '自动排布左右优先', { balanced: '自动平衡', left: '优先左侧', right: '优先右侧' }, () => plugin.preferences.placementMode === 'manual')
+    .setDesc('仅影响自动排列和首次自动初排。完全手动时不使用此选项，原选择会保留。');
+  slider('edgePadding', '正文边缘留白（px）', 8, 32, 2);
+  slider('snapGrid', '吸附栅格间距（px）', 4, 32, 2, () => plugin.preferences.placementMode !== 'snap')
+    .setDesc('仅在智能吸附模式使用。');
+  const noteReset = new Setting(container).setName('重置当前笔记卡片位置');
   noteReset.addButton(b => {
-    b.setButtonText('整理当前笔记').onClick(() => { const source = plugin.activeSource(); if (source) plugin.confirmReset(source); });
-    const refresh = () => { const source = plugin.activeSource(); b.setDisabled(!source); noteReset.setDesc(source ? `当前笔记：${source}。恢复自动位置，不影响其他笔记。` : '请先操作要整理的 Markdown 笔记。'); };
+    b.setButtonText('重置当前位置').onClick(() => { const source = plugin.activeSource(); if (source) plugin.confirmReset(source); });
+    const refresh = () => {
+      const source = plugin.activeSource(); b.setDisabled(!source);
+      const effect = plugin.preferences.placementMode === 'manual' ? '重新设置初始位置，继续保持完全手动模式。' : '清除已保存的位置并重新排列。';
+      noteReset.setDesc(source ? `当前笔记：${source}。${effect}不影响其他笔记。` : '请先操作要重置的 Markdown 笔记。');
+    };
     sync.push(refresh); refresh();
   });
-  new Setting(container).setName('清除所有布局').setDesc('保留外观偏好及全部双链。').addButton(b => b.setButtonText('清除全部').onClick(() => plugin.confirmReset()));
+  new Setting(container).setName('清除所有卡片位置').setDesc('清除全部已保存位置，保留布局模式、外观偏好和全部双链。').addButton(b => b.setButtonText('清除全部位置').onClick(() => plugin.confirmReset()));
   heading('卡片'); dropdown('cardShape', '卡片形状', { horizontal: '横向卡片', square: '正方形卡片', icon: '极简图标' });
   dropdown('cardSize', '卡片尺寸', { small: '小', medium: '中', large: '大' });
   dropdown('density', '窄边距策略（兼容旧设置）', { auto: '按可用空间自动调整', compact: '始终紧凑图标' });
@@ -83,7 +104,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   heading('新建笔记存放位置');
   sync.push(renderFolderSettings(container, plugin));
   heading('交互与辅助功能'); toggle('hoverFeedback', '悬停与焦点高亮反馈'); toggle('dragHints', '显示拖动边界'); toggle('reduceMotion', '减少动画');
-  container.createEl('p', { text: '单击卡片打开文件；自由/吸附模式下，按住卡片任意位置移动即可拖动。聚焦卡片后可用方向键移动、Shift+左右键换侧、Delete 恢复自动位置；右键卡片也可恢复。Esc/失焦/滚动取消拖动。系统减少动画偏好始终优先。' });
+  container.createEl('p', { text: '单击卡片打开文件；完全手动、自由拖动或智能吸附模式下，按住卡片任意位置移动即可拖动。聚焦卡片后可用方向键移动、Shift+左右键换侧、Delete 重置此卡片位置；右键卡片也可重置。Esc/失焦/滚动取消拖动。系统减少动画偏好始终优先。' });
   refreshPreview();
   return plugin.subscribe(() => { sync.forEach(s => s()); refreshPreview(); });
 }

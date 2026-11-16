@@ -1,6 +1,6 @@
 import { Modal, Setting, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
-import { LINE_MODE_OPTIONS, type LineMode } from '../types';
+import { LINE_MODE_OPTIONS, PLACEMENT_MODE_OPTIONS, type LineMode, type PlacementMode } from '../types';
 
 class ManagedModal extends Modal {
   constructor(app: App, protected plugin: MarginLinkPlugin) { super(app); plugin.dialogs.add(this); }
@@ -28,17 +28,21 @@ export class QuickControls extends ManagedModal {
       d.addOptions(LINE_MODE_OPTIONS).setValue(this.plugin.preferences.lines).onChange(v => { this.plugin.preferences.lines = v as LineMode; void this.plugin.savePreferences(); });
       refresh.push(() => d.setValue(this.plugin.preferences.lines));
     });
-    new Setting(this.contentEl).setName('布局模式').addDropdown(d => {
-      d.addOptions({ auto: '自动排列', free: '自由拖动', snap: '智能吸附' }).setValue(this.plugin.preferences.placementMode).onChange(v => { Object.assign(this.plugin.preferences, { placementMode: v }); void this.plugin.savePreferences(); });
+    new Setting(this.contentEl).setName('布局模式').setDesc('完全手动保留所有卡片位置，不做左右平衡。').addDropdown(d => {
+      d.addOptions(PLACEMENT_MODE_OPTIONS).setValue(this.plugin.preferences.placementMode).onChange(v => { void this.plugin.setPlacementMode(v as PlacementMode); });
       refresh.push(() => d.setValue(this.plugin.preferences.placementMode));
     });
     new Setting(this.contentEl).setName('卡片形状').addDropdown(d => {
       d.addOptions({ horizontal: '横向卡片', square: '正方形卡片', icon: '极简图标' }).setValue(this.plugin.preferences.cardShape).onChange(v => { Object.assign(this.plugin.preferences, { cardShape: v }); void this.plugin.savePreferences(); });
       refresh.push(() => d.setValue(this.plugin.preferences.cardShape));
     });
-    new Setting(this.contentEl).setName('整理当前笔记').addButton(b => {
-      b.setButtonText('恢复自动位置').onClick(() => { const source = this.plugin.activeSource(); if (source) this.plugin.confirmReset(source); });
-      const sync = () => b.setDisabled(!this.plugin.activeSource()); refresh.push(sync); sync();
+    const noteReset = new Setting(this.contentEl).setName('重置当前笔记卡片位置');
+    noteReset.addButton(b => {
+      b.setButtonText('重置当前位置').onClick(() => { const source = this.plugin.activeSource(); if (source) this.plugin.confirmReset(source); });
+      const sync = () => {
+        b.setDisabled(!this.plugin.activeSource());
+        noteReset.setDesc(this.plugin.preferences.placementMode === 'manual' ? '重新设置初始位置，继续保持完全手动模式。' : '清除已保存的位置并重新排列。');
+      }; refresh.push(sync); sync();
     });
     new Setting(this.contentEl).setName('完整设置').setDesc('在右侧 MarginLink 标签中调整全部选项；也可在设置 → MarginLink 打开。').addButton(b => b.setButtonText('打开完整设置').onClick(() => { this.close(); void this.plugin.openSettingsPanel(); }));
     this.dispose = this.plugin.subscribe(() => refresh.forEach(fn => fn()));

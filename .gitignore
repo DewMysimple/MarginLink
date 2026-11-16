@@ -66,6 +66,9 @@ artifacts/*
 !artifacts/curve-drag-cpu.json
 !artifacts/curve-drag-0.2.22.json
 !artifacts/release-0.2.22.json
+!artifacts/manual-layout-0.2.23.json
+!artifacts/manual-settings-0.2.23.png
+!artifacts/release-0.2.23.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

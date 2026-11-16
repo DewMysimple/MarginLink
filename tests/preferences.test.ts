@@ -6,15 +6,15 @@ it('only permits UI preferences into persistent data', () => {
   expect(saved).toEqual({ ...DEFAULT_PREFERENCES, enabled: false, lines: 'always', layout: 'right' });
 });
 
-describe('first-enable and reset appearance defaults', () => {
+describe('first-enable defaults and preference validation', () => {
   const defaults = { lines: 'always', placementMode: 'free', cardShape: 'square' };
-  it('uses the same always/free/square defaults for absent input and the reset object', () => {
+  it('uses always/free/square defaults for absent input and the default base object', () => {
     expect(DEFAULT_PREFERENCES).toMatchObject(defaults);
     for (const input of [null, undefined, {}, { schemaVersion: 2 }, { schemaVersion: 2, preferences: {} }]) {
       expect(readStoredData(input).preferences).toEqual(DEFAULT_PREFERENCES);
     }
-    // The reset path copies this public constant, then persists through the
-    // same reader that first enable uses. Layout data is independent of it.
+    // Appearance reset starts from this base and retains the selected layout
+    // mode in the UI; manual-settings.test.ts covers that user action.
     expect(readStoredData({ schemaVersion: 2, preferences: { ...DEFAULT_PREFERENCES } }).preferences).toEqual(DEFAULT_PREFERENCES);
   });
   it.each(['legacy', 'nested'])('preserves valid %s values, including the former defaults, across reload', storage => {
@@ -36,14 +36,21 @@ describe('first-enable and reset appearance defaults', () => {
     }
   });
   it.each(['lines', 'placementMode', 'cardShape'] as const)('retains all supported %s values individually', key => {
-    const choices = { lines: ['none', 'hover', 'always'], placementMode: ['auto', 'free', 'snap'], cardShape: ['horizontal', 'square', 'icon'] };
+    const choices = { lines: ['none', 'hover', 'always'], placementMode: ['auto', 'free', 'snap', 'manual'], cardShape: ['horizontal', 'square', 'icon'] };
     for (const value of choices[key]) expect(readPreferences({ [key]: value })[key]).toBe(value);
   });
-  it('preserves saved card coordinates when appearance is reset', () => {
+  it('preserves saved card coordinates when default preferences are read', () => {
     const layout = { source: 'A.md', key: 'a'.repeat(64), side: 'right', xNormalized: 0.8, yOffset: 3, updated: Date.now() };
     const before = readStoredData({ schemaVersion: 2, preferences: { cardShape: 'horizontal', placementMode: 'snap', lines: 'hover' }, layouts: [layout] });
     const reset = readStoredData({ ...before, preferences: { ...DEFAULT_PREFERENCES } });
     expect(reset.preferences).toEqual(DEFAULT_PREFERENCES);
     expect(reset.layouts).toEqual(before.layouts);
   });
+});
+
+it('round-trips complete manual mode without replacing existing placement choices', () => {
+  for (const placementMode of ['manual', 'free', 'snap', 'auto'] as const) {
+    const saved = readStoredData({ schemaVersion: 2, preferences: { placementMode, layout: 'right', snapGrid: 24 } });
+    expect(readStoredData(JSON.parse(JSON.stringify(saved))).preferences).toMatchObject({ placementMode, layout: 'right', snapGrid: 24 });
+  }
 });

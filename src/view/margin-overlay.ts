@@ -9,7 +9,7 @@ import { CardDragController, type CardDragContext } from './card-drag-controller
 import { resolveLink } from '../core/link-resolver';
 import type { FileRecognition } from '../core/file-recognition';
 import { canOpenInObsidian } from '../core/file-capabilities';
-import { positionFromDrop, type Box, type LayoutInput, type Placement } from './layout-engine';
+import { positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
 import { type PortChoice } from './connector-renderer';
@@ -136,6 +136,24 @@ export class MarginOverlay {
   cancelInteractions(): void { cardTooltip.hideWithin(this.root); if (this.decorations) cardTooltip.hideWithin(this.decorations.element); this.cardDrag.cancel(); this.drag.cancel(); }
   resetLayout(): void {
     this.cancelInteractions(); this.stableLayout.clear(); this.schedule();
+  }
+  /** Snapshot only this confirmed note's measured coordinates. Relative UI
+   * records survive navigation; no unmeasured or ambiguous link is invented. */
+  freezeLayout(overwrite = true, claimed?: Set<string>): boolean {
+    const input = this.layoutInput;
+    if (!input || this.cardDrag.dragging || this.confirmedSource !== this.path || this.view.file?.path !== this.path || this.view.getMode() !== this.mode) return false;
+    const source = this.mode === 'source' ? this.bridge()?.text : this.view.data;
+    if (source === undefined || source !== this.layoutSource) return false;
+    const positions = [...this.cards.values()].flatMap(card => {
+      const key = card.anchor.layoutKey, anchor = input.anchors.find(a => a.key === card.placement.key);
+      if (!key || !anchor || claimed?.has(key) || (!overwrite && anchor.manual)) return [];
+      const position = positionRelative(input, anchor, card.placement);
+      return position && Math.abs(position.yOffset) <= 80 ? [{ key, position, legacyKey: this.legacyLayoutKeys.get(key) }] : [];
+    });
+    if (!positions.length) return false;
+    this.host.layouts.setMany(this.path, positions, overwrite);
+    for (const position of positions) claimed?.add(position.key);
+    return true;
   }
   private render(): void {
     const container = this.view.contentEl;
@@ -275,7 +293,7 @@ export class MarginOverlay {
             const occurrence = this.cards.get(p.key)?.anchor.occurrence;
             if (occurrence) this.host.selection.relink(this.view, occurrence, this.bridge());
           }));
-          menu.addItem(item => item.setTitle('恢复此卡片自动位置').setIcon('rotate-ccw').onClick(() => {
+          menu.addItem(item => item.setTitle(this.host.preferences.placementMode === 'manual' ? '重置此卡片初始位置' : '恢复此卡片初始位置').setIcon('rotate-ccw').onClick(() => {
             const key = this.cards.get(p.key)?.anchor.layoutKey; if (key) this.host.layouts.clear(this.path, key, this.legacyLayoutKeys.get(key));
           })); menu.showAtMouseEvent(e);
         });
@@ -283,7 +301,7 @@ export class MarginOverlay {
       card.anchor = anchor; card.placement = p;
       if (card.signature !== signature) { cardTooltip.hideWithin(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
       card.button.classList.toggle('margin-link-card-movable', prefs.placementMode !== 'auto');
-      if (prefs.placementMode !== 'auto') card.button.setAttribute('aria-description', '拖动调整位置；方向键移动，Shift+左右键跨侧，Delete 恢复自动位置，Enter 打开文件');
+      if (prefs.placementMode !== 'auto') card.button.setAttribute('aria-description', '拖动调整位置；方向键移动，Shift+左右键跨侧，Delete 重置此卡片位置，Enter 打开文件');
       else card.button.removeAttribute('aria-description');
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
@@ -292,6 +310,9 @@ export class MarginOverlay {
     const selected = bridge?.cm.state.selection.main;
     this.highlight(this.highlighted ?? (selected ? this.anchors.find(a => selected.from < a.occurrence.end && selected.to > a.occurrence.start)?.key : undefined));
     this.drag.update(this.cardDrag.dragging ? undefined : bridge, hostRect, viewport, body);
+    // First stable display is the initial UI placement, not an invitation to
+    // rebalance on the next visit. A gesture only writes on its final commit.
+    if (prefs.placementMode !== 'auto') this.freezeLayout(false);
   }
   private sourceReady(): boolean {
     if (this.confirmedSource === this.path) return true;

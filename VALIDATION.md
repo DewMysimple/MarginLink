@@ -1,5 +1,22 @@
 # MarginLink 验证记录
 
+## 0.2.23 完全手动布局与导航恢复 · 2026-11-17
+
+基线为干净main `416516ba63a3c5d4b0c7265e6bf879cf7855d8fc`（0.2.22）。使用选定UE6笔记与十个目标的隔离副本、默认主题、1614×838/DPR1、Windows Obsidian1.15.1。旧test-profile启动停滞后，仅终止经过参数核实的本轮隔离进程，改用test-profile/manual-layout-run干净子profile及本机已有1.15.1缓存包；普通Obsidian保留，没有更改正式库或整个用户profile。
+
+实际点击卡片、执行原生历史返回，四组基线中source/free只有Verse一条保存位置时复现四张未拖卡漂移：dives右→左、Scene Graph左→右、model-assisted右→左、ship右→左，锚点相对偏移也变。其余三组这次稳定，不声称四组都复现。原因是每次切文件清空StableLayout后按分批到达的可见锚点重新平衡，只有拖过的卡片有持久位置。
+
+现有schema2 UI位置增加批量初始化：free/snap/manual在首次稳定显示后保存未记录的安全弱身份和精确相对位置，返回时恢复；不会在pointermove或每帧更新时间戳，也不因初始化挤掉既有记录。manual另有独立布局分支：忽略左右平衡、counts和碰撞挤开；新卡只给独立邻近侧初始位置，保存侧不可用则隐藏，不换侧。进入manual前冻结已测布局，多分栏最近操作视图优先，其他视图补齐未认领key；源文变更未重绘、歧义身份和超出相对预算的快照不写。小于1px的可移动水平空间按真实宽度归一化，避免反复恢复缩短偏移。
+
+- `npm test`：45文件437项通过（新增25项）。`npm run lint`及最终`npm run package`通过。构建首次因测试夹具与私有字段的交叉类型报错，改为明确的测试接口后tsc通过，未修改生产类型边界。
+- `node scripts/desktop-manual-layout.mjs baseline` / `final`：最终16/16。涵盖四组原生点击返回、manual读写无记录及忽略左右优先、精确非栅格和有意重叠拖动、三设置入口/disabled控制、恢复外观不改模式、resize/滚动/插件重载、Ctrl新Tab、重置当前笔记不改其他笔记、两个同时分栏合并、真实进程退出/新PID重启、auto不写生成位置。
+- 同包旧curve-drag脚本副本只筛四组curve轨迹和两组立即松手/插件重载，输出改到`artifacts/manual-layout/curve-regression/`：6/6。48步真实拖动，绘制p95约2.9–4.0ms，pointermove保存0，无文字/卡片碰撞，重载位置一致；不将它当新旧同布局性能对照。
+- 侧栏初次关闭后共同x差15.75px经完整host/body/viewport与归一化记录核实为180Hz下只等10帧导致动画未结束。探针改为连续8帧且至少320ms几何稳定，维持相同几何及1px门槛后通过；点击另用真实hit-test点，重叠测试遵守实际空白带，启动等待完整plugins/workspace。中间失败原始报告保留，生产代码未因探针问题打补丁。
+
+正式源在复制夹具后、baseline脚本启动前由`98d945…`变为`c463d3…`，变化来源未核实；本任务只读且未覆盖该变化。baseline/final/curve各run正式源起止都为c463d3，隔离副本及复制收据一直为98d945。初次速报误把发生时序写成baseline→final，已在提交前更正；本轮旧探针误标的fixtureSHA字段也在ignored原始报告中附来源说明后更正，没有改写历史版本报告。不能声称全轮正式源未变。
+
+[结果摘要](artifacts/manual-layout-0.2.23.json)、[完全手动设置](artifacts/manual-settings-0.2.23.png)、[发布收据](artifacts/release-0.2.23.json)。源码/安装目录/实际桌面bundle为`1b14311e30c963e6727717e548e3df0d8aa06a05cda3f3035b2d17e2abb41086`，ZIP五文件逐字节、版本及许可核对通过。保留每笔记100条、全局500条、90天及唯一弱身份限制。其他主题/DOM/系统、最低宿主与大库长期使用未覆盖。新增的重链视口与搜索焦点要求按用户指令在本阶段完成后处理，不计为本版已实现。
+
 ## 0.2.22 平滑曲线拖动性能 · 2026-11-16
 
 起点为干净 main `39fbdae671d97818cb93c288f5481d35a8a4d563`（0.2.21），跟踪 origin/main。Windows Obsidian 1.15.1、默认主题、霞鹜文楷15px/22.5px、700px正文、1614×838、DPR1；只读正式UE6笔记与十个目标，将选定内容和UI位置复制到test-vault。正式笔记散列前后不变，未向正式库安装或写入夹具。

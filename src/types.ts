@@ -26,7 +26,10 @@ export const LINE_MODE_OPTIONS: Record<LineMode, string> = {
 };
 export type LineStyle = 'curve' | 'straight' | 'elbow';
 export type CardShape = 'horizontal' | 'square' | 'icon';
-export type PlacementMode = 'auto' | 'free' | 'snap';
+export type PlacementMode = 'auto' | 'free' | 'snap' | 'manual';
+export const PLACEMENT_MODE_OPTIONS: Record<PlacementMode, string> = {
+  manual: '完全手动', free: '自由拖动（自动初排）', snap: '智能吸附（自动初排）', auto: '自动排列'
+};
 export interface Preferences {
   enabled: boolean;
   recognizeHtml: boolean;
@@ -82,7 +85,7 @@ export function readPreferences(value: unknown): Preferences {
     lines: choice('lines', Object.keys(LINE_MODE_OPTIONS) as LineMode[], DEFAULT_PREFERENCES.lines),
     density: v.density === 'compact' ? 'compact' : 'auto',
     layout: choice('layout', ['balanced', 'left', 'right'], 'balanced'),
-    placementMode: choice('placementMode', ['auto', 'free', 'snap'], DEFAULT_PREFERENCES.placementMode),
+    placementMode: choice('placementMode', Object.keys(PLACEMENT_MODE_OPTIONS) as PlacementMode[], DEFAULT_PREFERENCES.placementMode),
     lineStyle: choice('lineStyle', ['curve', 'straight', 'elbow'], 'curve'),
     lineWidth: Math.round(finiteNumber(v.lineWidth, 1.5, 1, 5) * 2) / 2,
     lineOpacity: finiteNumber(v.lineOpacity, 0.65, 0.1, 1),

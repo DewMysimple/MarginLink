@@ -1,0 +1,556 @@
+{
+  "version": "0.2.23",
+  "baseline": "416516ba63a3c5d4b0c7265e6bf879cf7855d8fc",
+  "host": "Windows Obsidian1.15.1, 1614x838 DPR1, isolated test-profile/manual-layout-run",
+  "fixtureSHA256": "98d945f99aac8cdd3920cba8a034ebc7a7a4c7fc9172b73a126a5dfb5c4a7083",
+  "formalReadOnly": true,
+  "formalChecks": {
+    "baselineStart": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "baselineEnd": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "finalStart": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "finalEnd": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "curveStart": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "curveEnd": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "note": "Formal source changed after the isolated fixture was copied and before baseline began; source of that change was not investigated. Each baseline/final/curve run had matching formal start/end. The task only read the formal note and retained the original isolated fixture. Legacy probe fields were corrected with explicit provenance notes; no historical reports were rewritten."
+  },
+  "bundleSHA256": "1b14311e30c963e6727717e548e3df0d8aa06a05cda3f3035b2d17e2abb41086",
+  "checks": {
+    "unitFiles": 45,
+    "unitPassed": 437,
+    "lint": "passed",
+    "package": "passed",
+    "manualDesktopPassed": 16,
+    "curveDesktopPassed": 6
+  },
+  "baselineScenarios": [
+    {
+      "name": "preview/free: actual card click and native history back with no preexisting positions",
+      "before": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "right",
+          "x": 1145,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 329,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "Scene Graph",
+          "side": "left",
+          "x": 329,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "right",
+          "x": 1145,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "right",
+          "x": 1145,
+          "offset": 143,
+          "manual": false
+        }
+      ],
+      "after": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "right",
+          "x": 1145,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 329,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "Scene Graph",
+          "side": "left",
+          "x": 329,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "right",
+          "x": 1145,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "right",
+          "x": 1145,
+          "offset": 143,
+          "manual": false
+        }
+      ],
+      "changedLabels": []
+    },
+    {
+      "name": "preview/free: one saved card cannot destabilize untouched neighbours on return",
+      "before": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "right",
+          "x": 1145,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 104.3,
+          "offset": -45,
+          "manual": true
+        },
+        {
+          "label": "Scene Graph",
+          "side": "left",
+          "x": 329,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "right",
+          "x": 1145,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "right",
+          "x": 1145,
+          "offset": 143,
+          "manual": false
+        }
+      ],
+      "after": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "right",
+          "x": 1145,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 104.3,
+          "offset": -45,
+          "manual": true
+        },
+        {
+          "label": "Scene Graph",
+          "side": "left",
+          "x": 329,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "right",
+          "x": 1145,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "right",
+          "x": 1145,
+          "offset": 143,
+          "manual": false
+        }
+      ],
+      "changedLabels": []
+    },
+    {
+      "name": "source/free: actual card click and native history back with no preexisting positions",
+      "before": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "left",
+          "x": 329,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 329,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "Scene Graph",
+          "side": "right",
+          "x": 1145,
+          "offset": 49,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "left",
+          "x": 329,
+          "offset": -139,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "left",
+          "x": 329,
+          "offset": 98,
+          "manual": false
+        }
+      ],
+      "after": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "left",
+          "x": 329,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 329,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "Scene Graph",
+          "side": "right",
+          "x": 1145,
+          "offset": 49,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "left",
+          "x": 329,
+          "offset": -139,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "left",
+          "x": 329,
+          "offset": 98,
+          "manual": false
+        }
+      ],
+      "changedLabels": []
+    },
+    {
+      "name": "source/free: one saved card cannot destabilize untouched neighbours on return",
+      "before": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "right",
+          "x": 1145,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 104.3,
+          "offset": -45,
+          "manual": true
+        },
+        {
+          "label": "Scene Graph",
+          "side": "left",
+          "x": 329,
+          "offset": -94,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "right",
+          "x": 1145,
+          "offset": 71.5,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "right",
+          "x": 1145,
+          "offset": 143,
+          "manual": false
+        }
+      ],
+      "after": [
+        {
+          "label": "Early Access",
+          "side": "right",
+          "x": 1145,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "dives",
+          "side": "left",
+          "x": 329,
+          "offset": 0,
+          "manual": false
+        },
+        {
+          "label": "Verse",
+          "side": "left",
+          "x": 104.3,
+          "offset": -45,
+          "manual": true
+        },
+        {
+          "label": "Scene Graph",
+          "side": "right",
+          "x": 1145,
+          "offset": 49,
+          "manual": false
+        },
+        {
+          "label": "model-assisted",
+          "side": "left",
+          "x": 329,
+          "offset": -139,
+          "manual": false
+        },
+        {
+          "label": "ship",
+          "side": "left",
+          "x": 329,
+          "offset": 98,
+          "manual": false
+        }
+      ],
+      "changedLabels": [
+        "dives",
+        "Scene Graph",
+        "model-assisted",
+        "ship"
+      ]
+    }
+  ],
+  "finalScenarios": [
+    {
+      "name": "preview/free: actual card click and native history back with no preexisting positions",
+      "passed": true
+    },
+    {
+      "name": "preview/free: one saved card cannot destabilize untouched neighbours on return",
+      "passed": true
+    },
+    {
+      "name": "source/free: actual card click and native history back with no preexisting positions",
+      "passed": true
+    },
+    {
+      "name": "source/free: one saved card cannot destabilize untouched neighbours on return",
+      "passed": true
+    },
+    {
+      "name": "preview/manual: no-record initial slots survive click/back and ignore left/right auto preference",
+      "passed": true
+    },
+    {
+      "name": "preview/manual: explicit overlap and off-grid drag moves only the selected card",
+      "passed": true
+    },
+    {
+      "name": "source/manual: no-record initial slots survive click/back and ignore left/right auto preference",
+      "passed": true
+    },
+    {
+      "name": "source/manual: explicit overlap and off-grid drag moves only the selected card",
+      "passed": true
+    },
+    {
+      "name": "manual: every settings entry exposes the mode and disables irrelevant automatic/snap controls",
+      "passed": true
+    },
+    {
+      "name": "manual: restore appearance defaults preserves mode and existing positions",
+      "passed": true
+    },
+    {
+      "name": "manual: resize, scrolling and plugin reload preserve saved layout",
+      "passed": true
+    },
+    {
+      "name": "manual: Ctrl-click opens another tab without changing the source card positions",
+      "passed": true
+    },
+    {
+      "name": "manual: explicit current-note reset keeps the selected mode and does not modify another note positions",
+      "passed": true
+    },
+    {
+      "name": "manual: two simultaneous views freeze the recently active visible layout and preserve all measured keys",
+      "passed": true
+    },
+    {
+      "name": "manual: actual native process restart retains layout and persisted selection",
+      "passed": true,
+      "processes": {
+        "oldPID": 9208,
+        "newPID": 41340,
+        "ordinary": [
+          38632
+        ]
+      }
+    },
+    {
+      "name": "auto: automatic mode remains available and does not persist generated positions",
+      "passed": true
+    }
+  ],
+  "curveRegressions": [
+    {
+      "name": "preview/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 48,
+        "total": 150.20000000298023,
+        "p50": 3.2999999970197678,
+        "p95": 4,
+        "max": 7.0999999940395355,
+        "over16": 0,
+        "over50": 0
+      },
+      "saves": 0,
+      "longTasks": 0
+    },
+    {
+      "name": "preview/curve/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 48,
+        "total": 90.69999995082617,
+        "p50": 1.8999999985098839,
+        "p95": 2.9000000059604645,
+        "max": 5.700000002980232,
+        "over16": 0,
+        "over50": 0
+      },
+      "saves": 0,
+      "longTasks": 0
+    },
+    {
+      "name": "source/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 50,
+        "total": 117.30000001192093,
+        "p50": 2.5,
+        "p95": 3.2000000029802322,
+        "max": 6.299999997019768,
+        "over16": 0,
+        "over50": 0
+      },
+      "saves": 0,
+      "longTasks": 0
+    },
+    {
+      "name": "source/curve/dives: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 49,
+        "total": 75.19999997317791,
+        "p50": 1.3999999985098839,
+        "p95": 3.1999999955296516,
+        "max": 4.5,
+        "over16": 0,
+        "over50": 0
+      },
+      "saves": 0,
+      "longTasks": 0
+    },
+    {
+      "name": "preview/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true
+    },
+    {
+      "name": "source/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true
+    }
+  ],
+  "probeCorrections": [
+    "Wait for geometry to remain stable >=8 frames and >=320ms before comparing a sidebar open/close, keeping 1px gate.",
+    "Use actual hit-tested visible card points for native click; intentional overlap may cover the nominal card centre.",
+    "Overlap drag uses a point inside the actual margin, preserving precise non-grid deltas.",
+    "Native process restart waits for plugins and workspace to exist, rather than treating app object existence as full readiness."
+  ],
+  "errors": [],
+  "limits": [
+    "Existing UI retention limits: unique weak identity,100 positions/note,500 total,90 days. Initialization does not evict existing positions or refresh timestamps every frame.",
+    "Actual note/windows/default theme/font only; minimum1.10.6 runtime,other platforms/themes/DOM combinations and large-vault endurance not tested.",
+    "Manual initial cards can intentionally overlap; no automatic collision/balance/side switch.",
+    "Next authorized stage: relink viewport preservation and picker initial search focus, not implemented by this release."
+  ]
+}

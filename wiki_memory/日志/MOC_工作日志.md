@@ -1,7 +1,7 @@
 ---
 type: moc
 status: active
-updated: 2026-11-16
+updated: 2026-11-17
 topic: work-log-index
 sources: []
 ---
@@ -12,6 +12,7 @@ sources: []
 
 | 日期 | 类型 | 任务结果 | 日志 |
 | --- | --- | --- | --- |
+| 2026-11-17 | bug | completed | [0.2.23 完全手动与导航位置稳定](Bug处理/2026-11-17-完全手动与导航位置稳定.md) |
 | 2026-11-16 | maintenance | completed | [main 分支合并交付](工程维护/2026-11-16-main分支合并交付.md) |
 | 2026-11-16 | maintenance | completed | [Windows 一键构建](工程维护/2026-11-16-Windows一键构建.md) |
 | 2026-11-16 | feature | completed | [0.2.7 原生附件识别与笔记创建](功能添加/2026-11-16-原生附件识别与笔记创建.md) |

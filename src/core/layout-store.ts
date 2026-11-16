@@ -5,6 +5,7 @@ import { parseWikilinks } from './wikilink-parser';
 export const MAX_LAYOUTS = 500;
 export const MAX_NOTE_LAYOUTS = 100;
 export const MAX_LAYOUT_AGE = 90 * 24 * 60 * 60 * 1000;
+export interface LayoutPosition { key: string; position: RelativePosition; legacyKey?: string }
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export function readLayouts(value: unknown, now = Date.now()): PersistedLayout[] {
   if (!Array.isArray(value)) return [];
@@ -50,9 +51,25 @@ export class LayoutStore {
     return e ? { side: e.side, xNormalized: e.xNormalized, yOffset: e.yOffset } : undefined;
   }
   set(source: string, key: string, position: RelativePosition, legacyKey?: string): void {
-    const keys = this.equivalentKeys(source, key); if (legacyKey) keys.add(legacyKey);
-    this.records = readLayouts([{ source, key, ...position, updated: Date.now() }, ...this.records.filter(e => e.source !== source || !keys.has(e.key))]);
-    this.changed();
+    this.setMany(source, [{ key, position, legacyKey }], true);
+  }
+  /** Freeze measured UI positions once. Initialization never evicts another
+   * card's saved slot or refreshes timestamps on scroll/render. Explicit user
+   * moves may replace old slots under the existing bounded retention policy. */
+  setMany(source: string, positions: readonly LayoutPosition[], overwrite = false): void {
+    const now = Date.now();
+    let next = readLayouts(this.records, now), changed = false;
+    for (const { key, position, legacyKey } of positions.slice(0, MAX_NOTE_LAYOUTS)) {
+      const keys = this.equivalentKeys(source, key); if (legacyKey) keys.add(legacyKey);
+      const exists = next.some(e => e.source === source && keys.has(e.key));
+      if (exists && !overwrite) continue;
+      const record = readLayouts([{ source, key, ...position, updated: now }], now)[0];
+      if (!record) continue;
+      if (!exists && !overwrite && (next.length >= MAX_LAYOUTS || next.filter(e => e.source === source).length >= MAX_NOTE_LAYOUTS)) continue;
+      next = [record, ...next.filter(e => e.source !== source || !keys.has(e.key))]; changed = true;
+    }
+    if (!changed) return;
+    this.records = readLayouts(next, now); this.changed();
   }
   clear(source?: string, key?: string, legacyKey?: string): void {
     const keys = source && key ? this.equivalentKeys(source, key) : new Set<string>(); if (legacyKey) keys.add(legacyKey);

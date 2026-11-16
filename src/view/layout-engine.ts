@@ -46,7 +46,7 @@ function legalize(candidate: Placement, input: LayoutInput, occupied: Placement[
   const target = clamp(candidate.y, band.top, band.bottom - candidate.height);
   // User-directed placement may intentionally overlap another card. Only the
   // moving card is clamped to its lane; automatic solving owns collision gaps.
-  if (input.preferences?.placementMode === 'free' || input.preferences?.placementMode === 'snap') return { ...candidate, x, y: target };
+  if (input.preferences && input.preferences.placementMode !== 'auto') return { ...candidate, x, y: target };
   const ys = [target, ...occupied.flatMap(c => [c.y + c.height + 10, c.y - candidate.height - 10])]
     .filter(y => y >= band.top && y + candidate.height <= band.bottom).sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b);
   for (const y of ys) {
@@ -70,10 +70,22 @@ export function positionFromDrop(input: LayoutInput, anchor: LayoutAnchor, x: nu
   }
   const placement = legalize({ key: anchor.key, side, x: left, y: top, ...dim, compact: dim.shape === 'icon', manual: true }, input, occupied);
   if (!placement) return;
-  return { placement, snapped: snap || Math.abs(placement.y - top) > 1, relative: {
-    side, xNormalized: clamp((placement.x - band.left) / Math.max(1, band.right - band.left - placement.width), 0, 1),
-    yOffset: clamp((placement.y + placement.height / 2 - anchor.y) / (input.lineHeight ?? 24), -80, 80)
-  } };
+  const relative = positionRelative(input, anchor, placement);
+  if (!relative) return;
+  return { placement, snapped: snap || Math.abs(placement.y - top) > 1, relative: { ...relative, yOffset: clamp(relative.yOffset, -80, 80) } };
+}
+/** Map the actual displayed card to text-relative UI coordinates. Unlike a
+ * drop, a snapshot must not clamp its vertical offset and silently move it.
+ * The caller checks the storage budget before persisting an exact snapshot. */
+export function positionRelative(input: LayoutInput, anchor: LayoutAnchor, placement: Placement): RelativePosition | undefined {
+  const band = lane(input, placement.side), lineHeight = input.lineHeight ?? 24;
+  if (![placement.x, placement.y, placement.width, placement.height, anchor.y, ...Object.values(band), lineHeight].every(Number.isFinite) ||
+      lineHeight <= 0 || placement.width <= 0 || placement.height <= 0) return;
+  const range = band.right - band.left - placement.width;
+  if (range < -0.000001 || placement.x < band.left - 0.000001 || placement.x > band.right - placement.width + 0.000001) return;
+  return { side: placement.side,
+    xNormalized: range > 0 ? clamp((placement.x - band.left) / range, 0, 1) : 0,
+    yOffset: (placement.y + placement.height / 2 - anchor.y) / lineHeight };
 }
 // Static display is unbounded vertically. Only a drop is constrained to the
 // viewport; scrolling must never push a card away from its text reference.
@@ -93,6 +105,22 @@ function displayPosition(candidate: Placement, input: LayoutInput, occupied: Pla
 export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Placement[] {
   if (![input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport)].every(Number.isFinite) || input.width <= 0 || input.height < 36) return [];
   const p = input.preferences;
+  if (p?.placementMode === 'manual') {
+    // Each missing position has a local, repeatable starting point. Neither
+    // viewport arrival order, other cards nor automatic side preferences may
+    // rebalance a completely manual note. A user may deliberately overlap it.
+    return input.anchors.filter(a => Number.isFinite(a.x) && Number.isFinite(a.y)).flatMap(a => {
+      const saved = a.manual;
+      const side = saved?.side ?? a.preferred ?? (Math.abs(a.x - input.body.left) <= Math.abs(a.x - input.body.right) ? 'left' : 'right');
+      const dim = dimensions(input, side);
+      if (!dim) return []; // Keep this side; temporarily unavailable is not a move.
+      const band = lane(input, side);
+      return [{ key: a.key, side, ...dim,
+        x: saved ? band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width) : side === 'left' ? band.right - dim.width : band.left,
+        y: a.y + (saved?.yOffset ?? 0) * (input.lineHeight ?? 24) - dim.height / 2,
+        compact: dim.shape === 'icon', manual: !!saved }];
+    });
+  }
   const manualMode = p && p.placementMode !== 'auto';
   if (manualMode && input.anchors.some(a => a.manual)) {
     // Derive every automatic slot from the same occurrence set first. A saved

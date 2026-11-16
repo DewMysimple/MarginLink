@@ -25,7 +25,7 @@ vi.mock('obsidian', () => ({
   },
   MarkdownView: class {}, Modal: class {}, Notice: class {}, FileView: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {}
 }));
-vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} resetLayout() {} destroy() {} } }));
+vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} resetLayout() {} freezeLayout() { return true; } destroy() {} } }));
 vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { clear() {} } }));
 vi.mock('../src/editor/selection-action', () => ({ SelectionAction: class { cancel() {} } }));
 vi.mock('../src/editor/editor-extension', () => ({ editorExtension: () => undefined }));
@@ -77,6 +77,18 @@ beforeEach(() => { vi.stubGlobal('window', globalThis); vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('settings panel lifecycle', () => {
+  it('freezes the most recently operated split first and lets other splits contribute unclaimed cards', async () => {
+    const a = note('A.md'), otherA = note('A.md'), b = note('B.md');
+    const { plugin } = fixture([a, otherA, b]); await plugin.onload();
+    otherA.containerEl.dispatchEvent(new Event('pointerdown'));
+    const freeze = vi.spyOn(MarginOverlay.prototype, 'freezeLayout');
+    await plugin.setPlacementMode('manual');
+    expect(freeze.mock.contexts.map(overlay => (overlay as MarginOverlay).view)).toEqual([otherA, a, b]);
+    expect(plugin.preferences.placementMode).toBe('manual');
+    await plugin.setPlacementMode('manual'); expect(freeze).toHaveBeenCalledTimes(3);
+    await plugin.setPlacementMode('auto'); expect(freeze).toHaveBeenCalledTimes(3);
+    plugin.onunload();
+  });
   it('opens one panel for concurrent requests, respects moved tabs, and can reopen a closed tab', async () => {
     const ready = deferred();
     const { plugin, workspace, handlers, leaves } = fixture([note('A.md')], ready.promise);

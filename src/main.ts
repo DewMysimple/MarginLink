@@ -1,5 +1,5 @@
 import { MarkdownView, Modal, Notice, Plugin } from 'obsidian';
-import { readPreferences, DEFAULT_PREFERENCES, type Preferences } from './types';
+import { readPreferences, DEFAULT_PREFERENCES, type PlacementMode, type Preferences } from './types';
 import { editorExtension, type EditorBridge } from './editor/editor-extension';
 import { ReadingAnchors } from './reading/reading-anchors';
 import { SelectionAction } from './editor/selection-action';
@@ -157,7 +157,10 @@ export default class MarginLinkPlugin extends Plugin {
     return this.openingSettings;
   }
   confirmReset(source?: string): void {
-    new ConfirmAction(this.app, this, source ? '清除当前笔记布局' : '清除所有笔记布局', '只删除自定义卡片位置，原生双链与笔记内容完全保留。', () => {
+    const description = this.preferences.placementMode === 'manual'
+      ? '清除保存的位置并重新给定初始位置，继续保持完全手动；不会自动平衡。原生双链与笔记内容保留。'
+      : '清除保存的卡片位置，下次显示重新给定初始位置；当前布局模式、原生双链与笔记内容保留。';
+    new ConfirmAction(this.app, this, source ? '重置当前笔记卡片位置' : '重置所有笔记卡片位置', description, () => {
       this.layouts.clear(source);
       // Whole-note/all reset is an explicit request to repack automatic slots.
       // Per-card reset uses LayoutStore.clear directly and stays local.
@@ -179,6 +182,22 @@ export default class MarginLinkPlugin extends Plugin {
     this.preferences = readPreferences(this.preferences); this.cancelInteractions(); this.refresh();
     for (const cb of this.listeners) cb();
     try { await this.flush(); } catch { new Notice('MarginLink 设置保存失败，请检查笔记库写入权限。'); }
+  }
+  async setPlacementMode(mode: PlacementMode): Promise<void> {
+    if (mode === 'manual' && this.preferences.placementMode !== 'manual') {
+      const sources = new Map<string, Set<string>>();
+      const views = [...this.overlays].sort(([a], [b]) => Number(b === this.recentMarkdown) - Number(a === this.recentMarkdown));
+      for (const [view, overlay] of views) {
+        const source = view.file?.path;
+        if (!source) continue;
+        let claimed = sources.get(source);
+        if (!claimed) { claimed = new Set(); sources.set(source, claimed); }
+        // Recent split wins shared occurrences. Other splits contribute their
+        // uniquely measured cards instead of dropping that part of the note.
+        overlay.freezeLayout(true, claimed);
+      }
+    }
+    this.preferences.placementMode = mode; await this.savePreferences();
   }
   async onExternalSettingsChange(): Promise<void> {
     window.clearTimeout(this.saveTimer); await this.saving.catch(() => undefined);

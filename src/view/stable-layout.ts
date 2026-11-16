@@ -6,11 +6,14 @@ interface Entry { placement: Placement; offset: number; manual: string }
 export class StableLayout {
   private entries = new Map<string, Entry>();
   private geometry = '';
+  private mode?: string;
   private automatic = new Map<string, Placement>();
   private automaticOffsets = new Map<string, number>();
-  clear(): void { this.entries.clear(); this.automatic.clear(); this.automaticOffsets.clear(); this.geometry = ''; }
+  clear(): void { this.entries.clear(); this.automatic.clear(); this.automaticOffsets.clear(); this.geometry = ''; this.mode = undefined; }
   update(input: LayoutInput, scrollTop: number, geometry: string): Placement[] {
-    if (this.geometry !== geometry) { this.clear(); this.geometry = geometry; }
+    if (this.geometry !== geometry || this.mode !== input.preferences?.placementMode) {
+      this.clear(); this.geometry = geometry; this.mode = input.preferences?.placementMode;
+    }
     const manualMode = !!input.preferences && input.preferences.placementMode !== 'auto';
     const manualKey = (a: LayoutInput['anchors'][number]) => JSON.stringify(manualMode ? a.manual ?? null : null);
     // A drop/reset changes one occurrence, not the entire note. Keep every
@@ -25,6 +28,17 @@ export class StableLayout {
       if (old) old.placement.y = a.y + old.offset;
       const automatic = this.automatic.get(a.key);
       if (automatic) automatic.y = a.y + this.automaticOffsets.get(a.key)!;
+    }
+    if (input.preferences?.placementMode === 'manual') {
+      // Fully manual placement has no invisible automatic base or neighbour
+      // reservation. Only this occurrence's saved record changes its slot.
+      const pending = anchors.filter(a => !this.entries.has(a.key));
+      const byKey = new Map(anchors.map(a => [a.key, a]));
+      for (const placement of layoutCards({ ...input, anchors: pending })) {
+        const anchor = byKey.get(placement.key)!;
+        this.entries.set(placement.key, { placement, offset: placement.y - anchor.y, manual: manualKey(anchor) });
+      }
+      return [...this.entries.values()].map(e => ({ ...e.placement, y: e.placement.y - scrollTop }));
     }
     // The invisible canonical slots reserve their original places even after a
     // card is dragged. Newly measured sections must not balance against its new
