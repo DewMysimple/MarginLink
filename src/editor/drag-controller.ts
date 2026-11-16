@@ -30,8 +30,9 @@ export class DragController {
   private showHint = () => { if (!this.cleanupDrag) cardTooltip.show(this.handle); };
   private hideHint = () => { cardTooltip.hideWithin(this.handle); };
   private onKey = (event: KeyboardEvent) => {
-    if ((event.key === 'Enter' || event.key === ' ') && this.bridge) {
+    if ((event.key === 'Enter' || event.key === ' ') && this.bridge && !this.cleanupDrag) {
       event.preventDefault();
+      if (event.repeat) return;
       const snapshot = this.action.capture(this.view, this.bridge);
       if (snapshot) this.action.open(this.view, this.bridge, snapshot);
     }
@@ -60,8 +61,15 @@ export class DragController {
     if (x >= viewport.left + 4 && x <= body.left - 12 && body.left - viewport.left >= 52) return 'left';
     if (x >= body.right + 12 && x <= viewport.right - 4 && viewport.right - body.right >= 52) return 'right';
   }
+  private current(bridge: EditorBridge, snapshot: SelectionSnapshot): boolean {
+    const selection = bridge.cm.state.selection;
+    return this.bridge === bridge && bridge.alive && bridge.revision === snapshot.revision &&
+      this.view.file?.path === snapshot.sourcePath && this.view.getMode() === 'source' &&
+      bridge.cm.state.doc.toString() === snapshot.text && selection.ranges.length === 1 &&
+      selection.main.from === snapshot.from && selection.main.to === snapshot.to;
+  }
   private onDown = (event: PointerEvent) => {
-    if (event.button !== 0 || !this.bridge || !this.geometry) return;
+    if (event.button !== 0 || !this.bridge || !this.geometry || this.cleanupDrag) return;
     event.preventDefault(); event.stopPropagation();
     const bridge = this.bridge;
     const snapshot = this.action.capture(this.view, bridge);
@@ -75,7 +83,7 @@ export class DragController {
     const reset = () => {
       doc.removeEventListener('pointermove', move, true);
       doc.removeEventListener('pointerup', up, true);
-      doc.removeEventListener('pointercancel', reset, true);
+      doc.removeEventListener('pointercancel', cancelled, true);
       doc.removeEventListener('keydown', key, true);
       win?.removeEventListener('blur', reset);
       this.root.classList.remove('margin-link-dragging');
@@ -85,7 +93,7 @@ export class DragController {
     };
     const move = (e: PointerEvent) => {
       if (e.pointerId !== pointerId) return;
-      if (bridge.revision !== snapshot.revision || this.view.file?.path !== snapshot.sourcePath || this.view.getMode() !== 'source') { reset(); return; }
+      if (!this.current(bridge, snapshot)) { reset(); return; }
       dragging ||= Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4;
       if (!dragging || !this.geometry) return;
       e.preventDefault();
@@ -105,16 +113,21 @@ export class DragController {
     };
     const up = (e: PointerEvent) => {
       if (e.pointerId !== pointerId) return;
+      dragging ||= Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4;
       const side = this.sideAt(e.clientX, e.clientY);
       const valid = this.snapshot;
+      const current = valid && this.current(bridge, valid);
+      const rect = this.handle.getBoundingClientRect();
+      const onHandle = !this.handle.hidden && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
       reset();
-      if (valid && dragging && side) this.action.open(this.view, bridge, valid, side);
+      if (current && (dragging ? !!side : onHandle)) this.action.open(this.view, bridge, valid, dragging ? side : undefined);
     };
+    const cancelled = (e: PointerEvent) => { if (e.pointerId === pointerId) reset(); };
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); reset(); } };
     this.cleanupDrag = reset;
     doc.addEventListener('pointermove', move, true);
     doc.addEventListener('pointerup', up, true);
-    doc.addEventListener('pointercancel', reset, true);
+    doc.addEventListener('pointercancel', cancelled, true);
     doc.addEventListener('keydown', key, true);
     win?.addEventListener('blur', reset);
   };
