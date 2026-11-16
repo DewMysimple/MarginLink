@@ -129,7 +129,7 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 | `src/ui/settings-tab.ts`, `settings-view.ts`, `quick-controls.ts` | 共享原生表单、右侧 ItemView、实时预览、快捷 Modal 与确认 |
 | `scripts/desktop-test.mjs`, `desktop-v2.mjs`, `desktop-remediation.mjs`, `desktop-stability.mjs` | 隔离库客户端回归、即时切页、逐帧分隔线/抓点和长悬停场景 |
 
-Windows 一键构建：安装 Git、Node 24（含 npm）后，双击项目根目录的 [buildStart.cmd](buildStart.cmd)。脚本通过 [build-latest.ps1](scripts/build-latest.ps1) 依次拉取 `origin/main`（仅快进）、按锁文件安装依赖、编译打包，并自动读取版本号生成 `dist/margin-link-<版本号>.zip`。窗口会保留成功路径或失败原因；项目路径可以包含空格和中文，从其他工作目录启动也可用。
+Windows 一键构建：安装 Git、Node 24（含 npm）后，双击项目根目录的 [buildStart.cmd](buildStart.cmd)。脚本通过 [build-latest.ps1](scripts/build-latest.ps1) 依次拉取 `origin/main`（仅快进）、按锁文件安装依赖、编译打包，并自动读取版本号生成 `dist/margin-link-<版本号>.zip`。随后会实际解压刷新 `dist/margin-link/`，对五个发布文件逐一校验 SHA-256，并更新文件夹日期。成功窗口同时显示 ZIP、可直接复制安装的目录、版本、生成时间与源码提交；失败时显示原因。项目路径可以包含空格和中文，从其他工作目录启动也可用。
 
 运行前需处于 `main` 分支，已跟踪文件没有待提交修改。本地历史分叉、存在未推送提交或任一步骤失败都会停止，不自动切换分支或处理本地修改。构建失败时，已有 ZIP 可能仍是旧包，以窗口中的成功结果为准。终端自动运行可使用 `buildStart.cmd --no-pause`。
 

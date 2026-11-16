@@ -32,7 +32,7 @@ function Invoke-BuildLatest {
         throw '项目有未提交的修改。请先提交或暂存修改，再运行此脚本。'
     }
 
-    Write-Host '[1/4] 拉取 origin/main 最新代码……'
+    Write-Host '[1/5] 拉取 origin/main 最新代码……'
     Invoke-Checked -FilePath $gitPath -Arguments @('pull', '--ff-only', 'origin', 'main')
     $localCommit = (Invoke-Checked -FilePath $gitPath -Arguments @('rev-parse', 'HEAD')).Trim()
     $remoteCommit = (Invoke-Checked -FilePath $gitPath -Arguments @('rev-parse', 'refs/remotes/origin/main')).Trim()
@@ -40,12 +40,12 @@ function Invoke-BuildLatest {
         throw '本地 main 含有远程没有的提交。请先同步这些提交，再构建远程最新版本。'
     }
 
-    Write-Host '[2/4] 按锁文件安装依赖……'
+    Write-Host '[2/5] 按锁文件安装依赖……'
     # npm 12 permits the lockfile's existing mirror URLs for this command only.
     # Integrity hashes are still checked; no global npm configuration is changed.
     Invoke-Checked -FilePath $npmPath -Arguments @('ci', '--allow-remote=all')
 
-    Write-Host '[3/4] 编译并生成安装目录……'
+    Write-Host '[3/5] 编译并生成安装目录……'
     Invoke-Checked -FilePath $npmPath -Arguments @('run', 'package')
 
     $manifest = Get-Content -LiteralPath (Join-Path $projectRoot 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -56,8 +56,14 @@ function Invoke-BuildLatest {
         throw 'manifest.json 与 package.json 的插件版本不一致，或版本号无效。'
     }
 
-    Write-Host '[4/4] 生成带版本号的 ZIP……'
+    Write-Host '[4/5] 生成带版本号的 ZIP……'
+    $distributionDirectory = Join-Path $projectRoot 'dist'
     $pluginDirectory = Join-Path $projectRoot 'dist\margin-link'
+    $releaseFiles = @('main.js', 'manifest.json', 'styles.css', 'LICENSE', 'THIRD_PARTY_NOTICES.txt')
+    $expectedHashes = @{}
+    foreach ($releaseFile in $releaseFiles) {
+        $expectedHashes[$releaseFile] = (Get-FileHash -LiteralPath (Join-Path $pluginDirectory $releaseFile) -Algorithm SHA256).Hash
+    }
     $zipPath = Join-Path $projectRoot "dist\margin-link-$pluginVersion.zip"
     $temporaryZip = Join-Path $projectRoot "dist\.margin-link-$([guid]::NewGuid().ToString('N')).zip"
     try {
@@ -69,8 +75,22 @@ function Invoke-BuildLatest {
         }
     }
 
+    Write-Host '[5/5] 解压刷新安装目录并校验文件……'
+    Expand-Archive -LiteralPath $zipPath -DestinationPath $distributionDirectory -Force -ErrorAction Stop
+    foreach ($releaseFile in $releaseFiles) {
+        $actualHash = (Get-FileHash -LiteralPath (Join-Path $pluginDirectory $releaseFile) -Algorithm SHA256).Hash
+        if ($actualHash -ne $expectedHashes[$releaseFile]) {
+            throw "解压后的文件校验失败：$releaseFile"
+        }
+    }
+    $completedAt = Get-Date
+    (Get-Item -LiteralPath $pluginDirectory).LastWriteTime = $completedAt
+
     Write-Host ''
     Write-Host "构建成功：$zipPath" -ForegroundColor Green
+    Write-Host "安装目录：$pluginDirectory" -ForegroundColor Green
+    Write-Host "插件版本：$pluginVersion"
+    Write-Host "生成时间：$($completedAt.ToString('yyyy-MM-dd HH:mm:ss zzz'))"
     Write-Host "源码提交：$localCommit"
 }
 
