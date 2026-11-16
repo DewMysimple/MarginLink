@@ -33,7 +33,13 @@ export function renderCard(button: HTMLButtonElement, occurrence: WikilinkOccurr
   accessible.id = `margin-link-card-label-${++accessibleId}`;
   button.setAttribute('aria-labelledby', accessible.id);
   const icon = button.createSpan({ cls: 'margin-link-card-icon' });
-  setIcon(icon, resolved.file ? fileIcon(resolved.file.extension) : 'file-question');
+  const extension = resolved.file?.extension.toLowerCase();
+  if (extension === 'html' || extension === 'htm') {
+    icon.classList.add('margin-link-html-icon');
+    icon.textContent = 'HTML';
+  } else {
+    setIcon(icon, resolved.file ? fileIcon(extension) : 'file-question');
+  }
   icon.setAttribute('aria-hidden', 'true');
   const text = button.createSpan({ cls: 'margin-link-card-text' });
   text.createSpan({ cls: 'margin-link-card-label', text: occurrence.label });
