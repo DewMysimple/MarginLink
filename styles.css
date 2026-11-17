@@ -15,8 +15,7 @@
   flex: 0 0 28px; flex-direction: column; align-items: center; justify-content: center;
   gap: 0; color: var(--text-muted); line-height: 1;
 }
-.margin-link-card .margin-link-html-icon svg { width: 24px; height: 24px; flex-shrink: 0; }
-.margin-link-html-label { display: block; font: 700 8px/1 var(--font-interface); letter-spacing: .25px; }
+.margin-link-card .margin-link-html-icon img { width: 24px; height: 24px; flex-shrink: 0; object-fit: contain; }
 .margin-link-card-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
 .margin-link-card-label, .margin-link-card-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .margin-link-card-label { font-weight: var(--font-medium); }
@@ -38,11 +37,10 @@
 .margin-link-card-shell[data-shape="square"] .margin-link-card-icon { flex-basis: auto; }
 .margin-link-card-shell[data-shape="square"] .margin-link-card-icon svg { width: 25px; height: 25px; }
 .margin-link-card-shell[data-shape="square"] .margin-link-card-text { width: 100%; }
-.margin-link-card-shell[data-shape="square"] .margin-link-html-icon svg { width: 26px; height: 26px; }
+.margin-link-card-shell[data-shape="square"] .margin-link-html-icon img { width: 26px; height: 26px; }
 .margin-link-card-shell .margin-link-compact:has(.margin-link-html-icon) { padding: 2px; }
 .margin-link-card-shell .margin-link-compact .margin-link-html-icon { flex-basis: auto; width: 26px; }
-.margin-link-card-shell .margin-link-compact .margin-link-html-icon svg { width: 18px; height: 18px; }
-.margin-link-card-shell .margin-link-compact .margin-link-html-label { font-size: 7px; letter-spacing: .2px; }
+.margin-link-card-shell .margin-link-compact .margin-link-html-icon img { width: 18px; height: 18px; }
 
 .margin-link-card-shell[data-shape="square"] .margin-link-card-path, .margin-link-no-path .margin-link-card-path { display: none; }
 .margin-link-card-movable { cursor: grab; touch-action: none; user-select: none; }

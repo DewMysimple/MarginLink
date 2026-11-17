@@ -157,15 +157,17 @@ try {
       const plugin = app.plugins.plugins['margin-link'];
       const old = [...plugin.overlays.values()], pendingTimers = old.filter(o => o.scrollIdleTimer !== undefined).length;
       const rendered = old.map(o => o.diagnostics?.renders ?? 0);
+      const cached = old.map(o => o.routeCache?.size ?? null);
       const parents = [...plugin.overlays.values()].map(overlay => ({ parent: overlay.decorations.parent, owned: overlay.decorations.positioned, previous: overlay.decorations.previousPosition }));
       await app.plugins.disablePlugin('margin-link');
       await new Promise(resolve => setTimeout(resolve, 400));
       return { nativeLayers: document.querySelectorAll('.margin-link-decoration-layer').length, fixedLayers: document.querySelectorAll('.margin-link-overlay').length,
-        pendingTimers, disposed: old.map((o, index) => ({ stopped: o.stopped, frameId: o.frame, timer: o.scrollIdleTimer ?? null, rendersBefore: rendered[index], rendersAfter: o.diagnostics?.renders ?? 0 })),
+        pendingTimers, disposed: old.map((o, index) => ({ stopped: o.stopped, frameId: o.frame, timer: o.scrollIdleTimer ?? null, rendersBefore: rendered[index], rendersAfter: o.diagnostics?.renders ?? 0, cacheBefore: cached[index], cacheAfter: o.routeCache?.size ?? null })),
         parents: parents.filter(item => item.parent?.isConnected).map(item => ({ owned: item.owned, previous: item.previous, current: item.parent.style.position })) };
     });
     assert.equal(result.nativeLayers, 0); assert.equal(result.fixedLayers, 0);
     if (curve) { assert(result.pendingTimers > 0, 'Unload must exercise a pending scroll quiet timer'); for (const old of result.disposed) { assert(old.stopped); assert.equal(old.rendersAfter, old.rendersBefore); assert.equal(old.timer, null); } }
+    if (process.argv.includes('--route-cache')) { assert(result.disposed.some(old => old.cacheBefore > 0), 'Unload did not exercise retained route hints'); for (const old of result.disposed) assert.equal(old.cacheAfter, 0, 'Unload retained route hints'); }
     for (const parent of result.parents.filter(parent => parent.owned)) assert.equal(parent.current, parent.previous);
     await page.evaluate(() => app.plugins.enablePlugin('margin-link')); await frames(20);
     assert(await page.evaluate(() => document.querySelectorAll('.margin-link-decoration-layer').length > 0)); return result;

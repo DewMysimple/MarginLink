@@ -1,5 +1,19 @@
 # MarginLink 验证记录
 
+## 0.2.26 指定HTML图标 · 2026-11-17
+
+按用户追加顺序，先完成并推送0.2.25滚动修复（22d9db9），再实施图标替换。`D:/04_EdgeDownload/Edge图标.png`与`src/assets/edge.png`字节相同，SHA256为`939eda2c…daa50448`，512×512 RGBA/90449bytes，保留原始透明度和颜色。移除原仿制SVG，改用内嵌data URL图片；无需运行时访问D盘。按后续要求删除图标下方HTML字样和相应CSS，只显示图案；HTML/HTM及大小写匹配、按钮无障碍名称、文件类型提示和非原生图片拖拽语义保留。三种卡片实际图片尺寸为24/26/18px。
+
+图标验证后的实际笔记滚动抽查仍出现52.4ms、恢复正式当前23条UI布局/霞鹜15px后又出现51.2ms，未靠重跑抽绿。CPU/指纹指出：六条线滚出coverage使当前batch完全空，返回时旧Connector已丢，42.3ms用于重新求路，与PNG解码无关。新增每视图限100条成功绘制提示的`ConnectorRouteCache`，只保留connector/fingerprint/originY，不混入当前draw关系/描边，不保存到data.json。返回仍执行严格相对几何/精确平移和全部当前文字、卡片、边界验证；真实变化或受阻仍重搜。笔记/模式/源文/几何变化及卸载清理，13项新增单测覆盖回入零求解、当前空批次无旧线、安全失效、容量和清理。
+
+最终`npm test`为50文件493项，`npm run lint`、`npm run package`通过；28项当前包桌面均passed、errors0：14图标（12真实浅深/读写/三形态+2原生交互）、2标准曲线hover滚轮、2双次2160px离屏返回、6生命周期及4拖卡。24个实际HTML/HTM图片decode512²、内嵌SHA与源相同；无HTML标记，点击、拖动、tooltip/aria和普通Markdown图标正常。主题实际class和computed background分别为theme-light/rgb255与theme-dark/rgb28，根已目视截图；没有以case名冒充主题切换。早期多余pointer假设、缺失HTM夹具、热改阅读section映射和setTheme参数被忽略的探针诊断完整保留，均未通过生产补丁或放宽断言处理。
+
+标准匹配曲线hover：阅读render p95/max为5.2/42.5ms、编辑2.5/33.6ms，Long Tasks0。两次完整离屏返回：阅读6→0→6各六条安全复用，回入paint0.6/0.5ms；编辑首次5/6复用+一条必要求解、2.9ms，第二6/6、0.5ms。独立deep轨迹render max阅读5.7ms/编辑46.6ms（编辑峰值为静默探索），不隐藏尾部开销。各组post-frame可见偏移0、滚动保存0；early rAF中途值仍保留。卸载时cache8→0、timer1→null，400ms旧overlay render2→2，frameId为已取消的旧编号而不是伪称归零。
+
+复做：隔离CDP9226下`node scripts/desktop-html-icon.mjs --output=artifacts/html-icon-0.2.26/final-cache`；匹配当前笔记UI布局后，`node scripts/desktop-scroll-performance.mjs --phase=html-icon-cache-deep-returns --only=curve/hover/false --cold --deep-returns --verify`。生命周期加`--reported-note --curve --route-cache`，拖动加`--only=curve/ship`，输出分别为final-cache-lifecycle-proof、final-cache-drag，保留旧报告。旧独立Chromium图标helper已适配PNG/无字样，但没有将其称作本轮运行通过。
+
+根main.js、dist、ZIP五个发布文件与全部当前桌面bundle一致`aecd1881…c98583`，唯一PNG data URL解码后等于原始图片。[本版摘要](artifacts/html-icon-0.2.26.json)、[发布收据](artifacts/release-0.2.26.json)。26夹具已保留到ignored证据、6配置精确还原、隔离实例关闭，正式PID23544与笔记SHA保留。0.2.25的22项桌面及合成器仍只属于其对应bundle，不计成本版重新验证。其他系统、最低宿主、全部第三方组合及长时大库仍未覆盖。
+
 ## 0.2.25 真实滚轮与曲线滚动 · 2026-11-17
 
 本轮使用用户当前UE6笔记及23个选定目标的只读副本；源与夹具SHA256为`12ba3973…699c`，与旧轮笔记内容不同。正式安装已核实为0.2.24且bundle与上版发布相同，排除旧包误用。测试仅在test-vault与隔离profile运行，Windows Obsidian1.15.1 / Electron37.10.2 / Chromium138，沿用用户15px字体、free布局、curve/hover、reduceMotion=false，并对照always及三线型。

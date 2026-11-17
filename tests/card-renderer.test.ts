@@ -15,7 +15,7 @@ class Element {
   textContent = '';
   id = '';
   type = '';
-  ownerDocument = { createElementNS: (_namespace: string, tag: string) => new Element(tag) };
+  ownerDocument = { createElement: (tag: string) => new Element(tag) };
   classList = {
     add: (name: string) => { this.className = `${this.className} ${name}`.trim(); },
     toggle: (name: string, on: boolean) => {
@@ -42,12 +42,11 @@ describe('HTML card artwork and native card semantics', () => {
     renderCard(button as unknown as HTMLButtonElement, occurrence, resolved(extension));
     const all = button.descendants(), icon = all.find(node => node.className.includes('margin-link-html-icon'))!;
     expect(icon.attrs['aria-hidden']).toBe('true');
-    const svg = icon.children.find(node => node.tag === 'svg')!;
-    expect(svg.attrs.viewBox).toBe('0 0 24 24');
-    expect(svg.attrs.focusable).toBe('false');
-    expect(svg.children.length).toBeGreaterThan(1);
-    expect(svg.children.every(path => path.tag === 'path' && path.attrs.fill === 'currentColor')).toBe(true);
-    expect(icon.children.find(node => node.className === 'margin-link-html-label')?.textContent).toBe('HTML');
+    const image = icon.children.find(node => node.tag === 'img')!;
+    expect(image.attrs.src).toContain('edge.png');
+    expect(image.attrs.alt).toBe(''); expect(image.attrs.draggable).toBe('false');
+    expect(icon.children.some(node => node.tag === 'svg')).toBe(false);
+    expect(icon.children.some(node => node.className === 'margin-link-html-label')).toBe(false);
     expect(all.find(node => node.id === button.attrs['aria-labelledby'])?.textContent).toBe(`stages.${extension} · HTML 文件`);
     expect(button.dataset.tooltip).toBe(`stages.${extension} · HTML 文件`);
     expect(button.attrs.title).toBeUndefined(); expect(button.attrs['aria-label']).toBeUndefined();

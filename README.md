@@ -2,11 +2,11 @@
 
 **Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件或新建 Markdown，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.2.25**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。本版修复长笔记滚动时平滑曲线重复求路造成的卡顿。支持单击选区图标关联、库外文件移动导入、原生同步滚动、仅编号显示、右键重新链接、保留重链视口、面板直接搜索和完全手动布局。两个文件识别开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
+**v0.2.26**，适用于 Obsidian 桌面端，最低声明版本 **1.10.6**。HTML 卡片使用指定的彩色 Edge 图标，并包含长笔记平滑曲线滚动性能修复。支持单击选区图标关联、库外文件移动导入、原生同步滚动、仅编号显示、右键重新链接、保留重链视口、面板直接搜索和完全手动布局。两个文件识别开关位于设置中的“Obsidian 能识别的文件类型”。本版验证范围见 [VALIDATION.md](VALIDATION.md)。
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.25.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.2.26.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/

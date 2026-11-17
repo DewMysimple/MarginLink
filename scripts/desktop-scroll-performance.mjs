@@ -164,15 +164,28 @@ try {
           if (!object || typeof object[key] !== 'function') return;
           const original = object[key]; state.originals.push(() => object[key] = original);
           object[key] = function (...args) { const start = performance.now(), beforeSignature = o.batchSignature;
+            if (name === 'paintConnectors') state.currentCacheLookups = [];
             const before = name === 'paintConnectors' ? [...o.batch?.relations ?? []].map(([key, relation]) => [key, relation.fingerprint]) : undefined;
             try { return original.apply(this, args); } finally {
             const duration = performance.now() - start; (state.times[name] ??= []).push(duration);
             if (name === 'paintConnectors') state.paints.push({ start, duration, cards: o.cards.size, relations: o.batch?.relations.size, obstacles: o.obstacles.length, revision: o.geometryRevision, highlighted: o.highlighted,
               scrolling: o.scrolling, before, after: [...o.batch?.relations ?? []].map(([key, relation]) => [key, relation.fingerprint]) });
             if (name === 'paintConnectors') state.paints.at(-1).phase = beforeSignature === o.batchSignature ? 'cached' : o.scrolling ? 'scroll-validation-or-required-solve' : 'quiet-optimization';
+            if (name === 'paintConnectors') Object.assign(state.paints.at(-1), {
+              routeCacheSize: o.routeCache?.size,
+              cacheHits: state.currentCacheLookups.length,
+              // A new solve always creates a new PortChoice. Exact translation
+              // retains the cached choice object, proving actual hint reuse.
+              cacheReused: state.currentCacheLookups.filter(({ key, value }) => o.batch?.relations.get(key)?.connector.choice === value.connector.choice).map(({ key }) => key)
+            });
           } };
         };
         wrap(o, 'render'); wrap(o, 'paintConnectors'); wrap(o, 'updateContinuations'); wrap(o.textObstacles, 'read', 'textObstacles'); wrap(p.reading, 'anchors', 'readingAnchors'); wrap(b, 'anchors', 'editorAnchors');
+        if (o.routeCache) {
+          const get = o.routeCache.get;
+          o.routeCache.get = function (key) { const value = get.call(this, key); if (value && state.currentCacheLookups) state.currentCacheLookups.push({ key, value }); return value; };
+          state.originals.push(() => o.routeCache.get = get);
+        }
         const oldSave = p.saveData; p.saveData = function (...args) { state.saves++; return oldSave.apply(this, args); }; state.originals.push(() => p.saveData = oldSave);
         state.observer = new MutationObserver(records => state.mutations += records.length); state.observer.observe(o.decorations.element, { attributes: true, childList: true, subtree: true });
         state.tasks = new PerformanceObserver(list => state.longTasks.push(...list.getEntries().map(e => ({ start: e.startTime, duration: e.duration })))); state.tasks.observe({ entryTypes: ['longtask'] });
@@ -196,7 +209,7 @@ try {
           const cardRect = card?.shell.getBoundingClientRect(), scrollRect = s.getBoundingClientRect();
           const visible = !!cardRect?.width && card.shell.checkVisibility({ checkVisibilityCSS: true }) &&
             cardRect.bottom > scrollRect.top && cardRect.top < scrollRect.bottom && reference > scrollRect.top && reference < scrollRect.bottom;
-          return { scrollTop: s.scrollTop, cardTop: cardRect?.top, reference, visible, cardCount: o.cards.size, routes: o.diagnostics.routes, measurements: o.diagnostics.measurements, revision: o.geometryRevision, highlighted: o.highlighted };
+          return { scrollTop: s.scrollTop, cardTop: cardRect?.top, reference, visible, cardCount: o.cards.size, routes: o.diagnostics.routes, measurements: o.diagnostics.measurements, revision: o.geometryRevision, highlighted: o.highlighted, routeCacheSize: o.routeCache?.size };
         };
         const sample = timestamp => {
           if (!state.active) return;
@@ -242,7 +255,10 @@ try {
       try {
         // Repeated small wheel packets exercise scroll fast paths; larger
         // reverse sweeps cross virtualization/measurement coverage boundaries.
-        for (const delta of [...Array(36).fill(-32), ...Array(36).fill(32), ...Array(24).fill(-90), ...Array(24).fill(90)]) {
+        const deltas = process.argv.includes('--deep-returns')
+          ? Array.from({ length: 2 }, () => [...Array(24).fill(-90), ...Array(24).fill(90)]).flat()
+          : [...Array(36).fill(-32), ...Array(36).fill(32), ...Array(24).fill(-90), ...Array(24).fill(90)];
+        for (const delta of deltas) {
           await page.mouse.wheel(0, delta); await page.waitForTimeout(12);
         }
         await page.evaluate(() => window.marginScrollPerformance.wheelEnded = performance.now());
@@ -263,10 +279,16 @@ try {
       const rawOffsets = rawReferences.map(f => f.cardTop - f.reference);
       const references = data.frames.map(f => f.postGeometry).filter(f => f?.visible && Number.isFinite(f.cardTop) && Number.isFinite(f.reference));
       const offsets = references.map(f => f.cardTop - f.reference);
+      const returning = []; let absent = false;
+      for (const paint of data.paints) {
+        if (paint.relations === 0) absent = true;
+        else if (absent && paint.relations > 0) { returning.push({ time: paint.start, duration: paint.duration, relations: paint.relations, routeCacheSize: paint.routeCacheSize, cacheHits: paint.cacheHits, cacheReused: paint.cacheReused }); absent = false; }
+      }
       Object.assign(scenario, { executionCompleted: true, mouse, frames: summary(intervals), timings: Object.fromEntries(Object.entries(data.times).map(([k, v]) => [k, summary(v)])),
         mutations: data.mutations, saves: data.saves, longTasks: data.longTasks, diagnostics: { ...data.diagnostics, work: summary(data.diagnostics.work) },
         scrollEvents: data.scrollEvents.length, scrollendEvents: data.scrollendEvents.length,
         paintRelationCounts: [...new Set(data.paints.map(p => p.relations))], paintCardCounts: [...new Set(data.paints.map(p => p.cards))],
+        offscreenReturns: returning,
         stoppedPaint: summary(data.paints.filter(p => p.start > data.wheelEnded).map(p => p.duration)),
         paintPhases: Object.fromEntries(['cached', 'scroll-validation-or-required-solve', 'quiet-optimization'].map(phase => [phase, summary(data.paints.filter(p => p.phase === phase).map(p => p.duration))])),
         geometry: { method: 'post-animation-frame task; early rAF observations retained separately', frames: references.length, relativeOffsetRange: offsets.length ? Math.max(...offsets) - Math.min(...offsets) : null,
@@ -301,6 +323,7 @@ try {
         assert(scenario.timings.render.max < 50, `Plugin render long task: ${scenario.timings.render.max}`);
         assert(scenario.timings.render.p95 <= 16.7, `Plugin render p95 exceeded frame budget: ${scenario.timings.render.p95}`);
         assert.equal(data.saves, 0, 'Scrolling wrote layout data');
+        if (process.argv.includes('--deep-returns')) { assert(returning.length >= 2, 'Trajectory did not leave all relations offscreen twice'); assert(returning.every(r => r.cacheReused.length > 0), 'Returned relation did not reuse a validated cached route'); }
         scenario.passed = true;
       }
       await page.screenshot({ path: `${output}/${name}.png` });

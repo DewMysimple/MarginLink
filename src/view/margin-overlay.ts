@@ -13,7 +13,7 @@ import { positionFromDrop, positionRelative, type Box, type LayoutInput, type Pl
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
 import { type PortChoice } from './connector-renderer';
-import { connectorBatch, type ConnectorBatch, type BatchRelationInput } from './connector-batch';
+import { connectorBatch, ConnectorRouteCache, type ConnectorBatch, type BatchRelationInput } from './connector-batch';
 import { applyAppearance } from './appearance';
 import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
@@ -38,6 +38,7 @@ export class MarginOverlay {
   private continuationNumbers = new Map<string, number>();
   private routePlacements: Placement[] = [];
   private batch?: ConnectorBatch;
+  private routeCache = new ConnectorRouteCache();
   private batchSignature = '';
   private sharedPaths = new Map<string, SVGPathElement>();
   private menus = new Set<Menu>();
@@ -243,6 +244,7 @@ export class MarginOverlay {
     }
     if (this.layoutGeometry !== geometryKey || this.layoutSource !== source) {
       this.stableLayout.clear(); this.contentAnchors.clear(); this.textObstacles.invalidate();
+      this.routeCache?.clear();
       this.measurementsDirty = true;
       this.layoutGeometry = geometryKey; this.layoutSource = source;
     }
@@ -415,7 +417,8 @@ export class MarginOverlay {
     // whitespace. Dense rows may use the compact budget; their full DOM text
     // rectangles remain protected throughout routing and batch validation.
     this.batch = connectorBatch(active, prefs.lineStyle,
-      { obstacles: this.obstacles, cardObstacles: inactiveCards, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5, optimizeShared }, this.batch);
+      { obstacles: this.obstacles, cardObstacles: inactiveCards, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5, optimizeShared }, this.batch, this.routeCache);
+    this.routeCache?.remember(this.batch);
     this.batchSignature = signature;
     if (this.diagnostics) this.diagnostics.routes++;
     const keep = new Set(this.batch!.segments.map(s => s.id));
@@ -575,6 +578,7 @@ export class MarginOverlay {
     cardTooltip.hideWithin(this.root); if (this.decorations) cardTooltip.hideWithin(this.decorations.element);
     this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
     this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
+    this.routeCache?.clear();
     this.cards.clear(); this.continuationNumbers?.clear(); this.routePlacements = []; this.anchors = []; this.layoutInput = undefined;
     this.measurementsDirty = true; this.measuredTop = Infinity; this.measuredBottom = -Infinity; this.markerSignature = ''; this.geometryRevision++;
     this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear(); this.textObstacles?.invalidate();

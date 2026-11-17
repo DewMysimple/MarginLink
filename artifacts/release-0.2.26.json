@@ -1,0 +1,20 @@
+{
+  "version": "0.2.26",
+  "baseline": "22d9db9fafb593fb61bb1b2fda44bae560c88e73",
+  "bundleSHA256": "aecd1881132c295a0bf4c1e7413e67c0c3856d02bb0a2417957ed37e03c98583",
+  "zipSHA256": "74b83afab7baece84fd34068c79dec9c80244dd5bc489b50f2f8467738cc4a47",
+  "files": {
+    "main.js": "aecd1881132c295a0bf4c1e7413e67c0c3856d02bb0a2417957ed37e03c98583",
+    "manifest.json": "ee4940ca4fabb35d024687d899c93fd1daab0c17b4bddc83343390bddddee416",
+    "styles.css": "862bd2eee0e8adb2d07c7e60c97a85f5f09f1ced17771723d3a24354f6614d1b",
+    "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+    "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+  },
+  "zipVerified": true,
+  "htmlIcon": {
+    "source": "src/assets/edge.png",
+    "sha256": "939eda2cb098dbe9feec10c38d85b4f9fb12c4b5bcd79a3935c54ccbdaa50448",
+    "embeddedBytesEqual": true,
+    "visibleWordmark": false
+  }
+}

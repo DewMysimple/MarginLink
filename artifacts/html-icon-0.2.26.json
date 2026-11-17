@@ -1,0 +1,524 @@
+{
+  "version": "0.2.26",
+  "baselineRevision": "22d9db9fafb593fb61bb1b2fda44bae560c88e73",
+  "status": "passed",
+  "bundleSHA256": "aecd1881132c295a0bf4c1e7413e67c0c3856d02bb0a2417957ed37e03c98583",
+  "asset": {
+    "source": "src/assets/edge.png",
+    "sha256": "939eda2cb098dbe9feec10c38d85b4f9fb12c4b5bcd79a3935c54ccbdaa50448",
+    "embeddedBytesEqual": true,
+    "visibleWordmark": false
+  },
+  "host": "The road to Unreal Engine 6. Read about our plans and timeline - test-vault - Obsidian 1.15.1",
+  "unitTests": 493,
+  "unitFiles": 50,
+  "lint": "passed",
+  "packageAndFiveFileZip": "passed",
+  "desktopScenarioCount": 28,
+  "iconCases": [
+    {
+      "name": "light/preview/square: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "light",
+      "background": "rgb(255, 255, 255)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          26,
+          26
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "light/preview/horizontal: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "light",
+      "background": "rgb(255, 255, 255)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          24,
+          24
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "light/preview/icon: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "light",
+      "background": "rgb(255, 255, 255)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          18,
+          18
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "light/source/square: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "light",
+      "background": "rgb(255, 255, 255)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          26,
+          26
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "light/source/horizontal: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "light",
+      "background": "rgb(255, 255, 255)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          24,
+          24
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "light/source/icon: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "light",
+      "background": "rgb(255, 255, 255)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          18,
+          18
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "dark/preview/square: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "dark",
+      "background": "rgb(28, 28, 28)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          26,
+          26
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "dark/preview/horizontal: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "dark",
+      "background": "rgb(28, 28, 28)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          24,
+          24
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "dark/preview/icon: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "dark",
+      "background": "rgb(28, 28, 28)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          18,
+          18
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "dark/source/square: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "dark",
+      "background": "rgb(28, 28, 28)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          26,
+          26
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "dark/source/horizontal: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "dark",
+      "background": "rgb(28, 28, 28)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          24,
+          24
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "dark/source/icon: full-color supplied PNG, HTML/HTM and native Markdown control",
+      "passed": true,
+      "actualTheme": "dark",
+      "background": "rgb(28, 28, 28)",
+      "decodedPngs": 2,
+      "naturalSize": [
+        512,
+        512
+      ],
+      "displaySizes": [
+        [
+          18,
+          18
+        ]
+      ],
+      "insideCard": true,
+      "minimumColoredPixels": 693,
+      "visibleWordmark": false,
+      "accessibilityAndNativeMarkdownControl": "passed"
+    },
+    {
+      "name": "preview: image preserves tooltip, drag, saved position and single-click opening",
+      "passed": true,
+      "draggedPixels": 60,
+      "neighbors": 2,
+      "openedTarget": "References/stages.html",
+      "tooltipsWhileDragging": 0
+    },
+    {
+      "name": "source: image preserves tooltip, drag, saved position and single-click opening",
+      "passed": true,
+      "draggedPixels": 60,
+      "neighbors": 2,
+      "openedTarget": "References/stages.html",
+      "tooltipsWhileDragging": 0
+    }
+  ],
+  "scrollCases": [
+    {
+      "phase": "html-icon-cache-smoke",
+      "mode": "preview",
+      "passed": true,
+      "renderP95Ms": 5.2000000001862645,
+      "renderMaxMs": 42.5,
+      "longTasks": 0,
+      "postFrameOffsetRangePx": 0,
+      "earlyRafOffsetRangePx": 0,
+      "scrollWrites": 0,
+      "offscreenReturns": [
+        {
+          "duration": 0.7999999998137355,
+          "relations": 6,
+          "routeCacheSize": 22,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        }
+      ],
+      "quietPaintMaxMs": 41.89999999990687
+    },
+    {
+      "phase": "html-icon-cache-smoke",
+      "mode": "source",
+      "passed": true,
+      "renderP95Ms": 2.5,
+      "renderMaxMs": 33.59999999962747,
+      "longTasks": 0,
+      "postFrameOffsetRangePx": 0,
+      "earlyRafOffsetRangePx": 246.6875,
+      "scrollWrites": 0,
+      "offscreenReturns": [
+        {
+          "duration": 3.8999999999068677,
+          "relations": 6,
+          "routeCacheSize": 19,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929"
+          ]
+        }
+      ],
+      "quietPaintMaxMs": 33.1999999997206
+    },
+    {
+      "phase": "html-icon-cache-deep-returns",
+      "mode": "preview",
+      "passed": true,
+      "renderP95Ms": 5.099999999627471,
+      "renderMaxMs": 5.7000000001862645,
+      "longTasks": 0,
+      "postFrameOffsetRangePx": 0,
+      "earlyRafOffsetRangePx": 0,
+      "scrollWrites": 0,
+      "offscreenReturns": [
+        {
+          "duration": 0.6000000005587935,
+          "relations": 6,
+          "routeCacheSize": 22,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        },
+        {
+          "duration": 0.5,
+          "relations": 6,
+          "routeCacheSize": 22,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        }
+      ],
+      "quietPaintMaxMs": 0.6000000005587935
+    },
+    {
+      "phase": "html-icon-cache-deep-returns",
+      "mode": "source",
+      "passed": true,
+      "renderP95Ms": 2.900000000372529,
+      "renderMaxMs": 46.59999999962747,
+      "longTasks": 0,
+      "postFrameOffsetRangePx": 0,
+      "earlyRafOffsetRangePx": 246.6875,
+      "scrollWrites": 0,
+      "offscreenReturns": [
+        {
+          "duration": 2.8999999994412065,
+          "relations": 6,
+          "routeCacheSize": 19,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        },
+        {
+          "duration": 0.5,
+          "relations": 6,
+          "routeCacheSize": 19,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        }
+      ],
+      "quietPaintMaxMs": 46.10000000055879
+    }
+  ],
+  "regressions": {
+    "final-cache-lifecycle-proof": {
+      "status": "passed",
+      "scenarios": [
+        {
+          "name": "native pointer free-card drag changes only its own placement",
+          "passed": true
+        },
+        {
+          "name": "source and reading split panes scroll independently",
+          "passed": true
+        },
+        {
+          "name": "reading section refresh and retained-sizer host removal reconnect native cards",
+          "passed": true
+        },
+        {
+          "name": "settled source and reading panes schedule zero idle renders",
+          "passed": true
+        },
+        {
+          "name": "large scroll into a new virtualized region reports geometry costs separately",
+          "passed": true
+        },
+        {
+          "name": "disabling the plugin unloads native layers and restores owned sizer positioning",
+          "passed": true
+        }
+      ]
+    },
+    "final-cache-drag": {
+      "status": "passed",
+      "scenarios": [
+        {
+          "name": "preview/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+          "passed": true
+        },
+        {
+          "name": "source/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+          "passed": true
+        },
+        {
+          "name": "preview/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+          "passed": true
+        },
+        {
+          "name": "source/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+          "passed": true
+        }
+      ]
+    },
+    "unload": {
+      "name": "disabling the plugin unloads native layers and restores owned sizer positioning",
+      "passed": true,
+      "nativeLayers": 0,
+      "fixedLayers": 0,
+      "pendingTimers": 1,
+      "disposed": [
+        {
+          "stopped": true,
+          "frameId": 2764,
+          "timer": null,
+          "rendersBefore": 2,
+          "rendersAfter": 2,
+          "cacheBefore": 8,
+          "cacheAfter": 0
+        }
+      ],
+      "parents": [
+        {
+          "owned": true,
+          "previous": "",
+          "current": ""
+        }
+      ]
+    }
+  },
+  "errors": [],
+  "cleanup": {
+    "retainedFixtures": 26,
+    "restoredConfigurations": 6,
+    "isolatedInstanceClosed": true,
+    "ordinaryMainProcessPreserved": 23544,
+    "formalSHA256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+    "testVaultGitChanges": 0
+  },
+  "diagnostics": [
+    "Intermediate wordmark and no-cache builds are not counted as final acceptance. The final asset has no visible HTML wordmark.",
+    "Two no-cache curve smokes retained 52.4/51.2ms render failures. Fingerprints and CPU showed an empty active batch discarded six formerly successful connectors; PNG decoding was not the cause. A bounded per-view drawing-hint cache now survives leaving coverage and still validates current full geometry.",
+    "Earlier probe assumptions about pointer-events, an absent historical HTM fixture, a hot-edited reading section and ignored app.setTheme arguments were corrected without production workarounds. Final themes assert actual classes and backgrounds, and final PNGs were visually inspected."
+  ],
+  "limits": [
+    "28 current-bundle Windows Obsidian cases are separate from the earlier 0.2.25 22-case report and compositor capture. Not a guarantee for all machines, themes or large Vaults.",
+    "Source early-rAF intermediate offsets remain recorded; post-frame coordinates were stable.",
+    "The standalone Chromium helper was adapted for PNG/no-wordmark, but not executed as part of the claimed desktop results."
+  ]
+}

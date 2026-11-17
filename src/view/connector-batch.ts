@@ -38,6 +38,24 @@ export interface ConnectorBatch {
   /** Last completed optional search, in coordinates relative to its routes. */
   optimization?: string;
 }
+type CachedRoute = Pick<BatchRelation, 'connector' | 'fingerprint' | 'originY'>;
+/** A view's bounded drawing hints survive leaving measured coverage. They are
+ * never emitted as current relations; every candidate must pass current safety. */
+export class ConnectorRouteCache {
+  private entries = new Map<string, CachedRoute>();
+  private readonly limit: number;
+  constructor(limit = 100) { this.limit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 100; }
+  get size(): number { return this.entries.size; }
+  get(key: string): Readonly<CachedRoute> | undefined { return this.entries.get(key); }
+  remember(batch: ConnectorBatch): void {
+    for (const [key, relation] of batch.relations) {
+      this.entries.delete(key);
+      this.entries.set(key, { connector: relation.connector, fingerprint: relation.fingerprint, originY: relation.originY });
+    }
+    while (this.entries.size > this.limit) this.entries.delete(this.entries.keys().next().value!);
+  }
+  clear(): void { this.entries.clear(); }
+}
 export interface BatchOptions extends ConnectorOptions {
   minSharedLength?: number;
   maxDetourRatio?: number;
@@ -227,7 +245,7 @@ export function partitionConnectorRoutes(routes: RoutedConnector[], minimum: num
 
 /** A batch is ephemeral drawing data scoped to one view. No relation or layout
  * records are written. Safe existing routes are reused when another card moves. */
-export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, options: BatchOptions = {}, previous?: ConnectorBatch): ConnectorBatch {
+export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, options: BatchOptions = {}, previous?: ConnectorBatch, cache?: ConnectorRouteCache): ConnectorBatch {
   const minimum = Math.max(1, options.minSharedLength ?? 24), cards = inputs.map(i => ({ key: i.key, box: cardBox(i.card) }));
   const perInput = (input: BatchRelationInput): ConnectorOptions => ({ ...options, bounds: input.bounds ?? options.bounds, cardObstacles: [...(options.cardObstacles ?? []), ...cards.filter(c => c.key !== input.key).map(c => c.box)] });
   let routes: RoutedConnector[] = [];
@@ -240,11 +258,11 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
     const fragments = input.fragments.map(box => ({ ...box, top: box.top - originY, bottom: box.bottom - originY }));
     const fingerprint = JSON.stringify([style, fragments, { ...input.card, y: input.card.y - originY }, options.lineWidth, options.clearance,
       options.minimumClearance, options.body, options.corridorX, options.preferCorridor]);
-    const old = previous?.relations.get(input.key), own = perInput(input);
+    const old = previous?.relations.get(input.key) ?? cache?.get(input.key), own = perInput(input);
     const candidate = old?.fingerprint === fingerprint && Number.isFinite(originY) && Number.isFinite(old.originY)
       ? translateConnector(old.connector, originY - old.originY) : undefined;
     const connector = candidate && clearConnectorSegments(candidate.segments, input.fragments, input.card, { ...own, clearance: candidate.clearance ?? own.clearance })
-      ? candidate : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.choice, own);
+      ? candidate : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.connector.choice, own);
     if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint, originY });
   }
   const optimize = options.optimizeShared !== false;

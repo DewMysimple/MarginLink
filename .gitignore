@@ -74,6 +74,8 @@ artifacts/*
 !artifacts/scroll-performance-0.2.25.json
 !artifacts/scroll-routing-cpu-0.2.25.json
 !artifacts/release-0.2.25.json
+!artifacts/html-icon-0.2.26.json
+!artifacts/release-0.2.26.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

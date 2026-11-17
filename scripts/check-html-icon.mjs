@@ -6,12 +6,13 @@ import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
 
 const root = resolve(import.meta.dirname, '..');
-const output = resolve(root, 'artifacts/html-icon-0.2.10');
+const output = resolve(root, process.argv.find(value => value.startsWith('--output='))?.slice(9) ?? 'artifacts/html-icon-current-dom');
 await mkdir(output, { recursive: true });
 process.env.TMPDIR = resolve(output, 'tmp');
 await mkdir(process.env.TMPDIR, { recursive: true });
 const bundle = await build({
   entryPoints: [resolve(root, 'src/view/card-renderer.ts')], bundle: true, write: false,
+  loader: { '.png': 'dataurl' },
   format: 'iife', globalName: 'cardRenderer', plugins: [{ name: 'obsidian-icons', setup(b) {
     b.onResolve({ filter: /^obsidian$/ }, () => ({ path: 'obsidian', namespace: 'stub' }));
     b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({ contents: 'export function setIcon() {}' }));
@@ -52,23 +53,24 @@ try {
         }
       }
     });
+    await page.locator('.margin-link-html-icon img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
     const checks = await page.locator('.margin-link-card').evaluateAll(buttons => buttons.map(button => {
-      const label = button.querySelector('.margin-link-html-label'), svg = button.querySelector('.margin-link-html-icon svg'), icon = button.querySelector('.margin-link-html-icon');
+      const image = button.querySelector('.margin-link-html-icon img'), icon = button.querySelector('.margin-link-html-icon');
       const cardBox = button.getBoundingClientRect();
-      const range = document.createRange(); range.selectNodeContents(label);
-      const boxes = [svg.getBoundingClientRect(), range.getBoundingClientRect()];
+      const boxes = [image.getBoundingClientRect()];
       const within = boxes.every(box => box.left >= cardBox.left + .5 && box.right <= cardBox.right - .5 && box.top >= cardBox.top + .5 && box.bottom <= cardBox.bottom - .5);
-      return { shape: button.parentElement.dataset.shape, text: label.textContent, within,
+      return { shape: button.parentElement.dataset.shape, wordmark: !!button.querySelector('.margin-link-html-label'), within,
         title: button.getAttribute('title'), ariaLabel: button.getAttribute('aria-label'),
         accessible: document.getElementById(button.getAttribute('aria-labelledby')).textContent,
         decorative: icon.getAttribute('aria-hidden'), opacity: getComputedStyle(button).opacity,
-        border: getComputedStyle(label).borderTopWidth,
-        fill: [...svg.querySelectorAll('path')].every(path => path.getAttribute('fill') === 'currentColor') };
+        decoded: image.complete && image.naturalWidth === 512 && image.naturalHeight === 512,
+        embedded: image.src.startsWith('data:image/png;base64,'), draggable: image.draggable };
     }));
     for (const check of checks) {
-      assert.equal(check.text, 'HTML'); assert.equal(check.within, true, `${theme}/${zoom}/${check.shape}: clipped artwork or label`);
+      assert.equal(check.wordmark, false); assert.equal(check.within, true, `${theme}/${zoom}/${check.shape}: clipped artwork`);
       assert.equal(check.title, null); assert.equal(check.ariaLabel, null); assert.match(check.accessible, /stages\.(?:html|HTM|HTML) · HTML 文件/);
-      assert.equal(check.decorative, 'true'); assert.equal(check.opacity, '1'); assert.equal(check.border, '0px'); assert.equal(check.fill, true);
+      assert.equal(check.decorative, 'true'); assert.equal(check.opacity, '1');
+      assert.equal(check.decoded, true); assert.equal(check.embedded, true); assert.equal(check.draggable, false);
     }
     results.push({ theme, zoom, cards: checks.length, checks });
     await page.screenshot({ path: resolve(output, `${theme}-${zoom}.png`), fullPage: true });
