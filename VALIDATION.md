@@ -1,5 +1,32 @@
 # MarginLink 验证记录
 
+## 0.2.27 连线路径美观 · 2026-11-17
+
+基线main/5482c0c、0.2.26实际bundle aecd1881…c98583。只读复制当前UE6笔记及23个目标，在隔离test-vault/profile、Windows Obsidian1.15.1/Chromium138验证。新旧使用同一源文SHA12ba3973…699c、UI布局SHA204c3fff…b4dcba、字体、偏好和视口；1614/1100两宽度×读写×三线型共12组比较，11卡原生屏幕坐标最大变化0px。效果见[优化前](artifacts/route-aesthetics-before.png)、[优化后](artifacts/route-aesthetics-after.png)。
+
+旧评分按曲线端点弦长并奖励Cubic、先接受大handle首个安全形状，导致大拱与长斜段占优。现在加入行间正交候选，以弧长、包络外逸、斜直段及端点曲率统一排名；开放空白仍保留舒展Cubic。评分下界先剪枝，走廊请求优先评相应路线，90°等腿Q用闭式弧长。候选评分的8点采样不参与安全判断；完整文字/卡片/描边、曲线保守细分及bounds保持原规则，batch/overlay/缓存和持久化结构未改。
+
+| 原生SVG实测 | 0.2.26 → 0.2.27 |
+| --- | --- |
+| UEFN实际上拱，阅读/编辑 | 36.60/67.68 → 2.75/2.75px |
+| incremental最长斜直段 | 475.24 → 0px |
+| MCP阅读路径长度 | 479.86 → 378.57px |
+| manual阅读路径长度 | 313.02 → 215.03px |
+
+不能概括每条路线均缩短：Cook仍须绕过正文行，manual编辑原本已有合理路线。6项新增回归也检查左右镜像、封住下出口、紧邻卡片栈与开放空间舒展性。最终`npm test`为51文件499项，`npm run lint`和`npm run package`通过。
+
+v3候选已改善外观，但真实滚动静默共享搜索出现62.3/51.7/53.6ms失败，raw完整保留，没有重跑抽绿。按实际profile，crosses占paint自耗时约38–46%。v4增加精确的线段同外半平面快拒绝、同轴distance绝对值快路，其余slab数学和曲线安全细分不变；一次额外比对44,683个相交判定、192组三线型完整Connector，与v3全部相同。
+
+最终同一个d1b827dd…a5c59包26项桌面全部通过、errors0：14几何（12标准+2粗线）、8实际拖动/取消/drop重载、4真实滚轮。标准每场11条完整；5.5px粗线阅读9完整+2配对编号、编辑8完整+3配对编号，全部端点可见且安全。UEFN48步拖动paint p95/max阅读3.6/7.6ms、编辑3.0/5.6ms；ship为3.4/9.1、3.0/7.8ms。四轨迹LongTasks0、pointermove保存0、取消恢复及可见邻卡原位。
+
+滚动标准render p95/max为阅读8.1/48ms、编辑5.5/18.2ms；双次深回入为5.3/10、3.1/18.5ms，均通过p95≤16.7、max<50、post-frame相对偏移≤1px及保存0门槛。实际post-frame偏移0、LongTasks0，回入复用已验证。阅读quiet paint仍47.2ms；每组各有一个浏览器帧间隔>50ms，source early-rAF中途246.6875px保留，不能把插件计时说成整机FPS或所有合成帧保证。
+
+独立CPU基准双方各用全新Node24.16.0进程，三线型×7场景×24计时/独立计数/独立几何帧；全部6/6连通和有向SVG接缝安全。curve冷求路p95 7.07→5.66ms、共享冷18.13→8.52、单卡拖动1.39→1.19；滚动/精确平移/离屏回入全0次新求路。原混合进程曾有明显执行环境偏移，未删除，也未据此断言某个具体GC/JIT原因。完整21组对照、两条`--only=baseline/current --shared`复做命令在[CPU摘要](artifacts/route-aesthetics-cpu-0.2.27.json)。
+
+桌面复做须先准备同一笔记副本与UI快照（原文及完整配置不随Git发布），安装包到隔离Vault并冷启9227。`desktop-route-aesthetics.mjs --phase=final-v4 --data=<快照>`，加`--narrow`、`--width=5.5 --allow-continuation --only=curve`覆盖其余几何；`desktop-curve-drag.mjs --ue6 --only=curve/UEFN`及原`--only=curve/ship`；`desktop-scroll-performance.mjs --phase=route-aesthetics-final-v4 --only=curve/hover/false --cold --verify`，深回入加`--deep-returns`并另选phase。新几何探针默认仅读隔离Vault的data.json。基线首份runtime版本曾遗留热manifest27，实际旧bundle/旧几何与后续runtime26一致；最终冷实例已核对manifest/runtime27及磁盘SHA，未以热metadata冒充包身份。
+
+根main.js、dist和ZIP五文件逐字节一致；ZIP SHA8b4bf5a5…a2693ab。24夹具逐个校验归档、6配置按SHA还原，隔离39024原生退出，普通3336保留；正式源SHA不变。正式目前安装0.2.26，本轮未自动升级，替换五发布文件时保留data.json。[桌面摘要](artifacts/route-aesthetics-0.2.27.json)、[发布收据](artifacts/release-0.2.27.json)。候选仍是有限启发式，非全局最短/零交叉证明；其他系统、最低宿主、第三方主题/DOM及大型库长时运行未覆盖。
+
 ## 0.2.26 指定HTML图标 · 2026-11-17
 
 按用户追加顺序，先完成并推送0.2.25滚动修复（22d9db9），再实施图标替换。`D:/04_EdgeDownload/Edge图标.png`与`src/assets/edge.png`字节相同，SHA256为`939eda2c…daa50448`，512×512 RGBA/90449bytes，保留原始透明度和颜色。移除原仿制SVG，改用内嵌data URL图片；无需运行时访问D盘。按后续要求删除图标下方HTML字样和相应CSS，只显示图案；HTML/HTM及大小写匹配、按钮无障碍名称、文件类型提示和非原生图片拖拽语义保留。三种卡片实际图片尺寸为24/26/18px。

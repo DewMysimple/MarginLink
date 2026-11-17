@@ -41,6 +41,11 @@ function padded(box: Box, amount: number): Box {
 // Clip against the open interior: a path can run exactly along its clearance
 // boundary. This operates on whole segments, including diagonal straight lines.
 function crosses(a: Point, b: Point, box: Box): boolean {
+  // A segment lies in the convex hull of its endpoints. If both are in the
+  // same exterior half-space, it cannot reach the box's open interior. Keep
+  // the full slab test below for every potentially intersecting segment.
+  if (a.x <= box.left && b.x <= box.left || a.x >= box.right && b.x >= box.right ||
+      a.y <= box.top && b.y <= box.top || a.y >= box.bottom && b.y >= box.bottom) return false;
   let enter = 0, leave = 1;
   for (const [from, delta, low, high] of [
     [a.x, b.x - a.x, box.left, box.right], [a.y, b.y - a.y, box.top, box.bottom]
@@ -71,7 +76,12 @@ function clearCurve(a: Point, c: Point, b: Point, obstacles: readonly Box[], dep
   return clearCurve(a, ac, middle, nearby, depth + 1) && clearCurve(middle, cb, b, nearby, depth + 1);
 }
 function midpoint(a: Point, b: Point): Point { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
-function distance(a: Point, b: Point): number { return Math.hypot(a.x - b.x, a.y - b.y); }
+function distance(a: Point, b: Point): number {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  // Most route skeletons and rounded-corner legs are axis-aligned. Preserve
+  // hypot's result exactly while avoiding its general normalization work here.
+  return dx === 0 ? Math.abs(dy) : dy === 0 ? Math.abs(dx) : Math.hypot(dx, dy);
+}
 function toward(a: Point, b: Point, amount: number): Point {
   const length = distance(a, b);
   return { x: a.x + (b.x - a.x) * amount / length, y: a.y + (b.y - a.y) * amount / length };
@@ -96,6 +106,57 @@ function clean(points: Point[]): Point[] {
 const BEND_COST = 48;
 function routeScore(points: Point[]): number {
   return points.slice(1).reduce((sum, point, i) => sum + distance(points[i], point), 0) + Math.max(0, points.length - 2) * BEND_COST;
+}
+/** Candidate ranking only; collision checks still use conservative subdivision.
+ * Chord length makes a large cubic arch look artificially shorter than a modest
+ * rounded route. Include its arc and discourage unnecessary excursions beyond
+ * the endpoints, without forbidding a detour around actual obstacles. */
+function curveScore(parts: Segment[], source: Point, target: Point, refined = false): number {
+  let length = 0, diagonal = 0, outside = 0, curvature = 0;
+  const left = Math.min(source.x, target.x), right = Math.max(source.x, target.x);
+  const top = Math.min(source.y, target.y), bottom = Math.max(source.y, target.y);
+  for (const part of parts) {
+    if (!part.control) {
+      const span = distance(part.from, part.to);
+      length += span;
+      if (part.from.x !== part.to.x && part.from.y !== part.to.y) diagonal += span;
+    } else if (!refined) length += distance(part.from, part.to);
+    else {
+      const corner = part.control, before = distance(part.from, corner), after = distance(corner, part.to);
+      const orthogonal = !part.control2 && Math.abs(before - after) < 0.000001 &&
+        (part.from.x === corner.x && part.to.y === corner.y || part.from.y === corner.y && part.to.x === corner.x);
+      // The rounded rectilinear candidates have equal-leg 90-degree quadratic
+      // corners. Their arc length has a closed form; sampling them adds no
+      // ranking information and repeats work for every candidate radius.
+      if (orthogonal) length += (before + after) / 2 * (1 + Math.asinh(1) / Math.SQRT2);
+      let last = part.from;
+      for (let step = 1; !orthogonal && step <= 8; step++) {
+        const t = step / 8, u = 1 - t, c = part.control, d = part.control2;
+        const point = d ? {
+          x: u ** 3 * part.from.x + 3 * u * u * t * c.x + 3 * u * t * t * d.x + t ** 3 * part.to.x,
+          y: u ** 3 * part.from.y + 3 * u * u * t * c.y + 3 * u * t * t * d.y + t ** 3 * part.to.y
+        } : {
+          x: u * u * part.from.x + 2 * u * t * c.x + t * t * part.to.x,
+          y: u * u * part.from.y + 2 * u * t * c.y + t * t * part.to.y
+        };
+        length += distance(last, point); last = point;
+      }
+      if (part.control2) {
+        // Very short cubic handles turn abruptly before an almost straight
+        // diagonal. Prefer a relaxed transition when open whitespace allows it.
+        const a = part.from, c = part.control, d = part.control2, b = part.to;
+        const first = distance(a, c), last = distance(d, b);
+        curvature += 2 / 3 * Math.max(
+          Math.abs((c.x - a.x) * (d.y - c.y) - (c.y - a.y) * (d.x - c.x)) / first ** 3,
+          Math.abs((b.x - d.x) * (d.y - c.y) - (b.y - d.y) * (d.x - c.x)) / last ** 3
+        );
+      }
+    }
+    const a = part.from, b = part.to, c = part.control ?? a, d = part.control2 ?? b;
+    outside = Math.max(outside, left - Math.min(a.x, b.x, c.x, d.x), Math.max(a.x, b.x, c.x, d.x) - right,
+      top - Math.min(a.y, b.y, c.y, d.y), Math.max(a.y, b.y, c.y, d.y) - bottom);
+  }
+  return length + diagonal * 0.18 + outside * 1.5 + parts.length * 0.2 + curvature * 200;
 }
 function segments(points: Point[], radius: number, minimumLead = 0): Segment[] | undefined {
   const result: Segment[] = [];
@@ -222,42 +283,47 @@ function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'w
       const escape = { x: a.x, y: a.y + a.ny * (lead + extra) };
       for (const b of targets) for (const approachLength of style === 'curve' ? [Math.max(36, tail * 2), tail, lead] : [tail, lead]) {
         const approach = { x: b.x + b.nx * approachLength, y: b.y + b.ny * approachLength };
-        const candidates = [
-          [a, escape, approach, b],
-          [a, escape, { x: corridor, y: escape.y }, { x: corridor, y: approach.y }, approach, b]
-        ];
+        const direct = [a, escape, approach, b];
+        const horizontal = [a, escape, { x: approach.x, y: escape.y }, approach, b];
+        const corridorRoute = [a, escape, { x: corridor, y: escape.y }, { x: corridor, y: approach.y }, approach, b];
+        const local = style === 'elbow' ? [horizontal] : style === 'curve'
+          ? [direct, horizontal, [a, escape, { x: escape.x, y: approach.y }, approach, b]] : [direct];
+        const candidates = options.preferCorridor ? [corridorRoute, ...local] : [...local, corridorRoute];
         // Elbows keep every leg orthogonal. Other styles may use the short
         // direct span when it has verified whitespace all the way to the card.
-        if (style === 'elbow') candidates[0] = [a, escape, { x: approach.x, y: escape.y }, approach, b];
         for (const candidate of candidates) {
           const points = clean(candidate);
+          let adjustment = 0;
+          // This is a normal-entry policy on the cleaned route skeleton, not a
+          // requirement for a straight 12px SVG primitive after corner rounding.
+          const lastLength = points.length > 2 ? distance(points[points.length - 2], points[points.length - 1]) : Infinity;
+          if (lastLength < tail - 0.001) adjustment += 100000;
+          if (options.preferCorridor && points.some((p, i) => i > 0 && p.x === corridor && points[i - 1].x === corridor && Math.abs(p.y - points[i - 1].y) >= 24)) adjustment -= 10000;
+          if (previous?.fragment === fragment && previous.source === a.edge && previous.target === b.edge) adjustment -= 4;
+          // Every drawn route is at least the endpoint distance. In a requested
+          // shared corridor, this also prunes unrelated local candidates before
+          // allocating their rounded shapes once a valid corridor is found.
+          if (distance(a, b) + adjustment >= bestScore) continue;
           const shapes = style === 'curve'
             ? [
-              ...(candidate === candidates[0] && points.length > 2 ? [0.35, 0.18, 0.08].map(scale => cubicTransition(a, escape, approach, b, scale)) : []),
+              ...(candidate === direct && points.length > 2 ? [0.35, 0.18, 0.08].map(scale => cubicTransition(a, escape, approach, b, scale)) : []),
               ...[24, 12, 6, 3, 1, 0.2, 0.05].map(radius => segments(points, radius, padding + 0.1))
             ] : [segments(points, 0)];
           const scored = shapes.flatMap(parts => {
             if (!parts) return [];
-            let score = style === 'curve'
-              ? parts.reduce((sum, s) => sum + distance(s.from, s.to), 0) + parts.length * 0.2
-              : routeScore(points);
-            if (parts.some(part => part.control2)) score -= 24;
-            // The complete route may be long while its final decorative fold is
-            // only a few pixels. Prefer a clean normal entry, not a longer detour.
-            const lastLength = points.length > 2 ? distance(points[points.length - 2], points[points.length - 1]) : Infinity;
-            if (lastLength < tail - 0.001) score += 100000;
-            if (options.preferCorridor && points.some((p, i) => i > 0 && p.x === corridor && points[i - 1].x === corridor && Math.abs(p.y - points[i - 1].y) >= 24)) score -= 10000;
-            if (previous?.fragment === fragment && previous.source === a.edge && previous.target === b.edge) score -= 4;
-            return [{ parts, score }];
+            const lowerBound = (style === 'curve' ? curveScore(parts, a, b) : routeScore(points)) + adjustment;
+            if (lowerBound >= bestScore) return [];
+            return [{ parts, lowerBound, adjustment }];
           });
-          // Keep the original first-safe-shape rule. Skip an entire candidate
-          // only when none of its shapes can improve the chosen route; skipping
-          // individual shapes could incorrectly select a later small radius.
-          if (scored.every(shape => shape.score >= bestScore)) continue;
-          for (const { parts, score } of scored) {
+          // Try the best geometry first, rather than accepting the first large
+          // cubic handle merely because it clears the text. Ranking precedes
+          // safety, so inferior shapes need no additional subdivision work.
+          for (const { parts, lowerBound, adjustment } of scored.sort((a, b) => a.lowerBound - b.lowerBound)) {
+            if (lowerBound >= bestScore) break;
+            const score = style === 'curve' ? curveScore(parts, a, b, true) + adjustment : lowerBound;
+            if (score >= bestScore) continue;
             if (!safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
             if (score < bestScore) { bestScore = score; best = { path: connectorPath(parts), choice: { fragment, source: a.edge, target: b.edge }, segments: parts, points }; }
-            break;
           }
         }
       }

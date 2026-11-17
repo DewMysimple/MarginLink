@@ -1,0 +1,427 @@
+{
+  "version": "0.2.27",
+  "baselineRevision": "5482c0cc324c81f415ab081385aa5d5dce32eb02",
+  "currentSourceSHA256": {
+    "src/view/connector-renderer.ts": "a0d4c2d755c0e27b46673e698cd12fde932ae73b3160392b09fa6b8f493e1694",
+    "src/view/connector-batch.ts": "5e99656266b62fd791324efbca92058698e4b70b43d2dddccee1aea5e1c7205a"
+  },
+  "nodeVersion": "v24.16.0",
+  "measuredAt": {
+    "baseline": "2026-11-17T10:57:08.645Z",
+    "current": "2026-11-17T10:57:12.953Z"
+  },
+  "strategy": "Each implementation measured in its own fresh Node process, baseline then current; no desktop performance probe or root checks ran concurrently. Both use the same shared-search policy per scenario.",
+  "fixture": "Synthetic six-relation geometry from tests/six-connectors.test.ts; no note text or saved user positions.",
+  "scope": "Node routing CPU only; both versions use the same optimizeShared policy per scenario. Gesture scenarios defer shared exploration. Optional shared scenarios measure cold true-policy batches and release work after an untimed moved-card preparation. Cold batch includes all six routes. Empty-and-return includes one empty batch and its six-route return; it uses each version's own bounded cache. Geometry validation and instrumentation are separate from the timing pass. Desktop renderer/compositor behavior requires actual Obsidian acceptance.",
+  "warmupFramesPerScenario": 3,
+  "timedFramesPerScenario": 24,
+  "separateInstrumentedFramesPerScenario": 24,
+  "separateGeometryFramesPerScenario": 24,
+  "sourceReports": [
+    "artifacts/route-aesthetics-cpu-v4-baseline-isolated.json",
+    "artifacts/route-aesthetics-cpu-v4-current-isolated.json"
+  ],
+  "commands": [
+    "node scripts/benchmark-route-aesthetics.mjs --baseline=5482c0c --only=baseline --frames=24 --shared --output=artifacts/route-aesthetics-cpu-v4-baseline-isolated.json",
+    "node scripts/benchmark-route-aesthetics.mjs --baseline=5482c0c --only=current --frames=24 --shared --output=artifacts/route-aesthetics-cpu-v4-current-isolated.json"
+  ],
+  "comparisons": [
+    {
+      "style": "straight",
+      "scenario": "cold-independent-batch",
+      "baseline": {
+        "p50Ms": 0.5948,
+        "p95Ms": 0.974,
+        "maxMs": 1.0354,
+        "routeCalls": 144
+      },
+      "current": {
+        "p50Ms": 0.4639,
+        "p95Ms": 0.7569,
+        "maxMs": 0.874,
+        "routeCalls": 144
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "straight",
+      "scenario": "one-card-drag",
+      "baseline": {
+        "p50Ms": 0.1817,
+        "p95Ms": 0.2975,
+        "maxMs": 0.3452,
+        "routeCalls": 23
+      },
+      "current": {
+        "p50Ms": 0.1836,
+        "p95Ms": 0.3867,
+        "maxMs": 0.3968,
+        "routeCalls": 23
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "straight",
+      "scenario": "unchanged-scroll",
+      "baseline": {
+        "p50Ms": 0.06,
+        "p95Ms": 0.0845,
+        "maxMs": 0.1166,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0588,
+        "p95Ms": 0.1261,
+        "maxMs": 0.2457,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "straight",
+      "scenario": "virtual-section-translation",
+      "baseline": {
+        "p50Ms": 0.0932,
+        "p95Ms": 0.1309,
+        "maxMs": 0.1358,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0959,
+        "p95Ms": 0.158,
+        "maxMs": 0.2994,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "straight",
+      "scenario": "empty-and-return",
+      "baseline": {
+        "p50Ms": 0.0725,
+        "p95Ms": 0.083,
+        "maxMs": 0.0884,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0755,
+        "p95Ms": 0.0984,
+        "maxMs": 0.3434,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "straight",
+      "scenario": "cold-shared-batch",
+      "baseline": {
+        "p50Ms": 1.4665,
+        "p95Ms": 1.7252,
+        "maxMs": 1.7698,
+        "routeCalls": 432
+      },
+      "current": {
+        "p50Ms": 0.9712,
+        "p95Ms": 1.1469,
+        "maxMs": 1.3584,
+        "routeCalls": 432
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "straight",
+      "scenario": "settle-shared-after-drag",
+      "baseline": {
+        "p50Ms": 1.259,
+        "p95Ms": 1.9546,
+        "maxMs": 2.1068,
+        "routeCalls": 293
+      },
+      "current": {
+        "p50Ms": 0.8255,
+        "p95Ms": 1.4488,
+        "maxMs": 2.1168,
+        "routeCalls": 293
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "cold-independent-batch",
+      "baseline": {
+        "p50Ms": 0.4862,
+        "p95Ms": 0.8352,
+        "maxMs": 1.0997,
+        "routeCalls": 144
+      },
+      "current": {
+        "p50Ms": 0.4008,
+        "p95Ms": 0.4763,
+        "maxMs": 0.6789,
+        "routeCalls": 144
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "one-card-drag",
+      "baseline": {
+        "p50Ms": 0.1279,
+        "p95Ms": 0.2202,
+        "maxMs": 0.2641,
+        "routeCalls": 23
+      },
+      "current": {
+        "p50Ms": 0.0953,
+        "p95Ms": 0.1518,
+        "maxMs": 0.1617,
+        "routeCalls": 23
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "unchanged-scroll",
+      "baseline": {
+        "p50Ms": 0.0563,
+        "p95Ms": 0.1082,
+        "maxMs": 0.1247,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0588,
+        "p95Ms": 0.1198,
+        "maxMs": 0.3293,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "virtual-section-translation",
+      "baseline": {
+        "p50Ms": 0.0782,
+        "p95Ms": 0.1115,
+        "maxMs": 0.1151,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0831,
+        "p95Ms": 0.1277,
+        "maxMs": 0.206,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "empty-and-return",
+      "baseline": {
+        "p50Ms": 0.0754,
+        "p95Ms": 0.0881,
+        "maxMs": 0.0931,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.096,
+        "p95Ms": 0.2028,
+        "maxMs": 1.7376,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "cold-shared-batch",
+      "baseline": {
+        "p50Ms": 1.5473,
+        "p95Ms": 1.9819,
+        "maxMs": 2.5268,
+        "routeCalls": 432
+      },
+      "current": {
+        "p50Ms": 0.9654,
+        "p95Ms": 1.1748,
+        "maxMs": 1.2501,
+        "routeCalls": 432
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "elbow",
+      "scenario": "settle-shared-after-drag",
+      "baseline": {
+        "p50Ms": 1.094,
+        "p95Ms": 1.3569,
+        "maxMs": 1.3935,
+        "routeCalls": 288
+      },
+      "current": {
+        "p50Ms": 0.5953,
+        "p95Ms": 0.8213,
+        "maxMs": 0.9485,
+        "routeCalls": 288
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "cold-independent-batch",
+      "baseline": {
+        "p50Ms": 6.6691,
+        "p95Ms": 7.0724,
+        "maxMs": 7.9287,
+        "routeCalls": 144
+      },
+      "current": {
+        "p50Ms": 5.1001,
+        "p95Ms": 5.6619,
+        "maxMs": 6.192,
+        "routeCalls": 144
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "one-card-drag",
+      "baseline": {
+        "p50Ms": 1.2729,
+        "p95Ms": 1.3894,
+        "maxMs": 1.6688,
+        "routeCalls": 23
+      },
+      "current": {
+        "p50Ms": 0.9317,
+        "p95Ms": 1.1847,
+        "maxMs": 1.3022,
+        "routeCalls": 23
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "unchanged-scroll",
+      "baseline": {
+        "p50Ms": 0.0915,
+        "p95Ms": 0.1064,
+        "maxMs": 0.2621,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0942,
+        "p95Ms": 0.1187,
+        "maxMs": 0.1398,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "virtual-section-translation",
+      "baseline": {
+        "p50Ms": 0.121,
+        "p95Ms": 0.3237,
+        "maxMs": 0.9912,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.1263,
+        "p95Ms": 0.1918,
+        "maxMs": 0.3919,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "empty-and-return",
+      "baseline": {
+        "p50Ms": 0.0906,
+        "p95Ms": 0.1378,
+        "maxMs": 0.2702,
+        "routeCalls": 0
+      },
+      "current": {
+        "p50Ms": 0.0989,
+        "p95Ms": 0.1037,
+        "maxMs": 0.1198,
+        "routeCalls": 0
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "cold-shared-batch",
+      "baseline": {
+        "p50Ms": 16.8352,
+        "p95Ms": 18.1246,
+        "maxMs": 18.3496,
+        "routeCalls": 432
+      },
+      "current": {
+        "p50Ms": 8.0104,
+        "p95Ms": 8.5193,
+        "maxMs": 8.6355,
+        "routeCalls": 432
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "style": "curve",
+      "scenario": "settle-shared-after-drag",
+      "baseline": {
+        "p50Ms": 10.4756,
+        "p95Ms": 10.7505,
+        "maxMs": 10.7911,
+        "routeCalls": 288
+      },
+      "current": {
+        "p50Ms": 3.7731,
+        "p95Ms": 3.8801,
+        "maxMs": 4.0868,
+        "routeCalls": 287
+      },
+      "geometryFramesCheckedPerVersion": 24,
+      "connectedRelationsPerFrame": 6
+    }
+  ],
+  "diagnosticsRetained": [
+    {
+      "path": "artifacts/route-aesthetics-cpu-final.json",
+      "scope": "Earlier third-version source84b41cc, baseline and current in the same Node process. Current unchanged-style times also shifted substantially; all original numbers are retained. Separate-process results reduce mixed-run exposure but do not establish a unique GC/JIT or operating-system cause."
+    },
+    {
+      "path": "artifacts/route-aesthetics-cpu-diagnostic-1.json",
+      "scope": "First scoring candidate, 15 current scenarios; curve independent cold p95 21.4538ms and moved-card p95 3.6206ms. This was diagnosed and optimized, not presented as final."
+    },
+    {
+      "path": "artifacts/route-aesthetics-cpu-diagnostic-2.json",
+      "scope": "Second scoring candidate, 42 mixed-process scenarios; curve current shared cold p95 40.9533ms. This was diagnosed and optimized, not presented as final."
+    },
+    {
+      "path": "artifacts/route-aesthetics-cpu-current-isolated.json",
+      "scope": "Third-version source84b41cc separate-process report, retained before v4 mathematical distance and broad-phase optimizations."
+    }
+  ],
+  "limitations": "These synthetic timings are not actual note frame rates, cold Obsidian startup times, compositor smoothness or universal speedup claims. Some unchanged-style/cache timings are slightly slower and all maxima are retained. All returned six-relation paths and ordered shared SVG seams passed independent sampling and current full stroke validation."
+}

@@ -11,10 +11,11 @@ const phase = process.argv.includes('baseline') ? 'baseline' : 'final';
 const output = process.argv.find(value => value.startsWith('--output='))?.slice(9) ?? `artifacts/curve-drag/${phase}`;
 const only = process.argv.find(value => value.startsWith('--only='))?.slice(7);
 const fixture = '详细分析/The road to Unreal Engine 6. Read about our plans and timeline.md';
-const labels = ['Early Access', 'dives', 'Verse', 'Scene Graph', 'model-assisted', 'ship'];
+const ue6 = process.argv.includes('--ue6');
+const labels = ue6 ? ['UEFN', 'unified', 'Cook', 'incremental', 'programming model', 'transactionalizes', 'live experiences', 'pipeline', 'MCP', 'multipliers', 'manual'] : ['Early Access', 'dives', 'Verse', 'Scene Graph', 'model-assisted', 'ship'];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const original = hash(await readFile(path.join('E:/Obsidian仓库/AnyTime', fixture)));
-const report = { phase, status: 'running', fixtureSHA256: original, scenarios: [], errors: [] };
+const report = { phase, status: 'running', fixtureSHA256: original, section: ue6 ? 'ue6' : 'closing', scenarios: [], errors: [] };
 let browser, page, preferences, layouts;
 const save = () => writeFile(`${output}/results.json`, JSON.stringify(report, null, 2));
 const frames = (count = 6) => page.evaluate(count => new Promise(resolve => {
@@ -29,7 +30,7 @@ const check = async (name, run) => {
 const probe = id => page.evaluate(id => window.marginConnectorProbe(id), id);
 const assertGeometry = snapshot => {
   const selected = snapshot.cards.filter(card => labels.includes(card.label));
-  assert.equal(selected.length, 6);
+  assert.equal(selected.length, labels.length);
   for (const card of selected) {
     assert(card.sourceVisible && card.fullyVisible, `${card.label}: endpoint clipped`);
     if (card.routeState === 'continuation') {
@@ -82,27 +83,46 @@ try {
       await leaf.setViewState({ type: 'markdown', state: { file: fixture, mode, source: false } });
       app.workspace.setActiveLeaf(leaf, { focus: true }); return leaf.id;
     }, { fixture, mode, style, layouts, resetLayouts }); await frames(12);
-    await page.evaluate(async id => {
-      const [view] = [...app.plugins.plugins['margin-link'].overlays].find(([view]) => view.leaf.id === id);
+    await page.evaluate(async ({ id, ue6, labels }) => {
+      const [view, overlay] = [...app.plugins.plugins['margin-link'].overlays].find(([view]) => view.leaf.id === id);
       if (view.getMode() === 'source') {
-        const at = view.editor.getValue().lastIndexOf('Early Access'), pos = view.editor.offsetToPos(at);
+        const at = ue6 ? view.editor.getValue().indexOf('### What is UE6?') : view.editor.getValue().lastIndexOf('Early Access'), pos = view.editor.offsetToPos(at);
         view.editor.scrollIntoView({ from: pos, to: pos }, true);
+        if (ue6) {
+          for (let i = 0; i < 6; i++) await new Promise(resolve => requestAnimationFrame(resolve));
+          const cm = overlay.bridge().cm, coords = cm.coordsAtPos(at);
+          if (coords) cm.scrollDOM.scrollTop += coords.top - cm.scrollDOM.getBoundingClientRect().top - 80;
+        }
       } else {
-        const scroll = view.previewMode.containerEl.querySelector('.markdown-preview-view'); scroll.scrollTop = scroll.scrollHeight;
+        const scroll = view.previewMode.containerEl.querySelector('.markdown-preview-view'); scroll.scrollTop = ue6 ? 0 : scroll.scrollHeight;
         let link;
         for (let i = 0; i < 30; i++) {
-          link = [...view.contentEl.querySelectorAll('a.internal-link')].find(el => el.textContent === 'Early Access');
+          link = [...view.contentEl.querySelectorAll(ue6 ? 'h3' : 'a.internal-link')].find(el => el.textContent === (ue6 ? 'What is UE6?' : 'Early Access'));
+          if (!link && ue6) scroll.scrollTop += 200;
           if (link) break; await new Promise(resolve => requestAnimationFrame(resolve));
         }
         if (!link) throw Error('Fixture link not rendered');
-        scroll.scrollTop += link.getBoundingClientRect().top - scroll.getBoundingClientRect().top - scroll.clientHeight * .56;
+        scroll.scrollTop += link.getBoundingClientRect().top - scroll.getBoundingClientRect().top - (ue6 ? 80 : scroll.clientHeight * .56);
       }
-    }, id); await frames(15); return id;
+      await document.fonts.ready;
+      let previous = '', since = performance.now(); const started = since;
+      await new Promise((resolve, reject) => {
+        const sample = () => {
+          const cards = [...overlay.cards.values()].filter(card => labels.includes(card.anchor.occurrence.label));
+          const signature = cards.length === labels.length ? JSON.stringify(cards.map(card => card.shell.getBoundingClientRect().toJSON())) : '';
+          const now = performance.now();
+          if (signature !== previous) { previous = signature; since = now; }
+          if (signature && now - since >= 200) resolve();
+          else if (now - started > 5000) reject(Error('Native card positions did not settle'));
+          else requestAnimationFrame(sample);
+        }; requestAnimationFrame(sample);
+      });
+    }, { id, ue6, labels }); await frames(3); return id;
   };
-  const cases = ['preview', 'source'].flatMap(mode => ['straight', 'elbow', 'curve'].flatMap(style => ['ship', 'dives'].map(draggedLabel => ({ mode, style, draggedLabel }))));
+  const cases = ['preview', 'source'].flatMap(mode => ['straight', 'elbow', 'curve'].flatMap(style => (ue6 ? ['UEFN', 'incremental'] : ['ship', 'dives']).map(draggedLabel => ({ mode, style, draggedLabel }))));
   // Saved positions are user-controlled: inspect actual placement rather than
   // assuming a label is still on the same side as a historical screenshot.
-  if (phase === 'final') for (const mode of ['preview', 'source']) cases.push({ mode, style: 'curve', draggedLabel: 'Scene Graph' });
+  if (phase === 'final' && !ue6) for (const mode of ['preview', 'source']) cases.push({ mode, style: 'curve', draggedLabel: 'Scene Graph' });
   for (const { mode, style, draggedLabel } of cases.filter(c => !only || `${c.style}/${c.draggedLabel}`.includes(only))) {
     const id = await open(mode, style);
     await check(`${mode}/${style}/${draggedLabel}: same 48-step pointer drag, cancel, independently sampled SVG`, async () => {
@@ -180,23 +200,29 @@ try {
     });
   }
   if (phase === 'final') for (const mode of ['preview', 'source']) await check(`${mode}/curve: immediate pointerup uses release coordinates and placement survives plugin reload`, async () => {
-    const id = await open(mode, 'curve'), before = await probe(id), start = before.cards.find(card => card.label === 'ship'); assert(start);
+    const id = await open(mode, 'curve'), before = await probe(id), start = before.cards.find(card => card.label === (ue6 ? 'UEFN' : 'ship')); assert(start);
     const x = start.rect.x + start.rect.width / 2, y = start.rect.y + start.rect.height / 2;
     await page.mouse.move(x, y); await page.mouse.down();
-    await page.mouse.move(x + 16, y - 24);
-    await page.mouse.move(x + 27, y - 47);
+    const dx = ue6 ? -60 : 27, dy = ue6 ? 24 : -47;
+    await page.mouse.move(x + dx / 2, y + dy / 2);
+    await page.mouse.move(x + dx, y + dy);
     // No frame wait between the last pointer event and release. The committed
     // position must use the latest actual input even when a preview is queued.
     await page.mouse.up(); await frames(10);
     const dropped = await probe(id), moved = dropped.cards.find(card => card.key === start.key);
-    assert(Math.abs(moved.rect.x - start.rect.x - 27) <= 1 && Math.abs(moved.rect.y - start.rect.y + 47) <= 1, 'Immediate release must commit the last pointer position');
+    assert(Math.abs(moved.rect.x - start.rect.x - dx) <= 1 && Math.abs(moved.rect.y - start.rect.y - dy) <= 1, 'Immediate release must commit the last pointer position');
+    for (const card of before.cards.filter(card => card.key !== start.key)) {
+      const other = dropped.cards.find(candidate => candidate.key === card.key); assert(other);
+      assert(Math.abs(other.rect.x - card.rect.x) <= 1 && Math.abs(other.rect.y - card.rect.y) <= 1, `${card.label}: neighboring placement changed on drop`);
+    }
     const droppedGeometry = assertGeometry(dropped);
     const saved = await page.evaluate(async () => { const plugin = app.plugins.plugins['margin-link']; await plugin.flush(); return plugin.layouts.snapshot(); });
     assert.notDeepEqual(saved, layouts, 'Legal drop saves a UI placement');
+    assert.equal(saved.filter(record => JSON.stringify(layouts.find(old => old.source === record.source && old.key === record.key)) !== JSON.stringify(record)).length, 1, 'Drop changed more than the dragged placement');
     const disk = JSON.parse(await readFile('test-vault/.obsidian/plugins/margin-link/data.json', 'utf8'));
     assert.deepEqual(disk.layouts, saved, 'Committed placement must reach the isolated data.json');
     await page.evaluate(async () => { await app.plugins.disablePlugin('margin-link'); await app.plugins.enablePlugin('margin-link'); }); await frames(12);
-    const reopenedID = await open(mode, 'curve', false), reopened = await probe(reopenedID), restored = reopened.cards.find(card => card.label === 'ship');
+    const reopenedID = await open(mode, 'curve', false), reopened = await probe(reopenedID), restored = reopened.cards.find(card => card.label === (ue6 ? 'UEFN' : 'ship'));
     assert(Math.abs(restored.rect.x - moved.rect.x) <= 1 && Math.abs(restored.rect.y - moved.rect.y) <= 1, 'Plugin reload must restore saved placement without a jump');
     assert.deepEqual(await page.evaluate(() => app.plugins.plugins['margin-link'].layouts.snapshot()), saved);
     const reopenedGeometry = assertGeometry(reopened);

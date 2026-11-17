@@ -1,0 +1,14 @@
+{
+  "version": "0.2.27",
+  "baseline": "5482c0cc324c81f415ab081385aa5d5dce32eb02",
+  "bundleSHA256": "d1b827ddec2a66b3d434241593627729017a91822b7f7ac2bba43dba249a5c59",
+  "zipSHA256": "8b4bf5a5df2bebae61277c638085ac5f759d17967351ea9028c143319a2693ab",
+  "files": {
+    "main.js": "d1b827ddec2a66b3d434241593627729017a91822b7f7ac2bba43dba249a5c59",
+    "manifest.json": "801d0eca3a81560f3ce6148d1cf74516c4d4b1b305a38359ac530e6fac8b1c20",
+    "styles.css": "862bd2eee0e8adb2d07c7e60c97a85f5f09f1ced17771723d3a24354f6614d1b",
+    "LICENSE": "c04f3b6c09867817b9c83081471afa583243c80a57a616b99a62521e77a4be52",
+    "THIRD_PARTY_NOTICES.txt": "5c72b7f193aa2912b2153ccec996c29e8e84881365f3618e90f0bc814de029a2"
+  },
+  "zipVerified": true
+}

@@ -76,6 +76,11 @@ artifacts/*
 !artifacts/release-0.2.25.json
 !artifacts/html-icon-0.2.26.json
 !artifacts/release-0.2.26.json
+!artifacts/route-aesthetics-0.2.27.json
+!artifacts/route-aesthetics-cpu-0.2.27.json
+!artifacts/route-aesthetics-before.png
+!artifacts/route-aesthetics-after.png
+!artifacts/release-0.2.27.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

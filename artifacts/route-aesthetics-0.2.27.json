@@ -1,0 +1,904 @@
+{
+  "version": "0.2.27",
+  "baselineRevision": "5482c0cc324c81f415ab081385aa5d5dce32eb02",
+  "bundleSHA256": "d1b827ddec2a66b3d434241593627729017a91822b7f7ac2bba43dba249a5c59",
+  "status": "passed",
+  "unitTests": {
+    "files": 51,
+    "tests": 499
+  },
+  "checks": [
+    "npm test",
+    "npm run lint",
+    "npm run package",
+    "ZIP exactly five files, byte-equal to install folder"
+  ],
+  "desktopCaseCount": 26,
+  "host": {
+    "platform": "Windows",
+    "obsidian": "1.15.1",
+    "electron": "37.10.2",
+    "chromium": "138.0.7204.251",
+    "node": "v24.16.0"
+  },
+  "sourceSHA256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+  "layoutSHA256": "204c3fff928f9018388b9de35b1f855e9ef7638214ea3e9e5466339ca9b4dcba",
+  "sameSourcePreferencesAndAllRelativeCardPositions": true,
+  "aestheticComparisons": [
+    {
+      "mode": "preview",
+      "label": "UEFN",
+      "before": {
+        "lengthPx": 303.1081237792969,
+        "abovePx": 36.6046142578125,
+        "longDiagonalPx": 0,
+        "target": "top"
+      },
+      "after": {
+        "lengthPx": 244.70570373535156,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "right"
+      }
+    },
+    {
+      "mode": "preview",
+      "label": "incremental",
+      "before": {
+        "lengthPx": 492.4725036621094,
+        "abovePx": 11.7620849609375,
+        "longDiagonalPx": 475.2428492439681,
+        "target": "top"
+      },
+      "after": {
+        "lengthPx": 458.3915100097656,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "left"
+      }
+    },
+    {
+      "mode": "preview",
+      "label": "MCP",
+      "before": {
+        "lengthPx": 479.85504364967346,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "bottom"
+      },
+      "after": {
+        "lengthPx": 378.57396149635315,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "left"
+      }
+    },
+    {
+      "mode": "preview",
+      "label": "manual",
+      "before": {
+        "lengthPx": 313.01806640625,
+        "abovePx": 0,
+        "longDiagonalPx": 0,
+        "target": "bottom"
+      },
+      "after": {
+        "lengthPx": 215.0337677001953,
+        "abovePx": 0,
+        "longDiagonalPx": 0,
+        "target": "right"
+      }
+    },
+    {
+      "mode": "source",
+      "label": "UEFN",
+      "before": {
+        "lengthPx": 339.72296142578125,
+        "abovePx": 67.682373046875,
+        "longDiagonalPx": 0,
+        "target": "top"
+      },
+      "after": {
+        "lengthPx": 244.7057342529297,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "right"
+      }
+    },
+    {
+      "mode": "source",
+      "label": "incremental",
+      "before": {
+        "lengthPx": 492.4725036621094,
+        "abovePx": 11.7620849609375,
+        "longDiagonalPx": 475.2428492439681,
+        "target": "top"
+      },
+      "after": {
+        "lengthPx": 458.3915100097656,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "left"
+      }
+    },
+    {
+      "mode": "source",
+      "label": "MCP",
+      "before": {
+        "lengthPx": 485.5446512699127,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "bottom"
+      },
+      "after": {
+        "lengthPx": 383.8239634037018,
+        "abovePx": 2.75,
+        "longDiagonalPx": 0,
+        "target": "left"
+      }
+    },
+    {
+      "mode": "source",
+      "label": "manual",
+      "before": {
+        "lengthPx": 179.95899963378906,
+        "abovePx": 0,
+        "longDiagonalPx": 0,
+        "target": "right"
+      },
+      "after": {
+        "lengthPx": 179.95899963378906,
+        "abovePx": 0,
+        "longDiagonalPx": 0,
+        "target": "right"
+      }
+    }
+  ],
+  "geometry": [
+    {
+      "file": "artifacts/route-aesthetics/final-v4/results.json",
+      "mode": "preview",
+      "style": "curve",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4/results.json",
+      "mode": "preview",
+      "style": "straight",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4/results.json",
+      "mode": "preview",
+      "style": "elbow",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4/results.json",
+      "mode": "source",
+      "style": "curve",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4/results.json",
+      "mode": "source",
+      "style": "straight",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4/results.json",
+      "mode": "source",
+      "style": "elbow",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-narrow/results.json",
+      "mode": "preview",
+      "style": "curve",
+      "size": [
+        1100,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-narrow/results.json",
+      "mode": "preview",
+      "style": "straight",
+      "size": [
+        1100,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-narrow/results.json",
+      "mode": "preview",
+      "style": "elbow",
+      "size": [
+        1100,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-narrow/results.json",
+      "mode": "source",
+      "style": "curve",
+      "size": [
+        1100,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-narrow/results.json",
+      "mode": "source",
+      "style": "straight",
+      "size": [
+        1100,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-narrow/results.json",
+      "mode": "source",
+      "style": "elbow",
+      "size": [
+        1100,
+        838
+      ],
+      "lineWidth": 1.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 11,
+      "pairedContinuation": 0
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-wide-stroke/results.json",
+      "mode": "preview",
+      "style": "curve",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 5.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 9,
+      "pairedContinuation": 2
+    },
+    {
+      "file": "artifacts/route-aesthetics/final-v4-wide-stroke/results.json",
+      "mode": "source",
+      "style": "curve",
+      "size": [
+        1614,
+        838
+      ],
+      "lineWidth": 5.5,
+      "passed": true,
+      "visible": 11,
+      "complete": 8,
+      "pairedContinuation": 3
+    }
+  ],
+  "drags": [
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-ue6/results.json",
+      "name": "preview/curve/UEFN: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 48,
+        "total": 133.40000000037253,
+        "p50": 3,
+        "p95": 3.6000000005587935,
+        "max": 7.599999999627471,
+        "over16": 0,
+        "over50": 0
+      },
+      "longTasks": [],
+      "savesDuringMove": 0,
+      "moves": 48
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-ue6/results.json",
+      "name": "source/curve/UEFN: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 49,
+        "total": 116.10000000149012,
+        "p50": 2.599999999627471,
+        "p95": 3,
+        "max": 5.6000000005587935,
+        "over16": 0,
+        "over50": 0
+      },
+      "longTasks": [],
+      "savesDuringMove": 0,
+      "moves": 48
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-ue6/results.json",
+      "name": "preview/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true,
+      "savedPlacementCount": 23
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-ue6/results.json",
+      "name": "source/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true,
+      "savedPlacementCount": 23
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-closing/results.json",
+      "name": "preview/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 48,
+        "total": 108.99999999627471,
+        "p50": 3.099999999627471,
+        "p95": 3.3999999994412065,
+        "max": 9.100000000558794,
+        "over16": 0,
+        "over50": 0
+      },
+      "longTasks": [],
+      "savesDuringMove": 0,
+      "moves": 48
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-closing/results.json",
+      "name": "source/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+      "passed": true,
+      "paint": {
+        "count": 49,
+        "total": 99.69999999925494,
+        "p50": 2.599999999627471,
+        "p95": 3,
+        "max": 7.7999999998137355,
+        "over16": 0,
+        "over50": 0
+      },
+      "longTasks": [],
+      "savesDuringMove": 0,
+      "moves": 48
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-closing/results.json",
+      "name": "preview/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true,
+      "savedPlacementCount": 23
+    },
+    {
+      "file": "artifacts/route-aesthetics/drag-final-v4-closing/results.json",
+      "name": "source/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+      "passed": true,
+      "savedPlacementCount": 23
+    }
+  ],
+  "scroll": [
+    {
+      "file": "artifacts/scroll-performance/route-aesthetics-final-v4/results.json",
+      "mode": "preview",
+      "passed": true,
+      "render": {
+        "count": 132,
+        "total": 286.20000000856817,
+        "p50": 0.8999999994412065,
+        "p95": 8.100000000558794,
+        "max": 48,
+        "over20": 1,
+        "over50": 0
+      },
+      "paint": {
+        "count": 132,
+        "total": 65.79999999981374,
+        "p50": 0,
+        "p95": 0.7000000001862645,
+        "max": 47.200000000186265,
+        "over20": 1,
+        "over50": 0
+      },
+      "quiet": {
+        "count": 1,
+        "total": 47.200000000186265,
+        "p50": 47.200000000186265,
+        "p95": 47.200000000186265,
+        "max": 47.200000000186265,
+        "over20": 1,
+        "over50": 0
+      },
+      "postFrameRelativeOffsetPx": 0,
+      "earlyRafRangePx": 0,
+      "saves": 0,
+      "longTasks": [],
+      "offscreenReturns": [
+        {
+          "time": 4643.5999999996275,
+          "duration": 0.6000000005587935,
+          "relations": 6,
+          "routeCacheSize": 23,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        }
+      ],
+      "frameIntervals": {
+        "count": 604,
+        "total": 3766.2,
+        "p50": 5.599999999999909,
+        "p95": 10.599999999999909,
+        "max": 94.5,
+        "over20": 6,
+        "over50": 1
+      }
+    },
+    {
+      "file": "artifacts/scroll-performance/route-aesthetics-final-v4/results.json",
+      "mode": "source",
+      "passed": true,
+      "render": {
+        "count": 125,
+        "total": 175.60000000242144,
+        "p50": 0.6000000005587935,
+        "p95": 5.5,
+        "max": 18.200000000186265,
+        "over20": 0,
+        "over50": 0
+      },
+      "paint": {
+        "count": 125,
+        "total": 44.79999999888241,
+        "p50": 0,
+        "p95": 0.7999999998137355,
+        "max": 17.800000000745058,
+        "over20": 0,
+        "over50": 0
+      },
+      "quiet": {
+        "count": 1,
+        "total": 17.800000000745058,
+        "p50": 17.800000000745058,
+        "p95": 17.800000000745058,
+        "max": 17.800000000745058,
+        "over20": 0,
+        "over50": 0
+      },
+      "postFrameRelativeOffsetPx": 0,
+      "earlyRafRangePx": 246.6875,
+      "saves": 0,
+      "longTasks": [],
+      "offscreenReturns": [
+        {
+          "time": 4975.399999999441,
+          "duration": 5.7999999998137355,
+          "relations": 6,
+          "routeCacheSize": 19,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929"
+          ]
+        }
+      ],
+      "frameIntervals": {
+        "count": 662,
+        "total": 4016.7000000000003,
+        "p50": 5.599999999999909,
+        "p95": 6.200000000000273,
+        "max": 111.09999999999991,
+        "over20": 6,
+        "over50": 1
+      }
+    },
+    {
+      "file": "artifacts/scroll-performance/route-aesthetics-deep-returns-v4/results.json",
+      "mode": "preview",
+      "passed": true,
+      "render": {
+        "count": 106,
+        "total": 158.8999999947846,
+        "p50": 0.599999999627471,
+        "p95": 5.2999999998137355,
+        "max": 10,
+        "over20": 0,
+        "over50": 0
+      },
+      "paint": {
+        "count": 106,
+        "total": 8.19999999832362,
+        "p50": 0,
+        "p95": 0.5,
+        "max": 0.7000000001862645,
+        "over20": 0,
+        "over50": 0
+      },
+      "quiet": {
+        "count": 1,
+        "total": 0.39999999944120646,
+        "p50": 0.39999999944120646,
+        "p95": 0.39999999944120646,
+        "max": 0.39999999944120646,
+        "over20": 0,
+        "over50": 0
+      },
+      "postFrameRelativeOffsetPx": 0,
+      "earlyRafRangePx": 0,
+      "saves": 0,
+      "longTasks": [],
+      "offscreenReturns": [
+        {
+          "time": 1962.9000000003725,
+          "duration": 0.5,
+          "relations": 6,
+          "routeCacheSize": 23,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        },
+        {
+          "time": 3090.7999999998137,
+          "duration": 0.7000000001862645,
+          "relations": 6,
+          "routeCacheSize": 23,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        }
+      ],
+      "frameIntervals": {
+        "count": 472,
+        "total": 2744.4,
+        "p50": 5.599999999999909,
+        "p95": 5.7000000000000455,
+        "max": 83.29999999999995,
+        "over20": 1,
+        "over50": 1
+      }
+    },
+    {
+      "file": "artifacts/scroll-performance/route-aesthetics-deep-returns-v4/results.json",
+      "mode": "source",
+      "passed": true,
+      "render": {
+        "count": 100,
+        "total": 105.89999999292195,
+        "p50": 0.5,
+        "p95": 3.099999999627471,
+        "max": 18.5,
+        "over20": 0,
+        "over50": 0
+      },
+      "paint": {
+        "count": 100,
+        "total": 29.999999999068677,
+        "p50": 0,
+        "p95": 0.40000000037252903,
+        "max": 17.90000000037253,
+        "over20": 0,
+        "over50": 0
+      },
+      "quiet": {
+        "count": 1,
+        "total": 17.90000000037253,
+        "p50": 17.90000000037253,
+        "p95": 17.90000000037253,
+        "max": 17.90000000037253,
+        "over20": 0,
+        "over50": 0
+      },
+      "postFrameRelativeOffsetPx": 0,
+      "earlyRafRangePx": 246.6875,
+      "saves": 0,
+      "longTasks": [],
+      "offscreenReturns": [
+        {
+          "time": 2151.5,
+          "duration": 1.5,
+          "relations": 6,
+          "routeCacheSize": 19,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        },
+        {
+          "time": 3344.9000000003725,
+          "duration": 0.2999999998137355,
+          "relations": 6,
+          "routeCacheSize": 19,
+          "cacheHits": 6,
+          "cacheReused": [
+            "13709",
+            "13770",
+            "13837",
+            "13875",
+            "13929",
+            "14095"
+          ]
+        }
+      ],
+      "frameIntervals": {
+        "count": 482,
+        "total": 2800.1,
+        "p50": 5.599999999999909,
+        "p95": 5.699999999999818,
+        "max": 100,
+        "over20": 1,
+        "over50": 1
+      }
+    }
+  ],
+  "fastPathEquivalence": {
+    "status": "passed",
+    "measuredAt": "2026-11-17T10:56:16.287Z",
+    "nodeVersion": "v24.16.0",
+    "baselineSourceSHA256": "84b41ccbf136943f9665f452ad64b6f7b812389ea64ad48ffdaf1fe87d717e30",
+    "currentSourceSHA256": "a0d4c2d755c0e27b46673e698cd12fde932ae73b3160392b09fa6b8f493e1694",
+    "intersectionCases": 44683,
+    "geometryCases": 192,
+    "comparison": "crosses boolean equality; deep strict equality of full three-style Connector geometry against exact reconstructed v3",
+    "coverage": [
+      "exterior halfspaces",
+      "open boundaries",
+      "zero-length/axis/diagonal segments",
+      "subpixel/narrow boxes",
+      "seeded random finite segments",
+      "left/right",
+      "four target heights",
+      "1.5/5.5px strokes",
+      "single/wrapped anchors",
+      "independent/shared corridor"
+    ],
+    "outputsSHA256": "fec85c00ac3fb99530e512fd91116cd649749b435706415ccb45ea3d88eaeb6c"
+  },
+  "cleanup": {
+    "method": "Native close; individually checked untracked file moves; no recursive delete",
+    "restored": [
+      {
+        "relative": "app.json",
+        "sha256": "b780eeed3af4a2be7faf2e34f9088e220b76df6584f58a814d89438967ad5dab"
+      },
+      {
+        "relative": "appearance.json",
+        "sha256": "30c7dc9ad53d37c57f4e19d9a798cb8a3f418e7200834e06abc80025f6966ae2"
+      },
+      {
+        "relative": "community-plugins.json",
+        "sha256": "30f25e127a53dcfd20d4457f04f020af4a4e438b9a2a3b0adb7c75fa3cc4e104"
+      },
+      {
+        "relative": "core-plugins.json",
+        "sha256": "bc0ce10ea1a941d0d0ba2fba2fdef38e3e66d3739478c9df840679d5ad998ae1"
+      },
+      {
+        "relative": "workspace.json",
+        "sha256": "c943be309605e1fb6c3b9a5c94302509d4a3c32aca1401e000fc27779b8b24d4"
+      },
+      {
+        "relative": "plugins/margin-link/data.json",
+        "sha256": "a6c4e30c3275f6cf77a24abaf1fca44735476e5b630c02e563255f8e5f22af1c"
+      }
+    ],
+    "moved": [
+      {
+        "relative": "详细分析/The road to Unreal Engine 6. Read about our plans and timeline.md",
+        "sha256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c"
+      },
+      {
+        "relative": "详细分析/Vocabulary/glimpse.html",
+        "sha256": "dc62fb7f6126ee0f17185de723b9daa9c685e1fb21b3396926e48182246f11c4"
+      },
+      {
+        "relative": "详细分析/Vocabulary/fellow.html",
+        "sha256": "c1d27060e4f7909342008b559f0a0d06a00e0df5d6cba50eb7cd8f99f7b69b6e"
+      },
+      {
+        "relative": "详细分析/Vocabulary/reinvented.html",
+        "sha256": "d9dbfe24aa4cd9f93689ec38fd1d32398fb9a2d4a37f7a355f599f10b736d6a8"
+      },
+      {
+        "relative": "详细分析/Vocabulary/evolving.html",
+        "sha256": "9be1b7e9ca20f3ec3aa7fc9195f3aac030364df8a710dec1f4788fc439363181"
+      },
+      {
+        "relative": "详细分析/Vocabulary/streams.html",
+        "sha256": "cf48e162217723cc49c6eb2224dd910cec910738232a84283939a9d7b247c68e"
+      },
+      {
+        "relative": "详细分析/Vocabulary/Fortnite.html",
+        "sha256": "327faafc4fef49d33ac7ce43a91fd3ad802e638aae34ca7bfbdc7d0d67894ffb"
+      },
+      {
+        "relative": "详细分析/Vocabulary/UEFN.html",
+        "sha256": "6037c14d8a345ce979c9abef5fe7bd710856998be60087523678a787fa5f5788"
+      },
+      {
+        "relative": "详细分析/Vocabulary/unified.html",
+        "sha256": "4b7aa96aa53e3a7dfec41205aec03f7e40918a4efd276aeb1afa0d40bd61159b"
+      },
+      {
+        "relative": "详细分析/Vocabulary/Cook.html",
+        "sha256": "1d6a4fafdbd59b5208569db2ea77d2e9950c26a1e4e581b482b7bbebb5845df8"
+      },
+      {
+        "relative": "详细分析/Vocabulary/incremental.html",
+        "sha256": "5d04148e208105af5e2a0de70e5a13a38a068bf4a710420c2f40c4d7a12c875e"
+      },
+      {
+        "relative": "详细分析/Vocabulary/programming_model.html",
+        "sha256": "59b6b01891fbebab1f1a2ca093dd409ae1a8f17da421e24d5ad5a4b5997f565a"
+      },
+      {
+        "relative": "详细分析/Vocabulary/transactionalizes.html",
+        "sha256": "dcd0e99da7ca883a5e9c5c3e4722db30234f3059b5c10a1b865b06a6b32d755a"
+      },
+      {
+        "relative": "详细分析/Vocabulary/live experiences.html",
+        "sha256": "808fbbde53bfed05cbfbdee852c1d27459458d9b8607ae6d3f15da9761cf7830"
+      },
+      {
+        "relative": "详细分析/Vocabulary/pipeline.html",
+        "sha256": "6d017f83514833fbff3e5042d0eede67270716d5e6aaa9e4830a0ae33f0cbe85"
+      },
+      {
+        "relative": "详细分析/Vocabulary/MCP.html",
+        "sha256": "a67b8a7ce51581678d1130ca692deb831a89ba605b68da1ff40537ab5ed51ba2"
+      },
+      {
+        "relative": "详细分析/Vocabulary/multipliers.html",
+        "sha256": "88d124a04e98131f985ef4c2b1a36a499ea3ddbc5a437a901233dc6049708cd9"
+      },
+      {
+        "relative": "详细分析/Vocabulary/manual.html",
+        "sha256": "632c4ea6f87d5faca4874723384094036ab0d186433d526e95289d0da05465e6"
+      },
+      {
+        "relative": "详细分析/Vocabulary/product_release_stages.html",
+        "sha256": "b8ab9f437437625950ff62c1da84dd217f6b87e43b5e114a5afbe13b010e5867"
+      },
+      {
+        "relative": "详细分析/Vocabulary/dive.html",
+        "sha256": "a5b5931c424cc7540f8c9aad5aa8bc9afb38ca4bc7347932f1e53274e9d1f77b"
+      },
+      {
+        "relative": "详细分析/Vocabulary/verse.html",
+        "sha256": "adbb064f56c5549434a2ed4a06bb880f8483d47d5257bbaa45c828305909014e"
+      },
+      {
+        "relative": "详细分析/Vocabulary/scene-graph.html",
+        "sha256": "a2f58e4c86e2e8b44dc84c98f67098f0b64e0d7d79d6ba2f2bbaded51bc391cf"
+      },
+      {
+        "relative": "详细分析/Vocabulary/model-assisted.html",
+        "sha256": "306aea21699d79675e83ea7d6c012b7ce46c0f4426be0d3b1fe3c733473d1b2f"
+      },
+      {
+        "relative": "详细分析/Vocabulary/ship.html",
+        "sha256": "628027a3f01b1472c3d79ea0e921f708885838102ff3c4972ba2b3af1c02d6ed"
+      }
+    ],
+    "formalSourceSHA256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+    "isolated39024Exited": true,
+    "ordinary3336Preserved": true
+  },
+  "releaseReceipt": "artifacts/release-0.2.27.json",
+  "cpuSummary": "artifacts/route-aesthetics-cpu-0.2.27.json",
+  "diagnostics": {
+    "v3Bundle": "b0dd00fbd9779f23807b249ff181142382df2885532f4249ee9d1047abdef50b",
+    "v3FailedScroll": [
+      "artifacts/scroll-performance/route-aesthetics-final/results.json",
+      "artifacts/scroll-performance/route-aesthetics-deep-returns/results.json"
+    ],
+    "v3RenderMaxMs": [
+      62.3,
+      51.7,
+      53.6
+    ],
+    "baselineFirstReportRuntimeMetadata": "Hot manifest retained 0.2.27 before case reload; actual baseline main.js SHA aecd1881...c98583, old geometry and subsequent cold metadata identify 0.2.26. Current final reports assert runtime/manifest 0.2.27.",
+    "cpuMixedRun": "Original mixed-process measurements retained; primary CPU comparison uses separate fresh Node processes, without assuming a specific cause for earlier timing shifts."
+  },
+  "limits": [
+    "Finite candidate ranking, no global shortest-path or zero-crossing guarantee.",
+    "Curve samples rank candidates; collision safety retains full conservative subdivision.",
+    "Quiet preview render max48ms is below this run gate but remains a tail cost.",
+    "Native browser frame gaps above50ms and source early-rAF246.6875px intermediate observations remain in raw evidence; post-frame offset0 does not prove all compositor frames perfect.",
+    "Other platforms, minimum Obsidian host, third-party themes/DOM and long large-vault sessions not covered.",
+    "Formal Vault remains installed0.2.26; only project test-vault/profile were mutated."
+  ]
+}
