@@ -1,5 +1,29 @@
 # MarginLink 验证记录
 
+## 0.2.24 重链视口与关联面板初始焦点 · 2026-11-17
+
+按用户顺序，先完成并推送0.2.23的完全手动整改（`49a5d51df2117111ae89a0eece4bede4ec927d64`），再开始本阶段。实际环境仍为Windows Obsidian1.15.1、默认主题、1614×838/DPR1、隔离test-vault和test-profile/manual-layout-run。正式库只读，复制副本与正式源的不同版本沿用上一节来源说明；本阶段最终两组run的正式源起止均为c463d3，副本为98d945。
+
+本地宿主源码与实际事务跟踪确认：Obsidian的Editor.transaction即使只改正文也请求scrollIntoView，因而卷向离屏旧光标；最后的editor.focus不是唯一原因。旧阅读恢复则在setState返回后直接写一次DOM scrollTop，早于原生渲染/滚动还原完成。Modal.open在onOpen之后再聚焦首个可聚焦元素，会覆盖FilePicker.onOpen内的input.focus。
+
+新增单一relink-viewport helper：捕捉实际writer的原生CM scrollSnapshot，按受校验的同一次splice映射，仍只执行一次Editor正文事务，再在同一事件轮次提交纯滚动effect。未知文档变更不复位旧像素；没有native能力才同步回退公开Editor滚动API。阅读在最后异步文件核验后采集当前位置，恢复用公开原生文档坐标；匹配source分栏也按实际writer处理。没有多次timer追滚动、替身笔记或新增关系数据。FilePicker在super.open完成后同步聚焦搜索，切页聚焦对应输入并preventScroll，重复open、异步结果和关闭后不抢焦点。
+
+| 真实成功重链 | 0.2.23开始→结束scrollTop | 0.2.24开始→结束scrollTop | 最终原模式连续采样偏移 |
+| --- | ---: | ---: | ---: |
+| 编辑 | 4503→448 | 4503→4503 | 滚动0px，锚点0px |
+| 阅读 | 4382→4350 | 4382→4382 | 滚动0px，锚点0px |
+
+旧阅读还曾在临时source阶段卷向448；不同模式的scroll坐标不作为相同像素比较。最终阅读仍短暂借用source，格式转换帧单独保留，不宣称跨模式没有任何视觉格式变化；恢复阅读后原锚点和视口完全原位。旧面板初始activeElement为“已有文件”按钮，直接键入完整路径只得到“A.md”；本版初始为search input，实际keyboard.type完整接收“Folder/Note A.md”。
+
+- `npm test`：46文件448项通过（本阶段新增11项）；`npm run lint`、`npm run package`（含tsc/build）通过。新增测试覆盖原生后置焦点、页签/关闭/异步焦点生命周期、snapshot映射/no-op/未知doc/能力回退、异步读取后最新阅读位置及实际source writer。
+- `node scripts/desktop-relink-viewport.mjs final --output=artifacts/relink-viewport/final-complete`：最终11/11、errors0。读写×鼠标/纯键盘Enter成功、取消、缺失路径，以及两模式页签/异步焦点/重复取消、公开新建关联命令入口直接键入。严格检查原模式逐rAF的原生scroll和真实anchorY≤1px、只替换受校验目标且保留别名/全文；实际成功与取消/失败均0px。
+- `node scripts/desktop-manual-layout.mjs final --output=artifacts/relink-viewport/manual-regression-complete`：同包16/16、errors0，重测完全手动、自由返回、三设置入口/禁用控制、真正非栅格/重叠、恢复外观/reset、分屏、Ctrl新Tab、插件重载和真实进程重启。故当前0.2.24桌面功能验收合计27/27，不把0.2.23的22项直接计成本版重测。
+- 独立只读审查核对源码、测试、数据边界及两份clean报告，没有阻断项。最低1.10.6本地安装包源码含scrollSnapshot且事务同样强制scrollIntoView，仅为能力结构检查，不当作本轮最低宿主桌面通过结果。
+
+验收修正均保留原始失败：早期Tab用例失败未停trace，后续探针访问暂时null的file引发自身错误；已补每case/finally清理、启动前回收和文件状态保护，并在干净WebContents重测。正向Tab离开WebContents会按既有window-blur规则关闭面板，异步不抢焦点验证改为Shift+Tab留在面板内，未增加焦点trap。原生设置窗口仅DOM刚连接即读取/关闭后立即打开Quick曾产生3条无栈illegal-access；卸载Editor、loaded字段读取及订阅1→0后保存等对照均无错，不能泛称宿主通用告警。正确流程等待原生控件可见稳定、窗口真正关闭及主文档恢复焦点后，再打开Quick；完整16项最终错误0。没有为这些探针/窗口时序问题修改生产代码、放宽1px门槛或泛化过滤errors。
+
+[结果摘要](artifacts/relink-viewport-0.2.24.json)、[发布收据](artifacts/release-0.2.24.json)。最终bundle `f3be4d44770bc70d9d11bb2edb9583b6ce9cb55b8b69bbb9f7cfb045c4a953e4`与安装目录及实际验收一致，ZIP五文件逐字节/版本/许可核对通过。收尾12个选定夹具移到ignored证据目录且散列一致，6份配置原样恢复，当前无隔离进程。其他宿主/主题/平台、popout/第三方DOM、大库长期使用未测；真实分栏重链由动作单测覆盖，桌面分屏布局重测不能代替该组合的GUI证明。
+
 ## 0.2.23 完全手动布局与导航恢复 · 2026-11-17
 
 基线为干净main `416516ba63a3c5d4b0c7265e6bf879cf7855d8fc`（0.2.22）。使用选定UE6笔记与十个目标的隔离副本、默认主题、1614×838/DPR1、Windows Obsidian1.15.1。旧test-profile启动停滞后，仅终止经过参数核实的本轮隔离进程，改用test-profile/manual-layout-run干净子profile及本机已有1.15.1缓存包；普通Obsidian保留，没有更改正式库或整个用户profile。

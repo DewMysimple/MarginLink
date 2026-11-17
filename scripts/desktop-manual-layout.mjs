@@ -6,7 +6,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-const baseline = process.argv.includes("baseline"), phase = baseline ? "baseline" : "final", output = `artifacts/manual-layout/${phase}`;
+const baseline = process.argv.includes("baseline"), phase = baseline ? "baseline" : "final", output = process.argv.find((arg) => arg.startsWith("--output="))?.slice(9) ?? `artifacts/manual-layout/${phase}`;
 const only = process.argv.find((arg) => arg.startsWith("--only="))?.slice(7);
 const fixture = "\u8BE6\u7EC6\u5206\u6790/The road to Unreal Engine 6. Read about our plans and timeline.md";
 const labels = ["Early Access", "dives", "Verse", "Scene Graph", "model-assisted", "ship"];
@@ -16,6 +16,12 @@ const fixtureHash = hash(await readFile(path.join("test-vault", fixture)));
 await mkdir(output, { recursive: true });
 const report = { phase, status: "running", fixtureSHA256: fixtureHash, formalStartSHA256: original, scenarios: [], errors: [] };
 let browser, page, preferences, layouts;
+let currentScenario = "initialization";
+let currentStep = "initialization";
+const captureError = (error) => {
+  report.errors.push(String(error));
+  (report.errorDetails ??= []).push({ message: String(error), stack: error.stack, scenario: currentScenario, step: currentStep, url: page?.url() });
+};
 const save = () => writeFile(`${output}/results.json`, JSON.stringify(report, null, 2));
 const frames = (count = 10) => page.evaluate((count2) => new Promise((resolve) => {
   const tick = () => --count2 ? requestAnimationFrame(tick) : resolve();
@@ -23,6 +29,8 @@ const frames = (count = 10) => page.evaluate((count2) => new Promise((resolve) =
 }), count);
 const check = async (name, run) => {
   if (only && !name.includes(only)) return;
+  currentScenario = name;
+  currentStep = "begin";
   try {
     report.scenarios.push({ name, passed: true, ...await run() });
     console.log("PASS", name);
@@ -162,7 +170,7 @@ const restart = async () => {
   await page.waitForFunction(() => typeof app !== "undefined" && !!app.plugins?.plugins?.["margin-link"] && !!app.workspace?.leftSplit && !!app.workspace?.rightSplit && app.workspace.layoutReady);
   assert.equal(path.resolve(await page.evaluate(() => app.vault.adapter.getBasePath())).toLowerCase(), path.resolve("test-vault").toLowerCase());
   await page.route(/^https?:\/\//, (route) => route.abort());
-  page.on("pageerror", (error) => report.errors.push(String(error)));
+  page.on("pageerror", captureError);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1614, height: 838, deviceScaleFactor: 1, mobile: false });
   await frames(20);
@@ -179,7 +187,7 @@ try {
   page.setDefaultTimeout(15e3);
   await page.waitForFunction(() => typeof app !== "undefined" && !!app.plugins?.plugins?.["margin-link"] && !!app.workspace?.leftSplit && !!app.workspace?.rightSplit && app.workspace.layoutReady);
   assert.equal(path.resolve(await page.evaluate(() => app.vault.adapter.getBasePath())).toLowerCase(), path.resolve("test-vault").toLowerCase(), "Refuse real Vault");
-  page.on("pageerror", (error) => report.errors.push(String(error)));
+  page.on("pageerror", captureError);
   await page.route(/^https?:\/\//, (route) => route.abort());
   preferences = await page.evaluate(() => ({ ...app.plugins.plugins["margin-link"].preferences }));
   layouts = await page.evaluate(() => app.plugins.plugins["margin-link"].layouts.snapshot());
@@ -269,28 +277,55 @@ try {
       await closeSettings();
       const after = await snapshot();
       assert.deepEqual(differences(before, after), [], "Entering manual must freeze the visible layout");
+      currentStep = "native-settings-open";
       await page.evaluate(() => {
         app.setting.open();
         app.setting.openTabById("margin-link");
       });
       await page.waitForFunction(() => !!app.setting.activeTab?.containerEl.querySelector('[data-margin-key="placementMode"] select:not(.is-measuring)'));
+      currentStep = "native-settings-layout-ready";
+      await page.evaluate(() => new Promise((resolve) => {
+        const root = app.setting.activeTab.containerEl, win = root.ownerDocument.defaultView, row = root.querySelector('[data-margin-key="placementMode"]');
+        row.scrollIntoView({ block: "center", behavior: "instant" });
+        const start = win.performance.now();
+        let last = "", same = 0;
+        const tick = () => {
+          const rect = row.getBoundingClientRect(), value = [rect.left, rect.top, rect.width, rect.height].join(":");
+          same = value === last ? same + 1 : 0;
+          last = value;
+          if (same >= 4 && win.performance.now() - start >= 320) resolve();
+          else win.requestAnimationFrame(tick);
+        };
+        win.requestAnimationFrame(tick);
+      }));
+      currentStep = "native-settings-read-fields";
       const native = await page.evaluate(() => {
         const root = app.setting.activeTab.containerEl, select2 = root.querySelector('[data-margin-key="placementMode"] select:not(.is-measuring)');
-        return { options: Object.fromEntries([...select2.options].map((option) => [option.value, option.textContent])), value: select2.value, disabledLayout: root.querySelector('[data-margin-key="layout"] select:not(.is-measuring)').disabled, disabledSnap: root.querySelector('[data-margin-key="snapGrid"] input[type=range]').disabled };
+        window.marginNativeSettingsWindow = root.ownerDocument.defaultView;
+        return { options: Object.fromEntries([...select2.options].map((option) => [option.value, option.textContent])), value: select2.value, disabledLayout: root.querySelector('[data-margin-key="layout"] select:not(.is-measuring)').disabled, disabledSnap: root.querySelector('[data-margin-key="snapGrid"] input[type=range]').disabled, differentDocument: root.ownerDocument !== document, listenerCountAtOpen: app.plugins.plugins["margin-link"].listeners.size };
       });
       assert.deepEqual(native.options, options);
       assert.equal(native.value, "manual");
       assert(native.disabledLayout && native.disabledSnap);
+      currentStep = "native-settings-close";
       await page.evaluate(() => app.setting.close());
+      // Native settings have a separate window. close() returns before that
+      // document is destroyed; wait for ownership to return before another modal.
+      await page.waitForFunction(() => window.marginNativeSettingsWindow === window || window.marginNativeSettingsWindow.closed && document.hasFocus());
+      native.lifecycleAfter = await page.evaluate(() => ({ closed: window.marginNativeSettingsWindow.closed, focused: document.hasFocus(), listenerCount: app.plugins.plugins["margin-link"].listeners.size }));
+      currentStep = "quick-controls-open";
       await page.evaluate(() => app.commands.executeCommandById("margin-link:quick-controls"));
       await frames();
       const quick = page.locator(".margin-link-quick-controls .setting-item").filter({ has: page.getByText("\u5E03\u5C40\u6A21\u5F0F", { exact: true }) }).locator("select:not(.is-measuring)");
       assert.deepEqual(await quick.locator("option").evaluateAll((options2) => Object.fromEntries(options2.map((option) => [option.value, option.textContent]))), options);
       assert.equal(await quick.inputValue(), "manual");
+      currentStep = "quick-controls-select-snap";
       await quick.selectOption("snap");
       await frames();
+      currentStep = "quick-controls-select-manual";
       await quick.selectOption("manual");
       await frames();
+      currentStep = "quick-controls-close";
       await closeSettings();
       assert.equal((await snapshot()).prefs.placementMode, "manual");
       return { options, native, before, after };

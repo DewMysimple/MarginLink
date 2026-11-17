@@ -69,6 +69,8 @@ artifacts/*
 !artifacts/manual-layout-0.2.23.json
 !artifacts/manual-settings-0.2.23.png
 !artifacts/release-0.2.23.json
+!artifacts/relink-viewport-0.2.24.json
+!artifacts/release-0.2.24.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

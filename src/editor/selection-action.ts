@@ -8,6 +8,7 @@ import type { Side, WikilinkOccurrence } from '../types';
 import { newNotePath, type NewNotePreferences } from '../core/new-note';
 import type { LayoutStore } from '../core/layout-store';
 import { checkedOccurrence, relinkLayoutAliases, relinkText } from '../core/relink';
+import { preserveRelinkViewport } from './relink-viewport';
 
 interface ActionContext {
   bridges(): Iterable<EditorBridge>;
@@ -109,18 +110,24 @@ export class SelectionAction {
         }
       }
       validate();
-      const state = mode === 'preview' ? view.getState() : undefined;
-      const scroller = mode === 'preview' ? view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-view') ?? view.previewMode.containerEl : undefined;
-      const scrollTop = scroller?.scrollTop;
+      let state: ReturnType<MarkdownView['getState']> | undefined, scrollTop: number | undefined, readingScroll: number | undefined;
+      const captureReading = () => {
+        if (mode !== 'preview') return;
+        state = view.getState();
+        const scroller = view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-view') ?? view.previewMode.containerEl;
+        scrollTop = scroller.scrollTop;
+        readingScroll = typeof view.previewMode.getScroll === 'function' ? view.previewMode.getScroll() : undefined;
+      };
       let editorView = mode === 'source' ? view : this.editors(operation.sourcePath)[0]?.view;
       try {
         if (!editorView) {
           const sourceFile = view.file;
           if (!sourceFile || normalized(await this.app.vault.read(sourceFile)) !== operation.text) throw new Error('阅读视图的源文件已改变，请刷新后重试。');
-          validate(); borrowed = true;
+          validate(); captureReading(); borrowed = true;
           await view.setState({ ...state, mode: 'source' }, { history: false });
           editorView = view;
         }
+        else captureReading();
         validate();
         if (editorView.file?.path !== operation.sourcePath || normalized(editorView.editor.getValue()) !== operation.text) throw new Error('源编辑器的内容已改变，未修改链接。');
         if (this.app.vault.getFileByPath(file.path) !== file) throw new Error('目标文件已删除或改变，请重新选择。');
@@ -129,8 +136,13 @@ export class SelectionAction {
         const expected = operation.text.slice(0, operation.from) + link + operation.text.slice(operation.to);
         const aliases = operation.occurrence ? relinkLayoutAliases(operation.text, expected, operation.from, operation.to, link) : undefined;
         const from = editorView.editor.offsetToPos(operation.from), to = editorView.editor.offsetToPos(operation.to);
-        editorView.editor.transaction({ changes: [{ from, to, text: link }],
-          ...(operation.selection ? { selection: { from: { line: from.line, ch: from.ch + link.length } } } : {}) }, 'margin-link');
+        const writer = this.editors(operation.sourcePath).find(editor => editor.view === editorView)?.bridge;
+        const restoreViewport = operation.occurrence
+          ? preserveRelinkViewport(editorView.editor, writer?.cm, { from: operation.from, to: operation.to, insert: link }) : undefined;
+        try {
+          editorView.editor.transaction({ changes: [{ from, to, text: link }],
+            ...(operation.selection ? { selection: { from: { line: from.line, ch: from.ch + link.length } } } : {}) }, 'margin-link');
+        } finally { restoreViewport?.(); }
         if (normalized(editorView.editor.getValue()) !== expected) throw new Error('未能确认原文事务成功；外部原件会保留，请检查笔记。');
         if (aliases) this.context?.layouts().preserveRelink(operation.sourcePath, aliases);
         if (side) bridge?.prefer(operation.from, target, side);
@@ -139,10 +151,17 @@ export class SelectionAction {
           try {
             await view.setState(state, { history: false });
             const restoredScroller = view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-view') ?? view.previewMode.containerEl;
-            if (scrollTop !== undefined) restoredScroller.scrollTop = scrollTop;
+            // Pixel writes immediately after setState race native preview
+            // virtualization. Its public ephemeral scroll is in document-line
+            // coordinates and is applied by the renderer when it is ready.
+            if (readingScroll !== undefined && Number.isFinite(readingScroll)) view.setEphemeralState({ scroll: readingScroll });
+            else if (scrollTop !== undefined) restoredScroller.scrollTop = scrollTop;
           }
           catch { new Notice('链接操作已结束，未能恢复阅读视图，请手动切回阅读模式。'); }
           borrowed = false;
+        }
+        else if (mode === 'preview' && readingScroll !== undefined && Number.isFinite(readingScroll) && view.file?.path === operation.sourcePath && view.getMode() === mode) {
+          view.setEphemeralState({ scroll: readingScroll });
         }
       }
       // Closing must not restore the selection captured before the transaction.

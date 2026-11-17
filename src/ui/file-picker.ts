@@ -19,6 +19,8 @@ export class FilePicker extends Modal {
   private folder: string;
   private filename: string;
   private search = '';
+  private opened = false;
+  private focusTarget?: HTMLInputElement;
   private queryGeneration = 0;
   private operation?: AbortController;
   private onWindowBlur = () => { if (!this.busy) this.close(); };
@@ -28,7 +30,16 @@ export class FilePicker extends Modal {
     this.folder = defaultNoteFolder(prefs);
     this.filename = alias.trim();
   }
+  open(): void {
+    const wasOpen = this.opened;
+    super.open();
+    // Modal.open performs its own initial focus after onOpen. Apply our
+    // explicit input target after that synchronous host step, without a timer
+    // that could steal focus from a later user action or a closed dialog.
+    if (!wasOpen) this.focusInput();
+  }
   onOpen(): void {
+    this.opened = true;
     this.setTitle('关联文件');
     this.contentEl.addClass('margin-link-file-picker');
     if (this.options.currentTarget) this.contentEl.createEl('p', { text: `当前目标：${this.options.currentTarget}` });
@@ -44,11 +55,18 @@ export class FilePicker extends Modal {
   private show(mode: 'existing' | 'new'): void {
     if (this.busy) return;
     this.queryGeneration++;
+    this.focusTarget = undefined;
     this.panel.empty();
     this.existingTab.setAttribute('aria-pressed', String(mode === 'existing'));
     this.newTab.setAttribute('aria-pressed', String(mode === 'new'));
     if (mode === 'existing') this.showFiles();
     else this.showNewNote();
+  }
+  private focusInput(select = false): void {
+    const input = this.focusTarget;
+    if (!this.opened || !input?.isConnected || !this.panel.contains(input)) return;
+    input.focus({ preventScroll: true });
+    if (select) input.select();
   }
   private showFiles(): void {
     const input = this.panel.createEl('input', { cls: 'prompt-input', attr: { type: 'search', placeholder: '搜索文件名或路径', 'aria-label': '搜索已有文件' } });
@@ -100,7 +118,7 @@ export class FilePicker extends Modal {
         highlight();
       } else if (event.key === 'Enter') { event.preventDefault(); choose(found[current]); }
     };
-    update(); input.focus();
+    update(); this.focusTarget = input; this.focusInput();
   }
   private async choose(file: TFile): Promise<void> {
     if (this.busy) return;
@@ -275,9 +293,10 @@ export class FilePicker extends Modal {
       if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); void submit(false); }
     };
     name.oninput = refresh; folder.onchange = refresh;
-    refresh(); name.focus(); name.select();
+    refresh(); this.focusTarget = name; this.focusInput(true);
   }
   onClose(): void {
+    this.opened = false; this.focusTarget = undefined;
     this.queryGeneration++;
     this.operation?.abort();
     this.modalEl.ownerDocument.defaultView?.removeEventListener('blur', this.onWindowBlur);

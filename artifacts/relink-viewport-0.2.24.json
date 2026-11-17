@@ -1,0 +1,614 @@
+{
+  "version": "0.2.24",
+  "baseline": [
+    {
+      "name": "preview: bottom-card relink success, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4350,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 528.109375,
+      "originalModeFrames": 130,
+      "maxOriginalModeScrollDelta": 32,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 32.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "BUTTON",
+        "type": "button",
+        "placeholder": null,
+        "text": "已有文件",
+        "ariaLabel": null
+      },
+      "directTypingValue": "A.md"
+    },
+    {
+      "name": "preview: bottom-card relink cancel, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4382,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 496.109375,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "BUTTON",
+        "type": "button",
+        "placeholder": null,
+        "text": "已有文件",
+        "ariaLabel": null
+      },
+      "directTypingValue": "A.md"
+    },
+    {
+      "name": "preview: bottom-card relink missing-path, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4382,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 496.109375,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "BUTTON",
+        "type": "button",
+        "placeholder": null,
+        "text": "已有文件",
+        "ariaLabel": null
+      },
+      "directTypingValue": "A.md"
+    },
+    {
+      "name": "source: bottom-card relink success, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 448,
+      "anchorBefore": 448.96875,
+      "anchorAfter": null,
+      "originalModeFrames": 132,
+      "maxOriginalModeScrollDelta": 4055,
+      "missingAnchorFrames": 113,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "BUTTON",
+        "type": "button",
+        "placeholder": null,
+        "text": "已有文件",
+        "ariaLabel": null
+      },
+      "directTypingValue": "A.md"
+    },
+    {
+      "name": "source: bottom-card relink cancel, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 4503,
+      "anchorBefore": 448.96875,
+      "anchorAfter": 448.96875,
+      "originalModeFrames": 120,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "BUTTON",
+        "type": "button",
+        "placeholder": null,
+        "text": "已有文件",
+        "ariaLabel": null
+      },
+      "directTypingValue": "A.md"
+    },
+    {
+      "name": "source: bottom-card relink missing-path, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 4503,
+      "anchorBefore": 448.96875,
+      "anchorAfter": 448.96875,
+      "originalModeFrames": 125,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "BUTTON",
+        "type": "button",
+        "placeholder": null,
+        "text": "已有文件",
+        "ariaLabel": null
+      },
+      "directTypingValue": "A.md"
+    }
+  ],
+  "host": "Windows Obsidian1.15.1, default theme, isolated test-profile/manual-layout-run,1614x838,DPR1",
+  "bundleSHA256": "f3be4d44770bc70d9d11bb2edb9583b6ce9cb55b8b69bbb9f7cfb045c4a953e4",
+  "fixtureSHA256": "98d945f99aac8cdd3920cba8a034ebc7a7a4c7fc9172b73a126a5dfb5c4a7083",
+  "formalChecks": {
+    "start": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "end": "c463d3d6faa2d83b1a45df0490b7995f347f404adc8a1c21533beba0af8c6c7c",
+    "unchangedWithinFinalRun": true,
+    "boundary": "Only selected test-vault files were changed. The formal note changed after initial fixture preparation before phase1 baseline, not during these final runs; see .23 provenance."
+  },
+  "checks": {
+    "unitFiles": 46,
+    "unitPassed": 448,
+    "lint": "passed",
+    "package": "passed",
+    "relinkFocusDesktopPassed": 11,
+    "manualRegressionPassed": 16,
+    "errors": 0,
+    "independentReadOnlyAudit": "no blocking finding; report/source/data-boundary review only"
+  },
+  "final": [
+    {
+      "name": "preview: bottom-card relink success, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4382,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 496.109375,
+      "originalModeFrames": 129,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [
+        {
+          "t": 118.79999999701977,
+          "mode": "source",
+          "scrollTop": 0,
+          "scrollHeight": 5350,
+          "clientHeight": 760,
+          "anchorTop": null,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        },
+        {
+          "t": 123.10000000149012,
+          "mode": "source",
+          "scrollTop": 0,
+          "scrollHeight": 5350,
+          "clientHeight": 760,
+          "anchorTop": null,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        },
+        {
+          "t": 123.69999999552965,
+          "mode": "source",
+          "scrollTop": 0,
+          "scrollHeight": 5350,
+          "clientHeight": 760,
+          "anchorTop": null,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        }
+      ],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "preview: bottom-card relink keyboard-enter, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4382,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 496.109375,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [
+        {
+          "t": 95.90000000596046,
+          "mode": "source",
+          "scrollTop": 4445,
+          "scrollHeight": 5668,
+          "clientHeight": 760,
+          "anchorTop": 484.46875,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        },
+        {
+          "t": 100.80000000447035,
+          "mode": "source",
+          "scrollTop": 4445,
+          "scrollHeight": 5668,
+          "clientHeight": 760,
+          "anchorTop": 484.46875,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        },
+        {
+          "t": 103.60000000149012,
+          "mode": "source",
+          "scrollTop": 4445,
+          "scrollHeight": 5668,
+          "clientHeight": 760,
+          "anchorTop": 484.46875,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        },
+        {
+          "t": 111.30000000447035,
+          "mode": "source",
+          "scrollTop": 4445,
+          "scrollHeight": 5668,
+          "clientHeight": 760,
+          "anchorTop": 484.46875,
+          "cursor": {
+            "line": 11,
+            "ch": 0
+          },
+          "selection": [
+            {
+              "anchor": {
+                "line": 11,
+                "ch": 0
+              },
+              "head": {
+                "line": 11,
+                "ch": 0
+              }
+            }
+          ],
+          "picker": true
+        }
+      ],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "preview: bottom-card relink cancel, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4382,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 496.109375,
+      "originalModeFrames": 120,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "preview: bottom-card relink missing-path, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "preview",
+      "scrollBefore": 4382,
+      "scrollAfter": 4382,
+      "anchorBefore": 496.109375,
+      "anchorAfter": 496.109375,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "source: bottom-card relink success, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 4503,
+      "anchorBefore": 448.96875,
+      "anchorAfter": 448.96875,
+      "originalModeFrames": 128,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "source: bottom-card relink keyboard-enter, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 4503,
+      "anchorBefore": 448.96875,
+      "anchorAfter": 448.96875,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "source: bottom-card relink cancel, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 4503,
+      "anchorBefore": 448.96875,
+      "anchorAfter": 448.96875,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "source: bottom-card relink missing-path, initial search focus and continuous native viewport",
+      "passed": true,
+      "mode": "source",
+      "scrollBefore": 4503,
+      "scrollAfter": 4503,
+      "anchorBefore": 448.96875,
+      "anchorAfter": 448.96875,
+      "originalModeFrames": 122,
+      "maxOriginalModeScrollDelta": 0,
+      "missingAnchorFrames": 0,
+      "maxOriginalModeAnchorDelta": 0.0,
+      "transientModes": [],
+      "initialFocus": {
+        "tag": "INPUT",
+        "type": "search",
+        "placeholder": "搜索文件名或路径",
+        "text": "",
+        "ariaLabel": "搜索已有文件"
+      },
+      "directTypingValue": "Folder/Note A.md"
+    },
+    {
+      "name": "preview: picker tabs, native keyboard focus and repeated cancellation retain the document viewport",
+      "passed": true
+    },
+    {
+      "name": "source: picker tabs, native keyboard focus and repeated cancellation retain the document viewport",
+      "passed": true
+    },
+    {
+      "name": "source: creating a new relation through the public command focuses search immediately and Escape leaves selected text intact",
+      "passed": true
+    }
+  ],
+  "manualRegression": [
+    {
+      "name": "preview/free: actual card click and native history back with no preexisting positions",
+      "passed": true
+    },
+    {
+      "name": "preview/free: one saved card cannot destabilize untouched neighbours on return",
+      "passed": true
+    },
+    {
+      "name": "source/free: actual card click and native history back with no preexisting positions",
+      "passed": true
+    },
+    {
+      "name": "source/free: one saved card cannot destabilize untouched neighbours on return",
+      "passed": true
+    },
+    {
+      "name": "preview/manual: no-record initial slots survive click/back and ignore left/right auto preference",
+      "passed": true
+    },
+    {
+      "name": "preview/manual: explicit overlap and off-grid drag moves only the selected card",
+      "passed": true
+    },
+    {
+      "name": "source/manual: no-record initial slots survive click/back and ignore left/right auto preference",
+      "passed": true
+    },
+    {
+      "name": "source/manual: explicit overlap and off-grid drag moves only the selected card",
+      "passed": true
+    },
+    {
+      "name": "manual: every settings entry exposes the mode and disables irrelevant automatic/snap controls",
+      "passed": true
+    },
+    {
+      "name": "manual: restore appearance defaults preserves mode and existing positions",
+      "passed": true
+    },
+    {
+      "name": "manual: resize, scrolling and plugin reload preserve saved layout",
+      "passed": true
+    },
+    {
+      "name": "manual: Ctrl-click opens another tab without changing the source card positions",
+      "passed": true
+    },
+    {
+      "name": "manual: explicit current-note reset keeps the selected mode and does not modify another note positions",
+      "passed": true
+    },
+    {
+      "name": "manual: two simultaneous views freeze the recently active visible layout and preserve all measured keys",
+      "passed": true
+    },
+    {
+      "name": "manual: actual native process restart retains layout and persisted selection",
+      "passed": true,
+      "processes": {
+        "oldPID": 44648,
+        "newPID": 42680,
+        "ordinary": [
+          38632
+        ]
+      }
+    },
+    {
+      "name": "auto: automatic mode remains available and does not persist generated positions",
+      "passed": true
+    }
+  ],
+  "method": "Native card context menu, direct keyboard.type without focusing/fill for initial search proof, mouse/Enter commit, unchanged alias/source assertions, continuous original-mode rAF native scroll and anchor positions <=1px. Reader temporarily borrows source mode; different-mode coordinates are recorded separately, not compared as equivalent pixels.",
+  "diagnostics": {
+    "strictFinalErrors": [],
+    "history": "Earlier failed trace leaked rAF/wrapped methods across runs; disposal and fresh WebContents removed null.path. Earlier native-settings->immediate-Quick sequence observed three stackless illegal-access errors. Subscription1->0/save and unloaded/loaded controls had no errors. Correct helper waits visible/stable foreign window and actual close/main focus before next modal; complete16 then errors0. No product patch or general error filter was added; raw intermediate failures and controls retained locally.",
+    "focusBoundary": "Forward Tab at the last focusable control may leave WebContents and trigger existing window-blur cancellation. Async no-steal proof uses Shift+Tab inside the modal; no new focus trap promised."
+  },
+  "limits": [
+    "Actual desktop Windows1.15.1 only;1.10.6 snapshot capability was checked in local source, not a new desktop run.",
+    "Matching source-split writer preservation is unit covered; real split-relink GUI not separately exercised.",
+    "Other hosts/themes/popout/third-party DOM and large-vault endurance not covered.",
+    "Borrowed source mode remains briefly present during reading relink; restored reading scroll and anchor are unchanged, but do not claim zero visual formatting transition between modes."
+  ],
+  "cleanup": {
+    "retainedFixtureFiles": 12,
+    "restoredExactConfigs": 6,
+    "isolatedProcesses": 0,
+    "processActions": []
+  }
+}

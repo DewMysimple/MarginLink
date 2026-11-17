@@ -4,6 +4,9 @@ import { FilePicker, type PickerActions } from '../src/ui/file-picker';
 import { readPreferences } from '../src/types';
 import type { ImportHost, LocalFileInspection } from '../src/core/local-file-import';
 
+const focusDocument: { activeElement?: Element; defaultView: { addEventListener(): void; removeEventListener(): void }; createDocumentFragment(): Element } = {
+  defaultView: { addEventListener() {}, removeEventListener() {} }, createDocumentFragment: () => new Element()
+};
 class Element {
   children: Element[] = [];
   parent?: Element;
@@ -19,7 +22,7 @@ class Element {
   onchange?: () => void;
   onkeydown?: (event: object) => void;
   classList = { toggle() {} };
-  ownerDocument = { defaultView: { addEventListener() {}, removeEventListener() {} }, createDocumentFragment: () => new Element() };
+  ownerDocument = focusDocument;
   createEl(tag: string, options: { text?: string; value?: string; cls?: string; attr?: Record<string, string> } = {}): Element {
     const child = new Element(); child.tagName = tag; child.textContent = options.text ?? ''; child.cls = options.cls ?? '';
     child.value = options.value ?? ''; child.parent = this; this.children.push(child); return child;
@@ -31,8 +34,8 @@ class Element {
   empty() { for (const child of this.children) child.parent = undefined; this.children = []; }
   contains(child: Element): boolean { return child === this || this.children.some(item => item.contains(child)); }
   scrollIntoView() {}
-  focus() {}
-  select() {}
+  focus = vi.fn((_options?: FocusOptions) => { focusDocument.activeElement = this; });
+  select = vi.fn();
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(item => item !== this); }
   all(): Element[] { return [this, ...this.children.flatMap(child => child.all())]; }
   text(): string { return this.all().map(child => child.textContent).join('\n'); }
@@ -41,9 +44,18 @@ const state = vi.hoisted(() => ({ inspect: vi.fn(), move: vi.fn(), notices: [] a
 vi.mock('obsidian', () => ({
   Modal: class {
     contentEl = new Element(); modalEl = new Element(); containerEl = new Element();
+    private mockOpen = false;
     constructor(public app: App) {}
     setTitle() {}
-    close() { this.containerEl.isConnected = false; (this as unknown as FilePicker).onClose(); }
+    open() {
+      if (this.mockOpen) return;
+      this.mockOpen = true; this.containerEl.isConnected = true;
+      (this as unknown as FilePicker).onOpen();
+      // The real host chooses its initial focus after onOpen, overriding a
+      // synchronous focus inside FilePicker.onOpen with the first tab button.
+      this.contentEl.all().find(element => ['button', 'input', 'select'].includes(element.tagName))?.focus({ preventScroll: true });
+    }
+    close() { this.mockOpen = false; this.containerEl.isConnected = false; (this as unknown as FilePicker).onClose(); }
   },
   Notice: class { constructor(message: unknown) { state.notices.push(message); } },
   prepareFuzzySearch: (query: string) => (candidate: string) => candidate.toLowerCase().includes(query.toLowerCase()) ? { score: 0 } : null,
@@ -63,14 +75,56 @@ function fixture(files: string[] = []) {
   const app = { vault: { adapter: { getBasePath: () => 'C:\\Vault' }, getFiles: () => [...indexed.values()], getFileByPath: (p: string) => indexed.get(p) ?? null,
     getFolderByPath: (p: string) => p === '资料' ? { path: p } : null, getAbstractFileByPath: (p: string) => indexed.get(p) ?? null } } as unknown as App;
   const picker = new FilePicker(app, 'streams', readPreferences({ newNoteFolders: ['资料'] }), actions, { currentTarget: 'old.html' });
-  picker.onOpen();
+  picker.open();
   const content = picker.contentEl as unknown as Element;
   const input = content.all().find(e => e.tagName === 'input')!;
   const button = (text: string) => content.all().find(e => e.tagName === 'button' && e.textContent === text)!;
   const query = (text: string) => { input.value = text; input.oninput!(); };
   return { picker, actions, content, input, button, query, indexed };
 }
-beforeEach(() => { state.inspect.mockReset(); state.move.mockReset(); state.notices.length = 0; });
+beforeEach(() => { state.inspect.mockReset(); state.move.mockReset(); state.notices.length = 0; focusDocument.activeElement = undefined; });
+
+describe('picker input focus after the host opens the dialog', () => {
+  it('overrides the host tab focus so direct typing immediately searches files without scrolling', () => {
+    const f = fixture(['A/streams.md', 'B/other.md']);
+    expect(focusDocument.activeElement).toBe(f.input);
+    expect(f.input.focus).toHaveBeenLastCalledWith({ preventScroll: true });
+    const focused = focusDocument.activeElement!;
+    focused.value = 'streams'; focused.oninput!();
+    expect(f.content.text()).toContain('A/streams.md'); expect(f.content.text()).not.toContain('B/other.md');
+  });
+
+  it('focuses the filename on the new tab and the preserved search when returning to existing files', () => {
+    const f = fixture(['A/streams.md']); f.query('streams');
+    f.button('新建文件').onclick!();
+    const filename = f.content.all().find(element => element.tagName === 'input')!;
+    expect(focusDocument.activeElement).toBe(filename);
+    expect(filename.value).toBe('streams'); expect(filename.select).toHaveBeenCalledOnce();
+    expect(filename.focus).toHaveBeenLastCalledWith({ preventScroll: true });
+    f.button('已有文件').onclick!();
+    const search = f.content.all().find(element => element.tagName === 'input')!;
+    expect(focusDocument.activeElement).toBe(search); expect(search.value).toBe('streams');
+    expect(search.focus).toHaveBeenLastCalledWith({ preventScroll: true });
+  });
+
+  it('does not reclaim focus on duplicate open or when a late path result arrives', async () => {
+    let resolve!: (value: LocalFileInspection) => void;
+    state.inspect.mockImplementation(() => new Promise(done => { resolve = done; }));
+    const f = fixture(); f.query(nativePath);
+    const tab = f.button('新建文件'); tab.focus();
+    f.picker.open(); expect(focusDocument.activeElement).toBe(tab);
+    resolve(inspection()); await settle();
+    expect(focusDocument.activeElement).toBe(tab);
+  });
+
+  it('does not refocus a closed dialog from late path inspection', async () => {
+    let resolve!: (value: LocalFileInspection) => void;
+    state.inspect.mockImplementation(() => new Promise(done => { resolve = done; }));
+    const f = fixture(); f.query(nativePath); f.picker.close();
+    const outside = new Element(); outside.focus(); resolve(inspection()); await settle();
+    expect(focusDocument.activeElement).toBe(outside); expect(f.content.text()).toBe('');
+  });
+});
 
 describe('one file picker for name search and local import', () => {
   it('keeps normal keywords on vault search and displays current relink target', async () => {

@@ -162,8 +162,8 @@ export default class MarginLinkPlugin extends Plugin {
       : '清除保存的卡片位置，下次显示重新给定初始位置；当前布局模式、原生双链与笔记内容保留。';
     new ConfirmAction(this.app, this, source ? '重置当前笔记卡片位置' : '重置所有笔记卡片位置', description, () => {
       this.layouts.clear(source);
-      // Whole-note/all reset is an explicit request to repack automatic slots.
-      // Per-card reset uses LayoutStore.clear directly and stays local.
+      // Explicit reset discards measured slots; the selected mode supplies
+      // initial positions. Per-card reset stays local to that occurrence.
       for (const [view, overlay] of this.overlays) if (source === undefined || view.file?.path === source) overlay.resetLayout();
     }).open();
   }

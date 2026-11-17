@@ -54,19 +54,31 @@ function note(initial: string, initialMode: 'source' | 'preview') {
   const offsetToPos = (offset: number) => { const lines = text.slice(0, offset).split('\n'); return { line: lines.length - 1, ch: lines.at(-1)!.length }; };
   const posToOffset = (position: { line: number; ch: number }) => text.split('\n').slice(0, position.line).reduce((n, line) => n + line.length + 1, 0) + position.ch;
   const editor = { getValue: () => text, offsetToPos, focus: vi.fn(), listSelections: () => [{}],
+    getScrollInfo: () => ({ top: scroller.scrollTop, left: 19 }), scrollTo: vi.fn((_left: number, top: number) => { scroller.scrollTop = top; }),
     transaction: vi.fn((tx: { changes: { from: { line: number; ch: number }; to: { line: number; ch: number }; text: string }[] }) => {
       for (const change of tx.changes) { const from = posToOffset(change.from), to = posToOffset(change.to); text = text.slice(0, from) + change.text + text.slice(to); }
       bridge.text = text; bridge.parsed = parseDocument(text); bridge.revision++;
     }) };
   const scroller = { scrollTop: 123 };
   const view = Object.assign(Object.create(MarkdownView.prototype) as MarkdownView, {
-    file: { path: 'Source.md' }, editor, contentEl: { contains: (dom: unknown) => dom === bridge.cm.dom }, previewMode: { containerEl: { scrollTop: 0, querySelector: () => scroller } },
+    file: { path: 'Source.md' }, editor, contentEl: { contains: (dom: unknown) => dom === bridge.cm.dom },
+    previewMode: { containerEl: { scrollTop: 0, querySelector: () => scroller }, getScroll: vi.fn(() => scroller.scrollTop / 10) },
+    setEphemeralState: vi.fn(),
     getMode: () => mode, getState: () => ({ mode, scroll: 42 }), setState: vi.fn(async (state: { mode: 'source' | 'preview' }) => { mode = state.mode; })
   });
   return { view, bridge, editor, scroller, mutate: (next: string) => { text = next; bridge.text = next; bridge.revision++; } };
 }
 beforeEach(() => { ui.pickers.length = 0; ui.modals.length = 0; ui.notices.length = 0; vi.mocked(resolveSubpath).mockReset(); });
 describe('the shared checked source transaction', () => {
+  it('does not reveal the old offscreen cursor when the host transaction forcibly scrolls to it', async () => {
+    const s = fixture(); s.origin.scroller.scrollTop = 4503;
+    const transact = s.origin.editor.transaction.getMockImplementation()!;
+    s.origin.editor.transaction.mockImplementation(tx => { transact(tx); s.origin.scroller.scrollTop = 448; });
+    s.open(); await ui.pickers[0].actions.existing(s.file);
+    expect(s.origin.editor.transaction).toHaveBeenCalledOnce();
+    expect(s.origin.editor.scrollTo).toHaveBeenCalledExactlyOnceWith(19, 4503);
+    expect(s.origin.scroller.scrollTop).toBe(4503);
+  });
   it('relinks only the requested occurrence in one undo transaction and displays its current target', async () => {
     const s = fixture(); s.open(); const picker = ui.pickers[0];
     expect(picker.options?.currentTarget).toBe('old/a.html'); await picker.actions.existing(s.file);
@@ -122,11 +134,31 @@ describe('reading mode and split editors', () => {
     const s = fixture('before [[old|item]] after', true); s.open(0); await ui.pickers[0].actions.existing(s.file);
     expect(s.origin.editor.getValue()).toBe('before [[new/b.html|item]] after'); expect(s.origin.view.getMode()).toBe('preview');
     expect(s.origin.view.setState).toHaveBeenCalledTimes(2); expect(s.origin.scroller.scrollTop).toBe(123);
+    expect(s.origin.view.setEphemeralState).toHaveBeenCalledExactlyOnceWith({ scroll: 12.3 });
+  });
+  it('samples the latest reading location after asynchronous source validation, not before the user scrolls', async () => {
+    const s = fixture('before [[old|item]] after', true);
+    let resolve!: (text: string) => void;
+    s.app.vault.read.mockImplementation(() => new Promise<string>(done => { resolve = done; }));
+    s.open(0); const pending = ui.pickers[0].actions.existing(s.file);
+    s.origin.scroller.scrollTop = 600;
+    resolve('before [[old|item]] after'); await pending;
+    expect(s.origin.view.setEphemeralState).toHaveBeenCalledExactlyOnceWith({ scroll: 60 });
   });
   it('commits through an already open matching source split without switching the reader', async () => {
     const initial = 'before [[old|item]] after', s = fixture(initial, true), split = note(initial, 'source'); s.notes.push(split); s.open(0);
     await ui.pickers[0].actions.existing(s.file); expect(split.editor.getValue()).toBe('before [[new/b.html|item]] after');
     expect(s.origin.editor.transaction).not.toHaveBeenCalled(); expect(s.origin.view.setState).not.toHaveBeenCalled();
+    expect(s.origin.view.setEphemeralState).toHaveBeenCalledExactlyOnceWith({ scroll: 12.3 });
+  });
+  it('preserves the actual writer split viewport as well as the reading origin', async () => {
+    const initial = 'before [[old|item]] after', s = fixture(initial, true), split = note(initial, 'source');
+    split.scroller.scrollTop = 901;
+    const transact = split.editor.transaction.getMockImplementation()!;
+    split.editor.transaction.mockImplementation(tx => { transact(tx); split.scroller.scrollTop = 0; });
+    s.notes.push(split); s.open(0); await ui.pickers[0].actions.existing(s.file);
+    expect(split.editor.scrollTo).toHaveBeenCalledExactlyOnceWith(19, 901);
+    expect(split.scroller.scrollTop).toBe(901); expect(s.origin.view.setState).not.toHaveBeenCalled();
   });
   it('refuses a stale reader when another split has unsaved content', () => {
     const s = fixture('before [[old|item]] after', true); s.notes.push(note('unsaved [[old|item]]', 'source')); s.open(0);
