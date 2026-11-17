@@ -1,5 +1,34 @@
 # MarginLink 验证记录
 
+## 0.2.25 真实滚轮与曲线滚动 · 2026-11-17
+
+本轮使用用户当前UE6笔记及23个选定目标的只读副本；源与夹具SHA256为`12ba3973…699c`，与旧轮笔记内容不同。正式安装已核实为0.2.24且bundle与上版发布相同，排除旧包误用。测试仅在test-vault与隔离profile运行，Windows Obsidian1.15.1 / Electron37.10.2 / Chromium138，沿用用户15px字体、free布局、curve/hover、reduceMotion=false，并对照always及三线型。
+
+CPU及逐次绘制记录确认：虚拟化DOM变化令障碍邻域重测，旧batch要求整份障碍和bounds相同才复用；整段真实的-0.3125px/+0.1875px坐标修正也被判成全部新路线。滚动还反复进行共享走廊候选搜索，已遇到但远离覆盖区的关系参与无效求路。旧曲线CPU主要耗在crosses/searchRoute，文字测量通常约1ms以内；并非只由SVG曲线绘制或文字扫描造成。
+
+现在按自身相对几何复用旧线，严格整体位移精确平移所有点、控制点与路径，再用当前完整文字/卡片/边界验证；不放宽安全容差或四舍五入障碍。覆盖区外不搜索不可能显示的关系，相关卡片仍参与避障。必要路线立即更新，共享探索在160ms滚动静默后进行，并缓存附近绘制几何已完成的优化。宿主实测每120个wheel scroll会产生约120个同轮scrollend，因此没有用scrollend误判整段手势结束。缓存仅控制可选优化，不能跳过安全校验和失败路线恢复，也不承诺穷尽覆盖区外所有更优共享方案。
+
+最终0.2.25真实wheel的10项硬门槛已通过：阅读/编辑×三线型always及curve悬停未激活/初始激活，120包上下往返滚轮、覆盖边界、450ms静置；每组render p95≤16.7ms、max<50ms、可见双方post-frame相对坐标≤1px、滚动保存0。6组always各4个静态点独立采样原生SVG，核对端口/共享接缝、完整文字及卡片描边碰撞和必要编号续接。最终曲线阅读p95为6.2–6.3ms、编辑2.3–2.5ms；阅读max28.3–36.3ms，编辑35.5–36.8ms。这些是插件工作耗时，不是整台机器的FPS保证；rAF记录仍可有宿主/采样等其他帧间隔。
+
+相同最终探针、逐case重载/相同字体稳定条件/轨迹的0.2.24对照（baseline-matched）10组均观测完成、errors0，但不满足性能门槛，明确标记measured而不是passed。主要曲线对照如下；更早不同初始化的94–112ms/最高607ms诊断不混入此表。
+
+| 模式/曲线显示 | 0.2.24 render p95 / max | 0.2.25 render p95 / max | Long Tasks旧→新 |
+| --- | --- | --- | --- |
+| 阅读/常驻 | 64.3 / 166.5ms | 6.3 / 36.3ms | 8→0 |
+| 阅读/悬停未激活 | 59.7 / 181.4ms | 6.3 / 28.3ms | 8→0 |
+| 编辑/常驻 | 42.2 / 197.2ms | 2.3 / 35.6ms | 6→0 |
+| 编辑/悬停未激活 | 49.4 / 310.3ms | 2.5 / 36.8ms | 6→0 |
+
+原生合成器另捕获阅读135PNG/编辑116PNG，分别39/30帧双方模板置信≥0.8，最大相对漂移0/1px，无>1px。source最早rAF观察曾有246.6875px的单帧中途值，post-frame task为0，未在已捕获合成帧呈现；原始值保留，没有删掉该观察来声称所有回调均同步。早期模板元数据与截图间字体/行宽变化造成假94px匹配，修正为fonts.ready及坐标稳定后取得模板，失败原始资料保留。
+
+独立CPU对照`node scripts/benchmark-scroll-routing.mjs --baseline=4aa8838 --frames=12 --output=artifacts/scroll-routing-cpu-0.2.25.json`已完成42项，逐项12帧持续计时、独立12帧安全/有向共享接缝与停稳校验。六关系curve整体微移p95为32.19→0.251ms，远障碍16.06→0.373ms，覆盖移动30.68→0.341ms；持续及停稳均零重新求路、保留完整安全复核。这是故意提交的邻域事件，不表示每个真实滚动帧都求路。故意绕过overlay过滤、提交全部30关系的压力组仍重试24失败离屏项，直线/直角墙钟有回退；实际过滤效果以桌面记录为准。
+
+完整`npm test`为49文件480项，`npm run lint`与`npm run package`通过，ZIP五个发布文件逐字节一致。当前包6项生命周期（双分栏真实滚轮、阅读重挂、idle0render、大跨度覆盖、待决timer期间卸载）及4项curve拖动/drop重载均通过，22桌面场景最终错误0。首轮生命周期5/6中的拖动邻卡变化发生在初始宿主字体/位置未稳，探针等待fonts.ready及200ms坐标稳定后同动作6/6，无生产补丁或放宽坐标判据。隔离首次信任/手动启用竞争和一次renderer崩溃单列诊断，后续最终各报告零pageerror。
+
+复做（先准备当前隔离副本、安装对应包并启动9225；历史报告不覆盖）：`node scripts/desktop-scroll-performance.mjs --phase=final --cold --geometry --verify`；合成器加`--phase=final-compositor --only=curve/always --compositor`后分别运行`python scripts/analyze-compositor.py artifacts/scroll-performance/final-compositor/<preview或source>-curve-always-rest-compositor`。回归为`node scripts/desktop-scroll-lifecycle.mjs --output=artifacts/scroll-performance/final-lifecycle-settled --reported-note --curve`与`node scripts/desktop-curve-drag.mjs --output=artifacts/scroll-performance/final-drag --only=curve/ship`，后二者环境变量`MARGINLINK_CDP_URL=http://127.0.0.1:9225`。
+
+最终源码、安装目录、ZIP及桌面bundle一致为`0d3f0744…550b4c`。[桌面摘要](artifacts/scroll-performance-0.2.25.json)、[发布收据](artifacts/release-0.2.25.json)、[CPU对照](artifacts/scroll-routing-cpu-0.2.25.json)。测试24夹具按SHA保留至ignored证据，6配置精确还原，隔离实例原生关闭；正式PID23544保留，源SHA起止不变。正式库未自动升级；其他系统、最低宿主、第三方DOM改写及大型库长时运行没有据此获得本轮验证。
+
 ## 0.2.24 重链视口与关联面板初始焦点 · 2026-11-17
 
 按用户顺序，先完成并推送0.2.23的完全手动整改（`49a5d51df2117111ae89a0eece4bede4ec927d64`），再开始本阶段。实际环境仍为Windows Obsidian1.15.1、默认主题、1614×838/DPR1、隔离test-vault和test-profile/manual-layout-run。正式库只读，复制副本与正式源的不同版本沿用上一节来源说明；本阶段最终两组run的正式源起止均为c463d3，副本为98d945。

@@ -1,0 +1,478 @@
+{
+  "version": "0.2.25",
+  "baselineRevision": "4aa8838df97029c12fb36b6231c109bc559ec5c5",
+  "bundleSHA256": "0d3f0744bb306e5cdc9836dbffa0abe4e68865f231e67be218318d5cce550b4c",
+  "fixtureSHA256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+  "runtime": {
+    "title": "The road to Unreal Engine 6. Read about our plans and timeline - test-vault - Obsidian 1.15.1",
+    "plugin": "0.2.25",
+    "chrome": "138.0.7204.251",
+    "electron": "37.10.2"
+  },
+  "scope": "Read-only copies of the current UE6 note and 23 selected targets, test-vault and isolated test-profile only. Formal Vault not upgraded. Same probe, per-case reload, fonts/coordinates settled, 120 native wheel packets, 450ms quiet interval. Plugin work durations are not whole-machine FPS guarantees.",
+  "validation": {
+    "unitTests": 480,
+    "unitFiles": 49,
+    "lint": "passed",
+    "package": "passed",
+    "desktopScenarios": 22,
+    "nativeSvgCheckpoints": 24
+  },
+  "baseline": {
+    "status": "measured",
+    "errors": [],
+    "bundleSHA256": "f3be4d44770bc70d9d11bb2edb9583b6ce9cb55b8b69bbb9f7cfb045c4a953e4",
+    "performancePassed": false,
+    "scenarios": [
+      {
+        "case": "preview/straight/always/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 14.299999999813735,
+        "renderMaxMs": 150.20000000018626,
+        "longTasks": 1,
+        "frameIntervalP95Ms": 5.7000000000000455,
+        "frameIntervalMaxMs": 294.4999999999998,
+        "frameIntervalsOver50ms": 2,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "preview/elbow/always/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 11.800000000279397,
+        "renderMaxMs": 156.5,
+        "longTasks": 1,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 311.0999999999999,
+        "frameIntervalsOver50ms": 2,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "preview/curve/always/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 64.3000000002794,
+        "renderMaxMs": 166.5,
+        "longTasks": 8,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 316.5999999999999,
+        "frameIntervalsOver50ms": 8,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "preview/curve/hover/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 59.700000000186265,
+        "renderMaxMs": 181.39999999990687,
+        "longTasks": 8,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 338.9000000000001,
+        "frameIntervalsOver50ms": 9,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "preview/curve/hover/initial-hover",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 60,
+        "renderMaxMs": 167.70000000018626,
+        "longTasks": 8,
+        "frameIntervalP95Ms": 5.700000000000273,
+        "frameIntervalMaxMs": 316.7000000000003,
+        "frameIntervalsOver50ms": 8,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "source/straight/always/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 6.5,
+        "renderMaxMs": 137.40000000037253,
+        "longTasks": 1,
+        "frameIntervalP95Ms": 5.7000000000000455,
+        "frameIntervalMaxMs": 138.80000000000018,
+        "frameIntervalsOver50ms": 2,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "source/elbow/always/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 5.399999999906868,
+        "renderMaxMs": 135,
+        "longTasks": 1,
+        "frameIntervalP95Ms": 5.699999999999932,
+        "frameIntervalMaxMs": 138.9000000000001,
+        "frameIntervalsOver50ms": 1,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "source/curve/always/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 42.200000000186265,
+        "renderMaxMs": 197.20000000018626,
+        "longTasks": 6,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 200,
+        "frameIntervalsOver50ms": 5,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "source/curve/hover/rest",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 49.39999999990687,
+        "renderMaxMs": 310.29999999981374,
+        "longTasks": 6,
+        "frameIntervalP95Ms": 10.300000000000182,
+        "frameIntervalMaxMs": 311.5,
+        "frameIntervalsOver50ms": 6,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      },
+      {
+        "case": "source/curve/hover/initial-hover",
+        "executionCompleted": true,
+        "performancePassed": false,
+        "renderP95Ms": 88.1999999997206,
+        "renderMaxMs": 355.10000000009313,
+        "longTasks": 6,
+        "frameIntervalP95Ms": 6.200000000000273,
+        "frameIntervalMaxMs": 355.90000000000055,
+        "frameIntervalsOver50ms": 7,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 0,
+        "quietPaintMaxMs": 0
+      }
+    ]
+  },
+  "final": {
+    "status": "passed",
+    "errors": [],
+    "scenarios": [
+      {
+        "case": "preview/straight/always/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 13.800000000279397,
+        "renderMaxMs": 27.399999999906868,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 6,
+        "frameIntervalMaxMs": 111,
+        "frameIntervalsOver50ms": 1,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 4,
+        "scrollPaintMaxMs": 6.900000000372529,
+        "quietPaintMaxMs": 12.600000000093132
+      },
+      {
+        "case": "preview/elbow/always/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 6.7000000001862645,
+        "renderMaxMs": 17.5,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.700000000000273,
+        "frameIntervalMaxMs": 155.5,
+        "frameIntervalsOver50ms": 1,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 4,
+        "scrollPaintMaxMs": 3,
+        "quietPaintMaxMs": 0.5
+      },
+      {
+        "case": "preview/curve/always/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 6.300000000279397,
+        "renderMaxMs": 36.3000000002794,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.700000000000273,
+        "frameIntervalMaxMs": 83.29999999999995,
+        "frameIntervalsOver50ms": 1,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 4,
+        "scrollPaintMaxMs": 22.800000000279397,
+        "quietPaintMaxMs": 35.700000000186265
+      },
+      {
+        "case": "preview/curve/hover/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 6.2999999998137355,
+        "renderMaxMs": 28.300000000279397,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 61.09999999999991,
+        "frameIntervalsOver50ms": 1,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 22.299999999813735,
+        "quietPaintMaxMs": 0.599999999627471
+      },
+      {
+        "case": "preview/curve/hover/initial-hover",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 6.2000000001862645,
+        "renderMaxMs": 28.700000000186265,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.7000000000000455,
+        "frameIntervalMaxMs": 49.90000000000009,
+        "frameIntervalsOver50ms": 0,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 0,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 22.399999999906868,
+        "quietPaintMaxMs": 0.6000000000931323
+      },
+      {
+        "case": "source/straight/always/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 2.8999999999068677,
+        "renderMaxMs": 7.100000000093132,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 77.79999999999995,
+        "frameIntervalsOver50ms": 1,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 4,
+        "scrollPaintMaxMs": 3.6000000000931323,
+        "quietPaintMaxMs": 3.7000000001862645
+      },
+      {
+        "case": "source/elbow/always/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 2.3000000002793968,
+        "renderMaxMs": 5.2999999998137355,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.699999999999818,
+        "frameIntervalMaxMs": 50,
+        "frameIntervalsOver50ms": 0,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 4,
+        "scrollPaintMaxMs": 2.2000000001862645,
+        "quietPaintMaxMs": 4.600000000093132
+      },
+      {
+        "case": "source/curve/always/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 2.3000000002793968,
+        "renderMaxMs": 35.60000000009313,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.7000000000000455,
+        "frameIntervalMaxMs": 44.5,
+        "frameIntervalsOver50ms": 0,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 4,
+        "scrollPaintMaxMs": 15.600000000093132,
+        "quietPaintMaxMs": 35.10000000009313
+      },
+      {
+        "case": "source/curve/hover/rest",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 2.5,
+        "renderMaxMs": 36.8000000002794,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.7000000000000455,
+        "frameIntervalMaxMs": 49.89999999999998,
+        "frameIntervalsOver50ms": 0,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 16.5,
+        "quietPaintMaxMs": 36.200000000186265
+      },
+      {
+        "case": "source/curve/hover/initial-hover",
+        "executionCompleted": true,
+        "performancePassed": true,
+        "renderP95Ms": 2.3999999999068677,
+        "renderMaxMs": 35.5,
+        "longTasks": 0,
+        "frameIntervalP95Ms": 5.7000000000000455,
+        "frameIntervalMaxMs": 50,
+        "frameIntervalsOver50ms": 0,
+        "postFrameOffsetRangePx": 0,
+        "earlyRafOffsetRangePx": 246.6875,
+        "scrollWrites": 0,
+        "svgCheckpoints": 0,
+        "scrollPaintMaxMs": 16.800000000279397,
+        "quietPaintMaxMs": 34.90000000037253
+      }
+    ]
+  },
+  "compositor": [
+    {
+      "mode": "preview",
+      "passed": true,
+      "method": "fixed-x normalized cross correlation of source/card labels in compositor frames",
+      "validFrames": 39,
+      "capturedFrames": 135,
+      "maxDriftPixels": 0,
+      "over1Pixel": 0,
+      "dpr": 1
+    },
+    {
+      "mode": "source",
+      "passed": true,
+      "method": "fixed-x normalized cross correlation of source/card labels in compositor frames",
+      "validFrames": 30,
+      "capturedFrames": 116,
+      "maxDriftPixels": 1,
+      "over1Pixel": 0,
+      "dpr": 1
+    }
+  ],
+  "regressions": {
+    "final-lifecycle-settled": {
+      "status": "passed",
+      "errors": [],
+      "scenarios": [
+        {
+          "name": "native pointer free-card drag changes only its own placement",
+          "passed": true
+        },
+        {
+          "name": "source and reading split panes scroll independently",
+          "passed": true
+        },
+        {
+          "name": "reading section refresh and retained-sizer host removal reconnect native cards",
+          "passed": true
+        },
+        {
+          "name": "settled source and reading panes schedule zero idle renders",
+          "passed": true
+        },
+        {
+          "name": "large scroll into a new virtualized region reports geometry costs separately",
+          "passed": true
+        },
+        {
+          "name": "disabling the plugin unloads native layers and restores owned sizer positioning",
+          "passed": true
+        }
+      ]
+    },
+    "final-drag": {
+      "status": "passed",
+      "errors": [],
+      "scenarios": [
+        {
+          "name": "preview/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+          "passed": true
+        },
+        {
+          "name": "source/curve/ship: same 48-step pointer drag, cancel, independently sampled SVG",
+          "passed": true
+        },
+        {
+          "name": "preview/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+          "passed": true
+        },
+        {
+          "name": "source/curve: immediate pointerup uses release coordinates and placement survives plugin reload",
+          "passed": true
+        }
+      ]
+    }
+  },
+  "diagnostics": [
+    "Early rAF saw a transient 246.6875px source value inside a host update; post-frame observations were zero and captured compositor frames stayed within 1px. Raw observations retained.",
+    "Earlier compositor template metadata became stale during font/layout settling and falsely matched another HTML label at 94px. Stable font/coordinates and contemporaneous templates corrected the probe; failed captures retained.",
+    "First lifecycle drag began before native layout settled; the same action passed after the probe waited for fonts and 200ms stable coordinates. No production patch or relaxed position gate.",
+    "Initial isolated trust/manual-enable load race and one isolated renderer crash were retained separately. Final accepted reports have zero page errors.",
+    "Native scrollend fires with individual wheel packets; a 160ms per-view quiet timer gates optional sharing only.",
+    "CPU stress benchmark deliberately submits 24 out-of-coverage failed relations directly to batch. Straight/elbow wall time can regress there; desktop culling avoids those submissions."
+  ],
+  "limits": [
+    "One Windows 1.15.1 setup and current source copy; not a claim for every theme, third-party DOM rewriter, OS, minimum host or large-Vault endurance.",
+    "Optional sharing cache covers nearby drawing geometry; safety always revalidates the current full environment, but no claim of globally optimal sharing outside that region.",
+    "Compositor drift checks apply to captured frames with both template confidences >=0.8; not every callback or every machine display frame."
+  ],
+  "formalReadOnly": {
+    "sourceSHA256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+    "afterSHA256": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+    "unchangedDuringFinalRun": true
+  },
+  "cleanup": {
+    "restoredConfigurations": 6,
+    "retainedFixtures": 24,
+    "formalBefore": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+    "formalAfter": "12ba3973a662bc43808a41947db282a374c5c32c8fde39ea5529e8a6e467699c",
+    "isolatedProfileClosed": true,
+    "ordinaryMainProcessPreserved": 23544,
+    "testVaultGitChanges": 0
+  }
+}

@@ -6,7 +6,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
-const output = 'artifacts/iteration-16-20/scroll-lifecycle';
+const output = process.argv.find(value => value.startsWith('--output='))?.slice(9) ?? 'artifacts/iteration-16-20/scroll-lifecycle';
+const fixture = process.argv.includes('--reported-note') ? '详细分析/The road to Unreal Engine 6. Read about our plans and timeline.md' : 'Connector Manual.md';
+const curve = process.argv.includes('--curve');
 const report = { status: 'running', scenarios: [], errors: [] };
 let browser, page, preferences, layouts, firstId, secondId;
 await mkdir(output, { recursive: true });
@@ -14,6 +16,21 @@ const save = () => writeFile(`${output}/results.json`, JSON.stringify(report, nu
 const frames = (count = 10) => page.evaluate(count => new Promise(resolve => {
   const next = () => --count ? requestAnimationFrame(next) : resolve(); requestAnimationFrame(next);
 }), count);
+const settle = id => page.evaluate(async id => {
+  await document.fonts.ready;
+  let previous = '', since = performance.now(); const started = since;
+  await new Promise((resolve, reject) => {
+    const sample = () => {
+      const [, overlay] = window.marginLifecycle.pair(id);
+      const signature = JSON.stringify([...overlay.cards.values()].map(card => card.shell.getBoundingClientRect().toJSON()));
+      const now = performance.now();
+      if (signature !== previous) { previous = signature; since = now; }
+      if (now - since >= 200) resolve();
+      else if (now - started > 5000) reject(Error('Native card positions did not settle'));
+      else requestAnimationFrame(sample);
+    }; requestAnimationFrame(sample);
+  });
+}, id);
 const check = async (name, action) => {
   try { const details = await action(); report.scenarios.push({ name, passed: true, ...details }); console.log('PASS', name); }
   catch (error) { report.scenarios.push({ name, passed: false, error: String(error), stack: error.stack }); console.log('FAIL', name, error.message); }
@@ -27,7 +44,7 @@ const snapshot = id => page.evaluate(id => {
 }, id);
 const stable = (before, after, except) => {
   let compared = 0;
-  for (const card of before.cards.filter(card => card.key !== except)) {
+  for (const card of before.cards.filter(card => card.key !== except && card.rect.width && card.connected)) {
     const current = after.cards.find(other => other.key === card.key); if (!current) continue;
     assert(Math.abs(current.rect.x - card.rect.x) <= 1 && Math.abs(current.rect.y - card.rect.y) <= 1, `${card.label}: independent card/pane moved`);
     assert.deepEqual(current.record, card.record); compared++;
@@ -45,27 +62,33 @@ try {
   preferences = await page.evaluate(() => ({ ...app.plugins.plugins['margin-link'].preferences }));
   layouts = await page.evaluate(() => app.plugins.plugins['margin-link'].layouts.snapshot());
   const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1800, height: 1100, deviceScaleFactor: 1, mobile: false });
-  firstId = await page.evaluate(async () => {
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: curve ? 2600 : 1800, height: 1100, deviceScaleFactor: 1, mobile: false });
+  firstId = await page.evaluate(async ({ fixture, curve }) => {
     app.setting?.close(); app.workspace.detachLeavesOfType('margin-link-settings'); app.workspace.leftSplit.collapse(); app.workspace.rightSplit.collapse();
     const plugin = app.plugins.plugins['margin-link'];
-    Object.assign(plugin.preferences, { enabled: true, lines: 'always', lineStyle: 'elbow', lineWidth: 2, placementMode: 'free', cardShape: 'square', reduceMotion: true }); await plugin.savePreferences();
+    Object.assign(plugin.preferences, { enabled: true, lines: 'always', lineStyle: curve ? 'curve' : 'elbow', lineWidth: 2, placementMode: 'free', cardShape: 'square', reduceMotion: true }); await plugin.savePreferences();
     const leaves = app.workspace.getLeavesOfType('markdown'), leaf = leaves[0] ?? app.workspace.getLeaf(true);
     for (const other of leaves.slice(1)) other.detach();
-    await leaf.setViewState({ type: 'markdown', state: { file: 'Connector Manual.md', mode: 'source', source: false } });
+    await leaf.setViewState({ type: 'markdown', state: { file: fixture, mode: 'source', source: false } });
     app.workspace.setActiveLeaf(leaf, { focus: true });
     window.marginLifecycle = {
       pair: id => [...app.plugins.plugins['margin-link'].overlays].find(([view]) => view.leaf.id === id),
       scroller: id => { const [view, overlay] = window.marginLifecycle.pair(id); return view.getMode() === 'source' ? overlay.bridge().cm.scrollDOM : view.previewMode.containerEl.querySelector('.markdown-preview-view') ?? view.previewMode.containerEl; },
-      center: id => {
+      center: async id => {
         const [view] = window.marginLifecycle.pair(id);
-        if (view.getMode() === 'source') { const at = view.editor.getValue().indexOf('Early Access'), pos = view.editor.offsetToPos(at); view.editor.scrollIntoView({ from: pos, to: pos }, true); }
-        else { const scroll = window.marginLifecycle.scroller(id), link = [...view.contentEl.querySelectorAll('a.internal-link')].find(element => element.textContent === 'Early Access'); if (link) scroll.scrollTop += link.getBoundingClientRect().top - scroll.getBoundingClientRect().top - scroll.clientHeight / 2; }
+        if (view.getMode() === 'source') { const at = view.editor.getValue().lastIndexOf('Early Access'), pos = view.editor.offsetToPos(at); view.editor.scrollIntoView({ from: pos, to: pos }, true); }
+        else {
+          const scroll = window.marginLifecycle.scroller(id); scroll.scrollTop = scroll.scrollHeight;
+          let link;
+          for (let i = 0; i < 40; i++) { link = [...view.contentEl.querySelectorAll('a.internal-link')].find(element => element.textContent === 'Early Access'); if (link) break; await new Promise(resolve => requestAnimationFrame(resolve)); }
+          if (!link) throw Error('Native reading source did not render');
+          scroll.scrollTop += link.getBoundingClientRect().top - scroll.getBoundingClientRect().top - scroll.clientHeight / 2;
+        }
       }
     };
     return leaf.id;
-  }); await frames(15);
-  await page.evaluate(id => window.marginLifecycle.center(id), firstId); await frames(15);
+  }, { fixture, curve }); await frames(15);
+  await page.evaluate(id => window.marginLifecycle.center(id), firstId); await frames(15); await settle(firstId);
 
   await check('native pointer free-card drag changes only its own placement', async () => {
     const before = await snapshot(firstId);
@@ -78,13 +101,14 @@ try {
   });
 
   await check('source and reading split panes scroll independently', async () => {
-    secondId = await page.evaluate(async () => { const leaf = app.workspace.getLeaf('split'); await leaf.setViewState({ type: 'markdown', state: { file: 'Connector Manual.md', mode: 'preview' } }); return leaf.id; });
-    await frames(20); await page.evaluate(ids => ids.forEach(id => window.marginLifecycle.center(id)), [firstId, secondId]); await frames(20);
+    secondId = await page.evaluate(async fixture => { const leaf = app.workspace.getLeaf('split'); await leaf.setViewState({ type: 'markdown', state: { file: fixture, mode: 'preview' } }); return leaf.id; }, fixture);
+    await frames(20); await page.evaluate(ids => Promise.all(ids.map(id => window.marginLifecycle.center(id))), [firstId, secondId]); await frames(20);
     const sourceBefore = await snapshot(firstId), readingBefore = await snapshot(secondId);
-    await page.evaluate(id => { window.marginLifecycle.scroller(id).scrollTop += 65; }, secondId); await frames(12);
+    const wheel = async id => { const box = await page.evaluate(id => window.marginLifecycle.scroller(id).getBoundingClientRect().toJSON(), id); await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.wheel(0, 65); await frames(12); };
+    await wheel(secondId);
     const unchangedSource = stable(sourceBefore, await snapshot(firstId));
     const readingAfter = await snapshot(secondId); assert(readingAfter.scrollTop !== readingBefore.scrollTop);
-    await page.evaluate(id => { window.marginLifecycle.scroller(id).scrollTop += 45; }, firstId); await frames(12);
+    await wheel(firstId);
     const unchangedReading = stable(readingAfter, await snapshot(secondId));
     return { unchangedSource, unchangedReading, readingDelta: readingAfter.scrollTop - readingBefore.scrollTop };
   });
@@ -128,14 +152,20 @@ try {
   });
 
   await check('disabling the plugin unloads native layers and restores owned sizer positioning', async () => {
+    await page.evaluate(id => { const scroller = window.marginLifecycle.scroller(id); scroller.scrollTop = Math.max(0, scroller.scrollTop - 90); scroller.dispatchEvent(new Event('scroll')); }, firstId);
     const result = await page.evaluate(async () => {
       const plugin = app.plugins.plugins['margin-link'];
+      const old = [...plugin.overlays.values()], pendingTimers = old.filter(o => o.scrollIdleTimer !== undefined).length;
+      const rendered = old.map(o => o.diagnostics?.renders ?? 0);
       const parents = [...plugin.overlays.values()].map(overlay => ({ parent: overlay.decorations.parent, owned: overlay.decorations.positioned, previous: overlay.decorations.previousPosition }));
       await app.plugins.disablePlugin('margin-link');
+      await new Promise(resolve => setTimeout(resolve, 400));
       return { nativeLayers: document.querySelectorAll('.margin-link-decoration-layer').length, fixedLayers: document.querySelectorAll('.margin-link-overlay').length,
+        pendingTimers, disposed: old.map((o, index) => ({ stopped: o.stopped, frameId: o.frame, timer: o.scrollIdleTimer ?? null, rendersBefore: rendered[index], rendersAfter: o.diagnostics?.renders ?? 0 })),
         parents: parents.filter(item => item.parent?.isConnected).map(item => ({ owned: item.owned, previous: item.previous, current: item.parent.style.position })) };
     });
     assert.equal(result.nativeLayers, 0); assert.equal(result.fixedLayers, 0);
+    if (curve) { assert(result.pendingTimers > 0, 'Unload must exercise a pending scroll quiet timer'); for (const old of result.disposed) { assert(old.stopped); assert.equal(old.rendersAfter, old.rendersBefore); assert.equal(old.timer, null); } }
     for (const parent of result.parents.filter(parent => parent.owned)) assert.equal(parent.current, parent.previous);
     await page.evaluate(() => app.plugins.enablePlugin('margin-link')); await frames(20);
     assert(await page.evaluate(() => document.querySelectorAll('.margin-link-decoration-layer').length > 0)); return result;

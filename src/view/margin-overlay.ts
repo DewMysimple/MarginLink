@@ -64,6 +64,9 @@ export class MarginOverlay {
   private textObstacles = new TextObstacles();
   private obstacles: readonly Box[] = [];
   private scrollTop = 0;
+  private scroller?: HTMLElement;
+  private scrolling = false;
+  private scrollIdleTimer?: number;
   private geometrySignature = '';
   private hostRect?: DOMRect;
   private highlighted?: string;
@@ -114,7 +117,7 @@ export class MarginOverlay {
     // here so a shrinking lane cannot paint yesterday's larger card for a frame.
     // The overlay is absolute and never changes the observed container/body size.
     this.resize = new ResizeObserver(() => { this.measurementsDirty = true; this.textObstacles.invalidate(); this.flushFrame(); }); this.resize.observe(container);
-    container.addEventListener('scroll', this.schedule, true);
+    container.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
     container.addEventListener('pointermove', this.onPointerMove); container.addEventListener('pointerleave', this.onLeave);
     this.win.addEventListener('resize', this.schedule);
     container.ownerDocument.fonts?.addEventListener('loadingdone', this.onFontsLoaded); this.schedule();
@@ -122,6 +125,17 @@ export class MarginOverlay {
   bridge(): EditorBridge | undefined { return [...this.host.bridges].find(b => b.alive && this.view.contentEl.contains(b.cm.dom)); }
   schedule = (): void => {
     if (!this.stopped && !this.frame) this.frame = this.win.requestAnimationFrame(this.flushFrame);
+  };
+  private onScroll = (event: Event): void => {
+    if (event.target === this.scroller) {
+      this.scrolling = true; this.win.clearTimeout(this.scrollIdleTimer);
+      // A wheel packet can emit scrollend in the very same event turn. Wait
+      // for a short quiet interval before optional corridor exploration instead.
+      this.scrollIdleTimer = this.win.setTimeout(() => {
+        this.scrollIdleTimer = undefined; this.scrolling = false; this.schedule();
+      }, 160);
+    }
+    this.schedule();
   };
   private onFontsLoaded = (): void => {
     this.layoutGeometry = ''; this.measurementsDirty = true; this.textObstacles.invalidate(); this.schedule();
@@ -183,6 +197,10 @@ export class MarginOverlay {
       this.cardDrag.cancel(); this.revision = bridge.revision;
     }
     const scroller = bridge?.cm.scrollDOM ?? this.view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-view') ?? this.view.previewMode.containerEl;
+    if (this.scroller !== scroller) {
+      this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined;
+      this.scroller = scroller; this.scrolling = false;
+    }
     const bodyEl = bridge?.cm.contentDOM ?? this.view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-sizer');
     if (!bodyEl) { this.cancelInteractions(); this.clearCards(); return; }
     if (this.observedBody !== bodyEl) {
@@ -365,7 +383,10 @@ export class MarginOverlay {
       return;
     }
     this.svg.style.display = '';
-    const optimizeShared = !this.cardDrag.dragging;
+    // Native scrolling already carries the ink with the note. Validate changed
+    // geometry immediately, but explore optional shared corridors only once the
+    // scroll becomes quiet. Existing coincident strokes remain shared throughout.
+    const optimizeShared = !this.cardDrag.dragging && !this.scrolling;
     const signature = [this.geometryRevision, this.cards.size, prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision, optimizeShared].join(':');
     if (signature === this.batchSignature) return;
     const coverage = this.textObstacles.bounds;
@@ -379,11 +400,22 @@ export class MarginOverlay {
       const both = fragments.some(f => containsBox(bounds, f)) && containsBox(bounds, box); visible.set(key, both);
       return { key, fragments, card: { ...p, y: p.y + this.scrollTop }, previous: card.ports, bounds };
     });
+    // Retain every layout slot, but do not search a route whose endpoints are
+    // wholly outside the measured neighbourhood. Its card still protects other
+    // routes, including cards whose own source has scrolled out of coverage.
+    const intersects = (box: Box) => box.left <= bounds.right && box.right >= bounds.left && box.top <= bounds.bottom && box.bottom >= bounds.top;
+    const active = relations.filter(relation => relation.fragments.some(intersects) && intersects({
+      left: relation.card.x, right: relation.card.x + relation.card.width, top: relation.card.y, bottom: relation.card.y + relation.card.height
+    }));
+    const activeKeys = new Set(active.map(relation => relation.key));
+    const inactiveCards = relations.filter(relation => !activeKeys.has(relation.key)).map(({ card }) => ({
+      left: card.x, right: card.x + card.width, top: card.y, bottom: card.y + card.height
+    }));
     // Reserve the widest highlighted stroke as well as at least .5px of real
     // whitespace. Dense rows may use the compact budget; their full DOM text
     // rectangles remain protected throughout routing and batch validation.
-    this.batch = connectorBatch(relations, prefs.lineStyle,
-      { obstacles: this.obstacles, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5, optimizeShared }, this.batch);
+    this.batch = connectorBatch(active, prefs.lineStyle,
+      { obstacles: this.obstacles, cardObstacles: inactiveCards, body: input.body, lineWidth: prefs.lineWidth + 0.5, minimumClearance: 0.5, optimizeShared }, this.batch);
     this.batchSignature = signature;
     if (this.diagnostics) this.diagnostics.routes++;
     const keep = new Set(this.batch!.segments.map(s => s.id));
@@ -539,6 +571,7 @@ export class MarginOverlay {
     }
   }
   private clearCards(): void {
+    this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
     cardTooltip.hideWithin(this.root); if (this.decorations) cardTooltip.hideWithin(this.decorations.element);
     this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
     this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
@@ -550,7 +583,8 @@ export class MarginOverlay {
     this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
     for (const menu of [...this.menus]) menu.hide(); this.menus.clear();
     const container = this.view.contentEl;
-    container.removeEventListener('scroll', this.schedule, true); container.removeEventListener('pointermove', this.onPointerMove); container.removeEventListener('pointerleave', this.onLeave);
+    container.removeEventListener('scroll', this.onScroll, true);
+    container.removeEventListener('pointermove', this.onPointerMove); container.removeEventListener('pointerleave', this.onLeave);
     this.win.removeEventListener('resize', this.schedule); container.ownerDocument.fonts?.removeEventListener('loadingdone', this.onFontsLoaded);
     this.cardDrag.destroy(); this.drag.destroy(); this.clearCards(); this.decorations.detach(); this.root.remove(); container.classList.remove('margin-link-host');
   }

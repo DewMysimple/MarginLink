@@ -1,0 +1,970 @@
+{
+  "baseline": "4aa8838",
+  "framesPerScenario": 12,
+  "fixture": "Synthetic six-relation geometry from tests/six-connectors.test.ts; no note text or saved user positions.",
+  "scope": "Routing CPU only. Neighbourhood events are deliberate batch submissions, not a claim that every desktop scroll renders or routes. Current policy defers shared exploration during the sequence and restores it once after the last frame. Offscreen scenario deliberately submits all 30 relations to both implementations and does not simulate the overlay culling layer.",
+  "measurements": [
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "unchanged-neighbourhood",
+      "p50Ms": 1.2107999999999777,
+      "p95Ms": 1.3868999999999971,
+      "maxMs": 1.3868999999999971,
+      "counts": {
+        "safe": 744,
+        "connectorRoute": 144,
+        "routeAtClearance": 144
+      },
+      "submittedRelations": 6,
+      "settledMs": 1.02770000000001,
+      "settledCounts": {
+        "safe": 62,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "far-text-added-and-removed",
+      "p50Ms": 1.5524000000000058,
+      "p95Ms": 1.8936999999999955,
+      "maxMs": 1.8936999999999955,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1776
+      },
+      "submittedRelations": 6,
+      "settledMs": 1.0424999999999898,
+      "settledCounts": {
+        "safe": 62,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "same-text-boxes-reordered",
+      "p50Ms": 1.4114000000000146,
+      "p95Ms": 1.65300000000002,
+      "maxMs": 1.65300000000002,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1776
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.9608000000000061,
+      "settledCounts": {
+        "safe": 62,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "coverage-window-moves",
+      "p50Ms": 1.2864999999999895,
+      "p95Ms": 1.6733999999999583,
+      "maxMs": 1.6733999999999583,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1776
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.9085000000000036,
+      "settledCounts": {
+        "safe": 62,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "remote-text-and-window-move",
+      "p50Ms": 1.4014999999999986,
+      "p95Ms": 1.5254000000000474,
+      "maxMs": 1.5254000000000474,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1776
+      },
+      "submittedRelations": 6,
+      "settledMs": 1.091099999999983,
+      "settledCounts": {
+        "safe": 62,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "virtual-section-translation",
+      "p50Ms": 1.4557000000000926,
+      "p95Ms": 1.6621999999999844,
+      "maxMs": 1.6621999999999844,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1776
+      },
+      "submittedRelations": 6,
+      "settledMs": 1.044399999999996,
+      "settledCounts": {
+        "safe": 62,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "straight",
+      "scenario": "retained-offscreen-relations",
+      "p50Ms": 4.586599999999976,
+      "p95Ms": 5.5330000000000155,
+      "maxMs": 5.5330000000000155,
+      "counts": {
+        "connectorRoute": 504,
+        "routeAtClearance": 792,
+        "safe": 59376,
+        "searchRoute": 1152
+      },
+      "submittedRelations": 30,
+      "settledMs": 3.984199999999987,
+      "settledCounts": {
+        "safe": 4862,
+        "connectorRoute": 36,
+        "routeAtClearance": 60,
+        "searchRoute": 96
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "unchanged-neighbourhood",
+      "p50Ms": 0.9954999999999927,
+      "p95Ms": 1.3953000000000202,
+      "maxMs": 1.3953000000000202,
+      "counts": {
+        "safe": 696,
+        "connectorRoute": 144,
+        "routeAtClearance": 144
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.9737999999999829,
+      "settledCounts": {
+        "safe": 58,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "far-text-added-and-removed",
+      "p50Ms": 1.3149999999999409,
+      "p95Ms": 1.5149999999999864,
+      "maxMs": 1.5149999999999864,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1332
+      },
+      "submittedRelations": 6,
+      "settledMs": 1.0136999999999716,
+      "settledCounts": {
+        "safe": 58,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "same-text-boxes-reordered",
+      "p50Ms": 1.338100000000054,
+      "p95Ms": 1.5885999999999285,
+      "maxMs": 1.5885999999999285,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1332
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.919399999999996,
+      "settledCounts": {
+        "safe": 58,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "coverage-window-moves",
+      "p50Ms": 1.2393999999999323,
+      "p95Ms": 1.4238000000000284,
+      "maxMs": 1.4238000000000284,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1332
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.8889000000001488,
+      "settledCounts": {
+        "safe": 58,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "remote-text-and-window-move",
+      "p50Ms": 1.296100000000024,
+      "p95Ms": 1.5585999999998421,
+      "maxMs": 1.5585999999998421,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1332
+      },
+      "submittedRelations": 6,
+      "settledMs": 1.0293000000001484,
+      "settledCounts": {
+        "safe": 58,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "virtual-section-translation",
+      "p50Ms": 1.3036999999999352,
+      "p95Ms": 1.4585000000001855,
+      "maxMs": 1.4585000000001855,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 1332
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.9186999999999443,
+      "settledCounts": {
+        "safe": 58,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "elbow",
+      "scenario": "retained-offscreen-relations",
+      "p50Ms": 4.289800000000014,
+      "p95Ms": 4.440200000000004,
+      "maxMs": 4.440200000000004,
+      "counts": {
+        "connectorRoute": 504,
+        "routeAtClearance": 792,
+        "safe": 58932,
+        "searchRoute": 1152
+      },
+      "submittedRelations": 30,
+      "settledMs": 4.098999999999933,
+      "settledCounts": {
+        "safe": 4858,
+        "connectorRoute": 36,
+        "routeAtClearance": 60,
+        "searchRoute": 96
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "unchanged-neighbourhood",
+      "p50Ms": 10.083900000000085,
+      "p95Ms": 11.259599999999864,
+      "maxMs": 11.259599999999864,
+      "counts": {
+        "safe": 9960,
+        "clearCurve": 18960,
+        "clearCubic": 10380,
+        "connectorRoute": 144,
+        "routeAtClearance": 144
+      },
+      "submittedRelations": 6,
+      "settledMs": 10.181300000000192,
+      "settledCounts": {
+        "safe": 830,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "far-text-added-and-removed",
+      "p50Ms": 15.419700000000375,
+      "p95Ms": 16.06179999999995,
+      "maxMs": 16.06179999999995,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 39804,
+        "clearCubic": 72768,
+        "clearCurve": 46848
+      },
+      "submittedRelations": 6,
+      "settledMs": 9.798800000000028,
+      "settledCounts": {
+        "safe": 830,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "same-text-boxes-reordered",
+      "p50Ms": 15.554299999999785,
+      "p95Ms": 30.83719999999994,
+      "maxMs": 30.83719999999994,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 39804,
+        "clearCubic": 72768,
+        "clearCurve": 46848
+      },
+      "submittedRelations": 6,
+      "settledMs": 17.81600000000026,
+      "settledCounts": {
+        "safe": 830,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "coverage-window-moves",
+      "p50Ms": 28.743800000000192,
+      "p95Ms": 30.680899999999383,
+      "maxMs": 30.680899999999383,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 39804,
+        "clearCubic": 72768,
+        "clearCurve": 46848
+      },
+      "submittedRelations": 6,
+      "settledMs": 17.910899999999856,
+      "settledCounts": {
+        "safe": 830,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "remote-text-and-window-move",
+      "p50Ms": 31.64930000000004,
+      "p95Ms": 33.26020000000062,
+      "maxMs": 33.26020000000062,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 39804,
+        "clearCubic": 72768,
+        "clearCurve": 46848
+      },
+      "submittedRelations": 6,
+      "settledMs": 18.741500000000087,
+      "settledCounts": {
+        "safe": 830,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "virtual-section-translation",
+      "p50Ms": 27.616899999999987,
+      "p95Ms": 32.18990000000031,
+      "maxMs": 32.18990000000031,
+      "counts": {
+        "connectorRoute": 216,
+        "routeAtClearance": 216,
+        "safe": 39804,
+        "clearCubic": 72768,
+        "clearCurve": 46848
+      },
+      "submittedRelations": 6,
+      "settledMs": 17.35480000000007,
+      "settledCounts": {
+        "safe": 830,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 12,
+        "routeAtClearance": 12
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "baseline",
+      "style": "curve",
+      "scenario": "retained-offscreen-relations",
+      "p50Ms": 32.44100000000071,
+      "p95Ms": 46.84200000000055,
+      "maxMs": 46.84200000000055,
+      "counts": {
+        "connectorRoute": 504,
+        "routeAtClearance": 792,
+        "safe": 43260,
+        "clearCubic": 72768,
+        "clearCurve": 46848,
+        "searchRoute": 1152
+      },
+      "submittedRelations": 30,
+      "settledMs": 18.033900000000358,
+      "settledCounts": {
+        "safe": 1118,
+        "clearCurve": 1580,
+        "clearCubic": 865,
+        "connectorRoute": 36,
+        "routeAtClearance": 60,
+        "searchRoute": 96
+      },
+      "sharedExplorationDuringScroll": true,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "unchanged-neighbourhood",
+      "p50Ms": 0.2698999999993248,
+      "p95Ms": 0.41089999999894644,
+      "maxMs": 0.41089999999894644,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.5239999999994325,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "far-text-added-and-removed",
+      "p50Ms": 0.14359999999942374,
+      "p95Ms": 0.5966000000007625,
+      "maxMs": 0.5966000000007625,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.21640000000115833,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "same-text-boxes-reordered",
+      "p50Ms": 0.1548000000002503,
+      "p95Ms": 0.33510000000023865,
+      "maxMs": 0.33510000000023865,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.22780000000057044,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "coverage-window-moves",
+      "p50Ms": 0.21489999999903375,
+      "p95Ms": 1.2868000000016764,
+      "maxMs": 1.2868000000016764,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.4171999999998661,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "remote-text-and-window-move",
+      "p50Ms": 0.1268000000000029,
+      "p95Ms": 0.3247000000010303,
+      "maxMs": 0.3247000000010303,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.1992000000009284,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "virtual-section-translation",
+      "p50Ms": 0.16849999999976717,
+      "p95Ms": 0.379399999999805,
+      "maxMs": 0.379399999999805,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.4030000000002474,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "straight",
+      "scenario": "retained-offscreen-relations",
+      "p50Ms": 5.16530000000057,
+      "p95Ms": 8.213799999999537,
+      "maxMs": 8.213799999999537,
+      "counts": {
+        "safe": 57672,
+        "connectorRoute": 288,
+        "routeAtClearance": 576,
+        "searchRoute": 1152
+      },
+      "submittedRelations": 30,
+      "settledMs": 4.468500000000859,
+      "settledCounts": {
+        "safe": 4806,
+        "connectorRoute": 24,
+        "routeAtClearance": 48,
+        "searchRoute": 96
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "unchanged-neighbourhood",
+      "p50Ms": 0.18770000000040454,
+      "p95Ms": 0.2451999999993859,
+      "maxMs": 0.2451999999993859,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.7402000000001863,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "far-text-added-and-removed",
+      "p50Ms": 0.13500000000021828,
+      "p95Ms": 0.17190000000118744,
+      "maxMs": 0.17190000000118744,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.2397000000000844,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "same-text-boxes-reordered",
+      "p50Ms": 0.12319999999999709,
+      "p95Ms": 0.2903999999998632,
+      "maxMs": 0.2903999999998632,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.4385999999994965,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "coverage-window-moves",
+      "p50Ms": 0.12490000000070722,
+      "p95Ms": 1.7779000000009546,
+      "maxMs": 1.7779000000009546,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.19069999999919673,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "remote-text-and-window-move",
+      "p50Ms": 0.14439999999922293,
+      "p95Ms": 0.46860000000015134,
+      "maxMs": 0.46860000000015134,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.19000000000050932,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "virtual-section-translation",
+      "p50Ms": 0.15639999999984866,
+      "p95Ms": 0.3371999999999389,
+      "maxMs": 0.3371999999999389,
+      "counts": {
+        "safe": 72
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.18499999999949068,
+      "settledCounts": {
+        "safe": 6
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "elbow",
+      "scenario": "retained-offscreen-relations",
+      "p50Ms": 5.608400000000984,
+      "p95Ms": 6.856799999999566,
+      "maxMs": 6.856799999999566,
+      "counts": {
+        "safe": 57672,
+        "connectorRoute": 288,
+        "routeAtClearance": 576,
+        "searchRoute": 1152
+      },
+      "submittedRelations": 30,
+      "settledMs": 6.143899999999121,
+      "settledCounts": {
+        "safe": 4806,
+        "connectorRoute": 24,
+        "routeAtClearance": 48,
+        "searchRoute": 96
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "unchanged-neighbourhood",
+      "p50Ms": 0.23019999999996799,
+      "p95Ms": 1.2153999999991356,
+      "maxMs": 1.2153999999991356,
+      "counts": {
+        "safe": 72,
+        "clearCurve": 468,
+        "clearCubic": 12
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.3503999999993539,
+      "settledCounts": {
+        "safe": 6,
+        "clearCurve": 39,
+        "clearCubic": 1
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "far-text-added-and-removed",
+      "p50Ms": 0.20190000000002328,
+      "p95Ms": 0.37339999999858264,
+      "maxMs": 0.37339999999858264,
+      "counts": {
+        "safe": 72,
+        "clearCurve": 468,
+        "clearCubic": 12
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.3394000000007509,
+      "settledCounts": {
+        "safe": 6,
+        "clearCurve": 39,
+        "clearCubic": 1
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "same-text-boxes-reordered",
+      "p50Ms": 0.2723999999998341,
+      "p95Ms": 0.4922999999998865,
+      "maxMs": 0.4922999999998865,
+      "counts": {
+        "safe": 72,
+        "clearCurve": 468,
+        "clearCubic": 12
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.30429999999978463,
+      "settledCounts": {
+        "safe": 6,
+        "clearCurve": 39,
+        "clearCubic": 1
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "coverage-window-moves",
+      "p50Ms": 0.21830000000045402,
+      "p95Ms": 0.3408999999992375,
+      "maxMs": 0.3408999999992375,
+      "counts": {
+        "safe": 72,
+        "clearCurve": 468,
+        "clearCubic": 12
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.2890000000006694,
+      "settledCounts": {
+        "safe": 6,
+        "clearCurve": 39,
+        "clearCubic": 1
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "remote-text-and-window-move",
+      "p50Ms": 0.1988999999994121,
+      "p95Ms": 0.31999999999970896,
+      "maxMs": 0.31999999999970896,
+      "counts": {
+        "safe": 72,
+        "clearCurve": 468,
+        "clearCubic": 12
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.4228000000002794,
+      "settledCounts": {
+        "safe": 6,
+        "clearCurve": 39,
+        "clearCubic": 1
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "virtual-section-translation",
+      "p50Ms": 0.22249999999985448,
+      "p95Ms": 0.25120000000060827,
+      "maxMs": 0.25120000000060827,
+      "counts": {
+        "safe": 72,
+        "clearCurve": 468,
+        "clearCubic": 12
+      },
+      "submittedRelations": 6,
+      "settledMs": 0.2853000000013708,
+      "settledCounts": {
+        "safe": 6,
+        "clearCurve": 39,
+        "clearCubic": 1
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    },
+    {
+      "version": "current",
+      "style": "curve",
+      "scenario": "retained-offscreen-relations",
+      "p50Ms": 0.6344000000008236,
+      "p95Ms": 2.209500000000844,
+      "maxMs": 2.209500000000844,
+      "counts": {
+        "safe": 3528,
+        "clearCurve": 468,
+        "clearCubic": 12,
+        "connectorRoute": 288,
+        "routeAtClearance": 576,
+        "searchRoute": 1152
+      },
+      "submittedRelations": 30,
+      "settledMs": 0.9960000000010041,
+      "settledCounts": {
+        "safe": 294,
+        "clearCurve": 39,
+        "clearCubic": 1,
+        "connectorRoute": 24,
+        "routeAtClearance": 48,
+        "searchRoute": 96
+      },
+      "sharedExplorationDuringScroll": false,
+      "geometryFramesChecked": 12,
+      "connectedRelationsPerFrame": 6
+    }
+  ]
+}

@@ -28,13 +28,15 @@ export interface BatchRelation {
   segments: SegmentReference[];
   shared: boolean;
   fingerprint: string;
+  originY: number;
 }
 export interface ConnectorBatch {
   segments: BatchStroke[];
   relations: Map<string, BatchRelation>;
   corridors: Partial<Record<Side, number>>;
   sharedCount: number;
-  geometry: string;
+  /** Last completed optional search, in coordinates relative to its routes. */
+  optimization?: string;
 }
 export interface BatchOptions extends ConnectorOptions {
   minSharedLength?: number;
@@ -43,7 +45,7 @@ export interface BatchOptions extends ConnectorOptions {
    * routes are still checked against every card and coincident ink is shared. */
   optimizeShared?: boolean;
 }
-export interface RoutedConnector { input: BatchRelationInput; connector: Connector; side: Side; fingerprint: string }
+export interface RoutedConnector { input: BatchRelationInput; connector: Connector; side: Side; fingerprint: string; originY: number }
 interface LineRecord { route: RoutedConnector; index: number; part: Segment; u: Point; offset: number; low: number; high: number }
 const EPSILON = 0.0001;
 const distance = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
@@ -51,6 +53,42 @@ const dot = (a: Point, b: Point) => a.x * b.x + a.y * b.y;
 const number = (n: number) => Math.round(n * 10000) / 10000;
 const pointKey = (p: Point) => `${number(p.x)},${number(p.y)}`;
 const samePoint = (a: Point, b: Point) => distance(a, b) < EPSILON;
+function translateConnector(connector: Connector, dy: number): Connector {
+  if (dy === 0) return connector;
+  const move = (point: Point): Point => ({ x: point.x, y: point.y + dy });
+  const segments = connector.segments.map(part => ({ ...part, from: move(part.from), to: move(part.to),
+    ...(part.control ? { control: move(part.control) } : {}), ...(part.control2 ? { control2: move(part.control2) } : {}) }));
+  return { ...connector, segments, points: connector.points.map(move), path: connectorPath(segments) };
+}
+/** A safe section translation or distant virtualized text must not launch the
+ * same optional corridor search again. Safety is checked separately on every
+ * reused route; this key only remembers a completed visual optimization. */
+function sharingKey(routes: RoutedConnector[], options: BatchOptions, minimum: number, cards: readonly Box[]): string {
+  const origin = routes[0]?.originY ?? 0;
+  const point = (p: Point) => [p.x, p.y - origin];
+  const box = (b: Box) => [b.left, b.right, b.top - origin, b.bottom - origin];
+  const points = routes.flatMap(route => [
+    ...route.input.fragments.flatMap(b => [{ x: b.left, y: b.top }, { x: b.right, y: b.bottom }]),
+    { x: route.input.card.x, y: route.input.card.y },
+    { x: route.input.card.x + route.input.card.width, y: route.input.card.y + route.input.card.height },
+    ...route.connector.segments.flatMap(s => [s.from, s.to, ...(s.control ? [s.control] : []), ...(s.control2 ? [s.control2] : [])])
+  ]);
+  const pad = Math.max(.5, (options.lineWidth ?? 1.5) / 2) + Math.max(0, options.clearance ?? 1.5);
+  const region = { left: Math.min(...points.map(p => p.x)) - pad, right: Math.max(...points.map(p => p.x)) + pad,
+    top: Math.min(...points.map(p => p.y)) - pad, bottom: Math.max(...points.map(p => p.y)) + pad };
+  const relevant = [...(options.obstacles ?? []), ...(options.cardObstacles ?? []), ...cards]
+    .filter(b => b.left <= region.right && b.right >= region.left && b.top <= region.bottom && b.bottom >= region.top)
+    .map(b => JSON.stringify(box(b))).sort();
+  const limits = routes.map(route => {
+    const bounds = route.input.bounds ?? options.bounds;
+    return bounds ? box({ left: Math.max(region.left, bounds.left), right: Math.min(region.right, bounds.right),
+      top: Math.max(region.top, bounds.top), bottom: Math.min(region.bottom, bounds.bottom) }) : null;
+  });
+  return JSON.stringify([minimum, options.maxDetourRatio, relevant, limits, routes.map(route => [
+    route.input.key, route.side, route.fingerprint, route.originY - origin,
+    route.connector.segments.map(s => [point(s.from), point(s.to), s.control && point(s.control), s.control2 && point(s.control2)])
+  ])]);
+}
 function primitiveLength(part: Segment): number {
   if (!part.control) return distance(part.from, part.to);
   let last = part.from, length = 0;
@@ -182,27 +220,38 @@ export function partitionConnectorRoutes(routes: RoutedConnector[], minimum: num
       } else combined.push(ref);
     }
     relations.set(route.input.key, { key: route.input.key, path: route.connector.path, choice: route.connector.choice, connector: route.connector,
-      segments: combined, shared: combined.some(r => strokes.get(r.id)!.shared), fingerprint: route.fingerprint });
+      segments: combined, shared: combined.some(r => strokes.get(r.id)!.shared), fingerprint: route.fingerprint, originY: route.originY });
   }
-  return { segments: [...strokes.values()], relations, corridors, sharedCount: [...strokes.values()].filter(s => s.shared).length, geometry: '' };
+  return { segments: [...strokes.values()], relations, corridors, sharedCount: [...strokes.values()].filter(s => s.shared).length };
 }
 
 /** A batch is ephemeral drawing data scoped to one view. No relation or layout
  * records are written. Safe existing routes are reused when another card moves. */
 export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, options: BatchOptions = {}, previous?: ConnectorBatch): ConnectorBatch {
-  const geometry = JSON.stringify([options.obstacles ?? [], options.cardObstacles ?? [], options.body, options.bounds, options.lineWidth, options.clearance, options.minimumClearance]);
   const minimum = Math.max(1, options.minSharedLength ?? 24), cards = inputs.map(i => ({ key: i.key, box: cardBox(i.card) }));
   const perInput = (input: BatchRelationInput): ConnectorOptions => ({ ...options, bounds: input.bounds ?? options.bounds, cardObstacles: [...(options.cardObstacles ?? []), ...cards.filter(c => c.key !== input.key).map(c => c.box)] });
   let routes: RoutedConnector[] = [];
   for (const input of inputs) {
-    const fingerprint = JSON.stringify([style, input.fragments, input.card, input.bounds, options.lineWidth, options.clearance, options.minimumClearance, options.body]);
+    // A newly measured neighbourhood need not change an existing route. Its
+    // own relative endpoints and routing policy establish reuse eligibility.
+    // Host virtualization can translate an entire section by a subpixel amount;
+    // follow that exact translation, then prove it safe against current geometry.
+    const originY = input.fragments[0]?.top ?? input.card.y;
+    const fragments = input.fragments.map(box => ({ ...box, top: box.top - originY, bottom: box.bottom - originY }));
+    const fingerprint = JSON.stringify([style, fragments, { ...input.card, y: input.card.y - originY }, options.lineWidth, options.clearance,
+      options.minimumClearance, options.body, options.corridorX, options.preferCorridor]);
     const old = previous?.relations.get(input.key), own = perInput(input);
-    const connector = previous?.geometry === geometry && old?.fingerprint === fingerprint && clearConnectorSegments(old.connector.segments, input.fragments, input.card, { ...own, clearance: old.connector.clearance ?? own.clearance })
-      ? old.connector : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.choice, own);
-    if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint });
+    const candidate = old?.fingerprint === fingerprint && Number.isFinite(originY) && Number.isFinite(old.originY)
+      ? translateConnector(old.connector, originY - old.originY) : undefined;
+    const connector = candidate && clearConnectorSegments(candidate.segments, input.fragments, input.card, { ...own, clearance: candidate.clearance ?? own.clearance })
+      ? candidate : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.choice, own);
+    if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint, originY });
   }
-  const corridors: Partial<Record<Side, number>> = options.optimizeShared === false ? { ...previous?.corridors } : {};
-  const sides: Side[] = options.optimizeShared === false ? [] : ['left', 'right'];
+  const optimize = options.optimizeShared !== false;
+  const cardBoxes = cards.map(card => card.box);
+  const unchanged = optimize && previous?.optimization === sharingKey(routes, options, minimum, cardBoxes);
+  const corridors: Partial<Record<Side, number>> = !optimize || unchanged ? { ...previous?.corridors } : {};
+  const sides: Side[] = !optimize || unchanged ? [] : ['left', 'right'];
   for (const side of sides) {
     const members = routes.filter(r => r.side === side); if (members.length < 2 || !options.body) continue;
     const gap = side === 'right' ? Math.min(...members.map(r => r.input.card.x)) - options.body.right : options.body.left - Math.max(...members.map(r => r.input.card.x + r.input.card.width));
@@ -238,5 +287,7 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
     if (bestCorridor !== undefined) corridors[side] = bestCorridor;
     else if (previous?.corridors[side] !== undefined) corridors[side] = previous.corridors[side];
   }
-  const batch = partitionConnectorRoutes(routes, minimum, corridors); batch.geometry = geometry; return batch;
+  const batch = partitionConnectorRoutes(routes, minimum, corridors);
+  batch.optimization = optimize ? sharingKey(routes, options, minimum, cardBoxes) : previous?.optimization;
+  return batch;
 }

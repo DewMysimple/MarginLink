@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PREFERENCES, type Box, type Side } from '../src/types';
 import { MarginOverlay } from '../src/view/margin-overlay';
 import type { ConnectorBatch, SegmentReference } from '../src/view/connector-batch';
+import { clearConnectorSegments } from '../src/view/connector-renderer';
 
 vi.mock('obsidian', () => ({ MarkdownView: class {}, FileView: class {}, Menu: class {}, Notice: class {}, setIcon: vi.fn(), parseLinktext: vi.fn() }));
 
@@ -42,6 +43,7 @@ interface OverlayProbe {
   sharedPaths: Map<string, ElementStub>;
   scrollTop: number;
   cardDrag: { dragging: boolean };
+  scrolling: boolean;
   diagnostics?: { renders: number; measurements: number; routes: number; svgWrites: number; markerWrites: number; work: number[] };
 }
 function fixture() {
@@ -84,6 +86,42 @@ function assertOrderedGeometry(f: ReturnType<typeof fixture>, key: string) {
 }
 
 describe('actual overlay shared-path drawing', () => {
+  it('keeps complete routes while scrolling and explores sharing once the native gesture ends', () => {
+    const f = fixture(); f.overlay.scrolling = true; f.overlay.paintConnectors();
+    expect(f.overlay.batch!.relations.size).toBe(2);
+    const moving = f.overlay.batch;
+    f.scroll(20); f.overlay.paintConnectors(); expect(f.overlay.batch).toBe(moving);
+    f.overlay.scrolling = false; f.overlay.paintConnectors();
+    expect(f.overlay.batch!.sharedCount).toBeGreaterThan(0);
+    for (const key of f.cards.keys()) assertOrderedGeometry(f, key);
+    const settled = f.overlay.batch;
+    f.overlay.paintConnectors(); expect(f.overlay.batch).toBe(settled);
+  });
+  it('skips an unmeasured source while retaining its card as a real route obstacle', () => {
+    const f = fixture(); f.overlay.paintConnectors();
+    const trunk = f.overlay.batch!.segments.find(stroke => stroke.shared)!;
+    const left = (trunk.from.x + trunk.to.x) / 2 - 5, top = (trunk.from.y + trunk.to.y) / 2 - 5;
+    const blocker = { left, right: left + 10, top, bottom: top + 10 };
+    f.cards.set('outside', { shell: new ElementStub(), button: new ElementStub(), path: new ElementStub('path'),
+      anchor: { element: new ElementStub(), occurrence: { label: 'outside' }, fragments: [{ left: 500, right: 540, top: 5000, bottom: 5020 }] },
+      placement: { key: 'outside', side: 'right', x: left, y: top, width: 10, height: 10 } });
+    f.overlay.paintConnectors();
+    expect(f.overlay.batch!.relations.has('outside')).toBe(false);
+    expect(f.cards.has('outside')).toBe(true);
+    expect(f.overlay.batch!.relations.size).toBe(2);
+    for (const relation of f.overlay.batch!.relations.values()) {
+      const card = f.cards.get(relation.key)!;
+      const fragments = card.anchor.fragments.map(box => ({ left: box.left - 40, right: box.right - 40, top: box.top - 20, bottom: box.bottom - 20 }));
+      expect(clearConnectorSegments(relation.connector.segments, fragments, card.placement,
+        { lineWidth: 2.5, clearance: relation.connector.clearance, cardObstacles: [blocker] })).toBe(true);
+    }
+  });
+  it('retains a partial card whose port is inside measured coverage', () => {
+    const f = fixture(); Object.assign(f.overlay, { textObstacles: { revision: 1, bounds: { top: 0, bottom: 450 } } });
+    f.overlay.paintConnectors();
+    expect(f.overlay.batch!.relations.size).toBe(2);
+    for (const key of f.cards.keys()) assertOrderedGeometry(f, key);
+  });
   it('optimizes after a gesture ends even when the final card coordinates have not changed', () => {
     const f = fixture();
     f.overlay.diagnostics = { renders: 0, measurements: 0, routes: 0, svgWrites: 0, markerWrites: 0, work: [] };

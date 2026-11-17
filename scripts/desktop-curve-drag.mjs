@@ -8,7 +8,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const phase = process.argv.includes('baseline') ? 'baseline' : 'final';
-const output = `artifacts/curve-drag/${phase}`;
+const output = process.argv.find(value => value.startsWith('--output='))?.slice(9) ?? `artifacts/curve-drag/${phase}`;
+const only = process.argv.find(value => value.startsWith('--only='))?.slice(7);
 const fixture = '详细分析/The road to Unreal Engine 6. Read about our plans and timeline.md';
 const labels = ['Early Access', 'dives', 'Verse', 'Scene Graph', 'model-assisted', 'ship'];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -44,7 +45,7 @@ const assertGeometry = snapshot => {
     maxTurn: card.route.maxTurn, startTangentError: card.route.startTangentError, endTangentError: card.route.endTangentError }));
 };
 try {
-  browser = await chromium.connectOverCDP('http://127.0.0.1:9223', { timeout: 10000 });
+  browser = await chromium.connectOverCDP(process.env.MARGINLINK_CDP_URL ?? 'http://127.0.0.1:9223', { timeout: 10000 });
   page = browser.contexts().flatMap(context => context.pages()).find(candidate => candidate.url().startsWith('app://obsidian.md/'));
   assert(page); page.setDefaultTimeout(20000);
   await page.waitForFunction(() => typeof app !== 'undefined' && app.plugins?.plugins['margin-link']);
@@ -102,7 +103,7 @@ try {
   // Saved positions are user-controlled: inspect actual placement rather than
   // assuming a label is still on the same side as a historical screenshot.
   if (phase === 'final') for (const mode of ['preview', 'source']) cases.push({ mode, style: 'curve', draggedLabel: 'Scene Graph' });
-  for (const { mode, style, draggedLabel } of cases) {
+  for (const { mode, style, draggedLabel } of cases.filter(c => !only || `${c.style}/${c.draggedLabel}`.includes(only))) {
     const id = await open(mode, style);
     await check(`${mode}/${style}/${draggedLabel}: same 48-step pointer drag, cancel, independently sampled SVG`, async () => {
       const before = await probe(id), start = before.cards.find(card => card.label === draggedLabel); assert(start);

@@ -71,6 +71,9 @@ artifacts/*
 !artifacts/release-0.2.23.json
 !artifacts/relink-viewport-0.2.24.json
 !artifacts/release-0.2.24.json
+!artifacts/scroll-performance-0.2.25.json
+!artifacts/scroll-routing-cpu-0.2.25.json
+!artifacts/release-0.2.25.json
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/
