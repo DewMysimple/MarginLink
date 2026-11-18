@@ -109,5 +109,5 @@ export function readPreferences(value: unknown): Preferences {
 }
 export interface RelativePosition { side: Side; xNormalized: number; yOffset: number }
 // yOffset is measured in current text line heights; never a window pixel coordinate.
-export interface PersistedLayout extends RelativePosition { source: string; key: string; updated: number }
+export interface PersistedLayout extends RelativePosition { source: string; key: string; updated: number; origin?: 'initial' | 'manual' }
 export interface StoredData { schemaVersion: 2; preferences: Preferences; layouts: PersistedLayout[] }

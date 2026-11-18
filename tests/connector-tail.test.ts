@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectorRoute } from '../src/view/connector-renderer';
+import { clearConnectorSegments, connectorRoute } from '../src/view/connector-renderer';
 import { svgSamples } from './svg-path';
 const source = { left: 420, right: 492, top: 120, bottom: 140 };
 const body = { left: 180, right: 820, top: 0, bottom: 600 };
@@ -7,6 +7,27 @@ function linePoints(path: string) {
   return [...path.matchAll(/([ML])\s+(-?[\d.e]+)\s+(-?[\d.e]+)/g)].map(([, , x, y]) => ({ x: Number(x), y: Number(y) }));
 }
 describe('clean normal entry at card edges', () => {
+  it.each(['elbow', 'straight'] as const)('%s draws a continuous horizontal run across a fractional interline gap', style => {
+    const text = { left: 400, right: 440, top: 102.375, bottom: 120.375 };
+    const nextLine = { left: 200, right: 800, top: 125.5, bottom: 145.5 };
+    const options = { body, lineWidth: 2, obstacles: [nextLine] };
+    for (const x of [48, 856]) for (const offset of [2, 2.6]) {
+      const card = { x, y: text.bottom + offset - 42, width: 84, height: 84 };
+      const route = connectorRoute([text], card, style, undefined, options)!;
+      expect(route.points).toHaveLength(3);
+      const [start, corner, end] = route.points;
+      expect(start).toMatchObject({ x: 420, y: text.bottom });
+      expect(corner.x).toBe(start.x);
+      expect(corner.y).toBe(end.y);
+      expect(end.x).toBe(x === 48 ? x + 84 : x);
+      expect(Math.abs(end.y - card.y - 42)).toBeLessThanOrEqual(0.5);
+      expect(clearConnectorSegments(route.segments, [text], card, options)).toBe(true);
+      const blocked = { ...options, obstacles: [nextLine, { left: x === 48 ? 280 : 600, right: x === 48 ? 300 : 620, top: 114, bottom: 128 }] };
+      const detour = connectorRoute([text], card, style, undefined, blocked)!;
+      expect(detour.path).not.toBe(route.path);
+      expect(clearConnectorSegments(detour.segments, [text], card, blocked)).toBe(true);
+    }
+  });
   it.each(['straight', 'elbow'] as const)('%s removes the documented three-pixel tail on both sides at all heights', style => {
     for (const x of [48, 856]) for (const y of [30, 88, 200]) for (const lineWidth of [1.5, 5]) {
       const card = { x, y, width: 84, height: 84 };

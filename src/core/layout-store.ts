@@ -5,7 +5,7 @@ import { parseWikilinks } from './wikilink-parser';
 export const MAX_LAYOUTS = 500;
 export const MAX_NOTE_LAYOUTS = 100;
 export const MAX_LAYOUT_AGE = 90 * 24 * 60 * 60 * 1000;
-export interface LayoutPosition { key: string; position: RelativePosition; legacyKey?: string }
+export interface LayoutPosition { key: string; position: RelativePosition; legacyKey?: string; origin?: PersistedLayout['origin'] }
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export function readLayouts(value: unknown, now = Date.now()): PersistedLayout[] {
   if (!Array.isArray(value)) return [];
@@ -19,7 +19,9 @@ export function readLayouts(value: unknown, now = Date.now()): PersistedLayout[]
     if (typeof xNormalized !== 'number' || !Number.isFinite(xNormalized) || xNormalized < 0 || xNormalized > 1) continue;
     if (typeof yOffset !== 'number' || !Number.isFinite(yOffset) || Math.abs(yOffset) > 80) continue;
     if (typeof updated !== 'number' || !Number.isFinite(updated) || updated < now - MAX_LAYOUT_AGE || updated > now + 60000) continue;
-    candidates.push({ source, key, side, xNormalized, yOffset, updated });
+    const origin = entry.origin;
+    candidates.push({ source, key, side, xNormalized, yOffset, updated,
+      ...(origin === 'manual' || origin === 'initial' ? { origin } : {}) });
   }
   const seen = new Set<string>(), notes = new Map<string, number>();
   return candidates.sort((a, b) => b.updated - a.updated).filter(e => {
@@ -45,10 +47,14 @@ export class LayoutStore {
   private relinkAliases = new Map<string, Map<string, Set<string>>>();
   constructor(records: PersistedLayout[], private changed: () => void) { this.records = readLayouts(records); }
   snapshot(): PersistedLayout[] { return readLayouts(this.records); }
-  get(source: string, key?: string, legacyKey?: string): RelativePosition | undefined {
+  get(source: string, key?: string, legacyKey?: string): (RelativePosition & { initial?: true }) | undefined {
     const keys = this.equivalentKeys(source, key); if (legacyKey) keys.add(legacyKey);
     const e = this.records.find(e => e.source === source && keys.has(e.key) && Date.now() - e.updated <= MAX_LAYOUT_AGE);
-    return e ? { side: e.side, xNormalized: e.xNormalized, yOffset: e.yOffset } : undefined;
+    if (!e) return;
+    // Before origins were recorded, automatic square/icon/horizontal slots
+    // sat flush with the inner lane edge. Preserve other legacy coordinates.
+    const initial = e.origin === 'initial' || (!e.origin && e.xNormalized === (e.side === 'left' ? 1 : 0));
+    return { side: e.side, xNormalized: e.xNormalized, yOffset: e.yOffset, ...(initial ? { initial: true } : {}) };
   }
   set(source: string, key: string, position: RelativePosition, legacyKey?: string): void {
     this.setMany(source, [{ key, position, legacyKey }], true);
@@ -59,11 +65,11 @@ export class LayoutStore {
   setMany(source: string, positions: readonly LayoutPosition[], overwrite = false): void {
     const now = Date.now();
     let next = readLayouts(this.records, now), changed = false;
-    for (const { key, position, legacyKey } of positions.slice(0, MAX_NOTE_LAYOUTS)) {
+    for (const { key, position, legacyKey, origin } of positions.slice(0, MAX_NOTE_LAYOUTS)) {
       const keys = this.equivalentKeys(source, key); if (legacyKey) keys.add(legacyKey);
       const exists = next.some(e => e.source === source && keys.has(e.key));
       if (exists && !overwrite) continue;
-      const record = readLayouts([{ source, key, ...position, updated: now }], now)[0];
+      const record = readLayouts([{ source, key, ...position, origin: origin ?? (overwrite ? 'manual' : 'initial'), updated: now }], now)[0];
       if (!record) continue;
       if (!exists && !overwrite && (next.length >= MAX_LAYOUTS || next.filter(e => e.source === source).length >= MAX_NOTE_LAYOUTS)) continue;
       next = [record, ...next.filter(e => e.source !== source || !keys.has(e.key))]; changed = true;

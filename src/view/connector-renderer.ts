@@ -279,6 +279,27 @@ function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'w
     const minimumLead = padding + 0.1;
     if (style === 'curve' && targets.every(b => distance(a, b) >= minimumLead) &&
         !safe([{ from: a, to: { x: a.x, y: a.y + a.ny * minimumLead } }], a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
+    // Fractional line metrics often put the interline corridor half a pixel
+    // above/below the card midpoint. Try one continuous horizontal run, first
+    // at the midpoint, then just off-centre if the full stroke needs clearance.
+    if (style !== 'curve') for (const target of targets) {
+      if (!target.nx || (a.x - target.x) * target.nx < tail) continue;
+      const centreLead = (target.y - a.y) * a.ny;
+      const tolerance = Math.min(4, card.height / 4);
+      for (const length of [centreLead, lead, lead + 3, lead + 7]) {
+        if (length < lead || length > lead + 7 + tolerance) continue;
+        const y = a.y + a.ny * length, offset = Math.abs(y - target.y);
+        if (offset > tolerance) continue;
+        const points = [a, { x: a.x, y }, { x: target.x, y }];
+        const score = routeScore(points) + 2 * offset -
+          (previous?.fragment === fragment && previous.source === a.edge && previous.target === target.edge ? 4 : 0);
+        if (score >= bestScore) continue;
+        const parts = [{ from: a, to: points[1] }, { from: points[1], to: points[2] }];
+        if (!safe(parts, a, obstacles, protectedBoxes, cardBox, otherCards, options.bounds)) continue;
+        bestScore = score;
+        best = { points, segments: parts, path: connectorPath(parts), choice: { fragment, source: a.edge, target: target.edge } };
+      }
+    }
     for (const extra of style === 'curve' ? [0, 3, 7, 16, 32] : [0, 3, 7]) {
       const escape = { x: a.x, y: a.y + a.ny * (lead + extra) };
       for (const b of targets) for (const approachLength of style === 'curve' ? [Math.max(36, tail * 2), tail, lead] : [tail, lead]) {

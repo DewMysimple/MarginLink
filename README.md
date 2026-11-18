@@ -2,11 +2,11 @@
 
 **Obsidian 原生双链的边缘卡片与空间布局。** 已有 `[[Wikilink]]` 自动显示为卡片；选中文字，用链接手柄或命令选择已有文件或新建 Markdown，即写入标准 `[[目标路径|原文字]]`。关闭插件后，全部原生链接仍可用。
 
-**v0.3.0**，最低 Obsidian 桌面版本 **1.10.6**。在当前笔记中，可以沿一次具体引用高亮正文和连线，直接预览目标，或按文件夹、文件类型折叠卡片。[本版验证记录](VALIDATION.md)
+**v0.3.1**，最低 Obsidian 桌面版本 **1.10.6**。密集段落的自动卡位在文字重新换行后保持间距。连线接近卡片中线时，可以从行间空白水平接入卡边。[本版验证记录](VALIDATION.md)
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.3.0.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.3.1.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
@@ -71,7 +71,7 @@ Git 仓库跟踪源码。克隆后可双击 Windows 的 `buildStart.cmd` 生成 
 
 同一笔记多个 leaf 共享视觉偏好，但每个视图独立测量、裁剪和排布。保存的是 `side + xNormalized + yOffset`：水平值是空白带内的比例，垂直偏移以当前文字行高为单位、相对对应锚点。卡片、线和编号位于可编辑 DOM 之外的原生滚动内容层，使用同一个滚动变换并自然裁切，不撑大滚动高度。已测区间保留现有 DOM 和安全路线；宿主虚拟化引起整段微移时，曲线精确跟随并重新核验当前障碍，只有受影响的路线重新搜索。滚动期间即时处理必要几何，静默后再尝试共享优化；不在滚动中保存位置。拖动侧栏或分屏分隔线时，同一窗格统一更新，横向空间不足只影响对应卡片，不修改保存的位置。
 
-0.2.12起，手动位置恢复允许重叠，未拖过的卡片仍按独立的自动基准排列；拖动、键盘移动或单卡重置只改变当前出现位置。显式整理当前笔记或全部布局才重排对应范围。
+自由和吸附模式会在当前视图中为相撞的初排卡位留出 10 像素。新版会在布局记录的 `origin` 字段区分初排与手动位置，手动拖动仍可有意叠放。旧记录没有这个字段，恢复时将位于正文侧边缘的旧卡位视作初排位置。原有坐标保留，完全手动模式按保存坐标显示。
 
 ## 连线与卡片外观
 
@@ -171,7 +171,7 @@ npm test
 npm run lint
 npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.3.0.zip -Force
+Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.3.1.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。

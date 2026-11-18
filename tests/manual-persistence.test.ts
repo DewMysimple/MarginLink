@@ -17,6 +17,50 @@ const input: LayoutInput = {
 };
 
 describe('bounded initialization of observed UI positions', () => {
+  it.each(['free', 'snap'] as const)('repairs colliding legacy snapshots in %s without rewriting their coordinates', placementMode => {
+    const changed = vi.fn(), updated = Date.now();
+    const anchors = [100, 150, 195, 600].map((y, i) => ({ key: key(i), x: 700, y }));
+    const records = anchors.map(a => ({ source: 'A.md', key: a.key, side: 'right' as const, xNormalized: 0, yOffset: 0, updated }));
+    const store = new LayoutStore(records, changed);
+    const data = { ...input, preferences: { ...DEFAULT_PREFERENCES, placementMode },
+      anchors: anchors.map(a => ({ ...a, manual: store.get('A.md', a.key) })) };
+    const layout = new StableLayout(), before = layout.update(data, 0, 'fixed');
+    const [a, b, c, isolated] = before;
+    expect(b.y - a.y - a.height).toBeCloseTo(10);
+    expect(c.y - b.y - b.height).toBeCloseTo(10);
+    expect(isolated.y).toBe(600 - isolated.height / 2);
+    expect(layoutCards(data).map(p => p.y)).toEqual(before.map(p => p.y));
+    const scroll = 127.5;
+    const scrolled = layout.update({ ...data, anchors: data.anchors.map(a => ({ ...a, y: a.y - scroll })) }, scroll, 'fixed');
+    for (let i = 0; i < before.length; i++) expect(scrolled[i].y).toBeCloseTo(before[i].y - scroll);
+    const reflow = { ...data, anchors: data.anchors.map((a, i) => ({ ...a, y: 100 + i * 130 })) };
+    expect(layout.update(reflow, 0, 'fixed').map(p => p.y)).toEqual(reflow.anchors.map(a => a.y - 42));
+    expect(layout.update(data, 0, 'fixed')).toEqual(before);
+    expect(store.snapshot()).toEqual(records);
+    expect(changed).not.toHaveBeenCalled();
+
+    // A real move to the inner edge can intentionally overlap even a member
+    // of the repaired stack. The neighbouring display slots stay where seen.
+    store.set('A.md', data.anchors[0].key, { side: 'right', xNormalized: 0, yOffset: (b.y + 42 - data.anchors[0].y) / 24 });
+    const moved = layout.update({ ...data, anchors: data.anchors.map(a => ({ ...a, manual: store.get('A.md', a.key) })) }, 0, 'fixed');
+    for (const card of before.slice(1)) expect(moved.find(p => p.key === card.key)).toEqual(card);
+    expect(moved.find(p => p.key === a.key)?.y).toBeCloseTo(b.y);
+    expect(new LayoutStore(store.snapshot(), changed).get('A.md', a.key)?.initial).toBeUndefined();
+  });
+
+  it('distinguishes new automatic and deliberate edge slots even when their coordinates match', () => {
+    const edge = { side: 'left' as const, xNormalized: 1, yOffset: 0 };
+    const store = new LayoutStore([], vi.fn());
+    store.setMany('A.md', [{ key: key(1), position: edge }]);
+    store.set('A.md', key(2), edge);
+    const reopened = new LayoutStore(store.snapshot(), vi.fn());
+    expect(reopened.get('A.md', key(1))).toEqual({ ...edge, initial: true });
+    expect(reopened.get('A.md', key(2))).toEqual(edge);
+    const manual = { ...input, preferences: { ...DEFAULT_PREFERENCES, placementMode: 'manual' as const },
+      anchors: [1, 2].map(i => ({ key: key(i), x: 380, y: 160, manual: reopened.get('A.md', key(i)) })) };
+    const [a, b] = new StableLayout().update(manual, 0, 'fixed');
+    expect([a.x, a.y]).toEqual([b.x, b.y]);
+  });
   it('initializes one batch without replacing existing positions or refreshing timestamps on another render', () => {
     const changed = vi.fn(), store = new LayoutStore([], changed);
     store.set('A.md', key(1), position); changed.mockClear();
@@ -54,15 +98,33 @@ describe('bounded initialization of observed UI positions', () => {
 
 function overlayFixture() {
   const changed = vi.fn(), store = new LayoutStore([], changed);
-  const placements = new StableLayout().update(input, 0, 'fixed');
+  const stableLayout = new StableLayout();
+  const placements = stableLayout.update(input, 0, 'fixed');
   const cards = new Map(placements.map(p => [p.key, { placement: p, anchor: { layoutKey: key(Number(p.key)) } }]));
-  const state = { layoutInput: structuredClone(input), layoutSource: 'current text', bridge: () => ({ text: 'current text' }), cards, cardDrag: { dragging: false }, confirmedSource: 'A.md', path: 'A.md', mode: 'source',
+  const state = { stableLayout, layoutInput: structuredClone(input), layoutSource: 'current text', bridge: () => ({ text: 'current text' }), cards, cardDrag: { dragging: false }, confirmedSource: 'A.md', path: 'A.md', mode: 'source',
     view: { file: { path: 'A.md' }, getMode: () => 'source' }, legacyLayoutKeys: new Map(), host: { layouts: store } };
   const overlay = Object.assign(Object.create(MarginOverlay.prototype) as object, state) as unknown as Pick<MarginOverlay, 'freezeLayout'>;
   return { overlay, state, store, changed, placements };
 }
 
 describe('freeze real measured geometry before navigating or changing mode', () => {
+  it('freezing a newly seen card next to a legacy slot does not apply its spacing correction twice', () => {
+    const f = overlayFixture(), anchors = f.state.layoutInput.anchors;
+    const neighbor = f.placements.find(p => p.key === anchors[1].key)!;
+    const prior = { side: neighbor.side, xNormalized: neighbor.side === 'left' ? 1 : 0,
+      yOffset: (neighbor.y + neighbor.height / 2 - anchors[0].y) / input.lineHeight! };
+    f.store.setMany('A.md', [{ key: key(0), position: prior }]);
+    const refresh = () => {
+      for (const a of anchors) a.manual = f.store.get('A.md', key(Number(a.key)));
+      const cards = f.state.stableLayout.update(f.state.layoutInput, 0, 'fixed');
+      for (const card of cards) f.state.cards.get(card.key)!.placement = card;
+      return new Map(cards.map(p => [p.key, [p.x, p.y]]));
+    };
+    const before = refresh();
+    expect(f.state.cards.get(neighbor.key)!.placement.y).not.toBe(neighbor.y);
+    expect(f.overlay.freezeLayout(false)).toBe(true);
+    expect(refresh()).toEqual(before);
+  });
   it('restores every free card after different sections arrive first on a fresh view', () => {
     const f = overlayFixture(); expect(f.overlay.freezeLayout(false)).toBe(true);
     expect(f.changed).toHaveBeenCalledOnce(); expect(f.store.snapshot()).toHaveLength(6);

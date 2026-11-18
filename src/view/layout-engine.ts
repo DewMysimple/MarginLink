@@ -1,6 +1,6 @@
 import type { Box, CardShape, Preferences, RelativePosition, Side } from '../types';
 export type { Box } from '../types';
-export interface LayoutAnchor { key: string; x: number; y: number; preferred?: Side; manual?: RelativePosition }
+export interface LayoutAnchor { key: string; x: number; y: number; preferred?: Side; manual?: RelativePosition & { initial?: true } }
 export interface LayoutInput {
   width: number; height: number; body: Box; viewport: Box;
   anchors: LayoutAnchor[]; density: Preferences['density']; layout: Preferences['layout'];
@@ -9,6 +9,39 @@ export interface LayoutInput {
 export interface Placement {
   key: string; side: Side; x: number; y: number; width: number; height: number;
   compact: boolean; shape?: CardShape; manual?: boolean;
+}
+const CARD_GAP = 10;
+
+/** Pack each automatic column in document coordinates. A stack with colliding
+ * desired tops shares the displacement equally, so a dense cluster doesn't
+ * push a long chain of otherwise well-spaced cards down the page. */
+export function packInitialSlots(slots: Placement[]): Map<string, number> {
+  const tops = new Map<string, number>();
+  for (const side of ['left', 'right'] as const) {
+    const column = slots.filter(card => card.side === side).sort((a, b) => a.y - b.y || a.key.localeCompare(b.key));
+    const stacks: { start: number; count: number; mean: number }[] = [];
+    // Subtract cumulative heights and gaps: separation now requires only
+    // nondecreasing tops. Pool adjacent out-of-order blocks at their mean.
+    let occupied = 0;
+    for (let i = 0; i < column.length; i++) {
+      const card = column[i], stack = { start: i, count: 1, mean: card.y - occupied };
+      occupied += card.height + CARD_GAP;
+      while (stacks.length && stacks[stacks.length - 1].mean > stack.mean) {
+        const before = stacks.pop()!;
+        stack.mean = (before.mean * before.count + stack.mean * stack.count) / (before.count + stack.count);
+        stack.count += before.count;
+        stack.start = before.start;
+      }
+      stacks.push(stack);
+    }
+    occupied = 0;
+    for (const stack of stacks) for (let i = stack.start; i < stack.start + stack.count; i++) {
+      const card = column[i];
+      if (stack.count > 1) tops.set(card.key, stack.mean + occupied);
+      occupied += card.height + CARD_GAP;
+    }
+  }
+  return tops;
 }
 // Pointer coordinates hit-test the lane; the grab point only positions the card.
 // Omitted for keyboard movement, which intentionally uses the card's centre.
@@ -36,7 +69,7 @@ export function dimensions(input: LayoutInput, side: Side): { width: number; hei
   return { shape, width: shape === 'icon' ? icon : shape === 'square' ? square : Math.min(width, space),
     height: shape === 'icon' ? icon : shape === 'square' ? square : { small: 44, medium: 48, large: 56 }[size] };
 }
-export function overlapsCard(a: Placement, b: Placement, gap = 10): boolean {
+export function overlapsCard(a: Placement, b: Placement, gap = CARD_GAP): boolean {
   return a.x < b.x + b.width + gap && a.x + a.width + gap > b.x && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y;
 }
 function legalize(candidate: Placement, input: LayoutInput, occupied: Placement[]): Placement | undefined {
@@ -47,7 +80,7 @@ function legalize(candidate: Placement, input: LayoutInput, occupied: Placement[
   // User-directed placement may intentionally overlap another card. Only the
   // moving card is clamped to its lane; automatic solving owns collision gaps.
   if (input.preferences && input.preferences.placementMode !== 'auto') return { ...candidate, x, y: target };
-  const ys = [target, ...occupied.flatMap(c => [c.y + c.height + 10, c.y - candidate.height - 10])]
+  const ys = [target, ...occupied.flatMap(c => [c.y + c.height + CARD_GAP, c.y - candidate.height - CARD_GAP])]
     .filter(y => y >= band.top && y + candidate.height <= band.bottom).sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b);
   for (const y of ys) {
     const card = { ...candidate, x, y };
@@ -94,7 +127,7 @@ function displayPosition(candidate: Placement, input: LayoutInput, occupied: Pla
   const x = clamp(candidate.x, band.left, band.right - candidate.width);
   const exact = { ...candidate, x };
   if (!occupied.some(c => overlapsCard(exact, c))) return exact;
-  const ys = [candidate.y, ...occupied.flatMap(c => [c.y + c.height + 10, c.y - candidate.height - 10])]
+  const ys = [candidate.y, ...occupied.flatMap(c => [c.y + c.height + CARD_GAP, c.y - candidate.height - CARD_GAP])]
     .sort((a, b) => Math.abs(a - candidate.y) - Math.abs(b - candidate.y) || a - b);
   for (const y of ys) {
     const card = { ...candidate, x, y };
@@ -127,7 +160,7 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
     // manual card must not change unedited cards' initial sides or ordering.
     const automatic = layoutCards({ ...input, preferences: { ...p!, placementMode: 'auto' } }, occupied);
     const anchors = new Map(input.anchors.map(a => [a.key, a]));
-    return automatic.flatMap(card => {
+    const restored = automatic.flatMap(card => {
       const anchor = anchors.get(card.key)!, saved = anchor.manual;
       if (!saved) return [card];
       const dim = dimensions(input, saved.side);
@@ -137,6 +170,13 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
         x: band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width),
         y: anchor.y + saved.yOffset * (input.lineHeight ?? 24) - dim.height / 2,
         compact: dim.shape === 'icon', manual: true }];
+    });
+    if (!input.anchors.some(a => a.manual?.initial) || restored.length < 2) return restored;
+    const initial = new Map(restored.filter(card => anchors.get(card.key)?.manual?.initial).map(card => [card.key, card]));
+    const packed = packInitialSlots([...occupied, ...automatic.map(card => initial.get(card.key) ?? card)]);
+    return restored.map(card => {
+      const saved = anchors.get(card.key)?.manual;
+      return saved && !saved.initial ? card : { ...card, y: packed.get(card.key) ?? card.y };
     });
   }
   const output: Placement[] = [];

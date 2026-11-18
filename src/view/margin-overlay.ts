@@ -182,8 +182,13 @@ export class MarginOverlay {
     const positions = [...this.cards.values()].flatMap(card => {
       const key = card.anchor.layoutKey, anchor = input.anchors.find(a => a.key === card.placement.key);
       if (!key || !anchor || claimed?.has(key) || (!overwrite && anchor.manual)) return [];
-      const position = positionRelative(input, anchor, card.placement);
-      return position && Math.abs(position.yOffset) <= 80 ? [{ key, position, legacyKey: this.legacyLayoutKeys.get(key) }] : [];
+      const fixed = input.preferences?.placementMode === 'manual' || (input.preferences?.placementMode !== 'auto' && anchor.manual && !anchor.manual.initial);
+      const origin: 'manual' | 'initial' = fixed ? 'manual' : 'initial';
+      // Store the requested automatic slot on first sight. Baking a temporary
+      // collision adjustment into one new record would apply it again on restore.
+      const offset = !overwrite && !fixed ? this.stableLayout.initialOffset(anchor.key) : undefined;
+      const position = positionRelative(input, anchor, offset === undefined ? card.placement : { ...card.placement, y: anchor.y + offset });
+      return position && Math.abs(position.yOffset) <= 80 ? [{ key, position, origin, legacyKey: this.legacyLayoutKeys.get(key) }] : [];
     });
     if (!positions.length) return false;
     this.host.layouts.setMany(this.path, positions, overwrite);
