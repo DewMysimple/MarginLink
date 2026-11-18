@@ -10,11 +10,10 @@ import { CardDragController, type CardDragContext } from './card-drag-controller
 import { resolveLink } from '../core/link-resolver';
 import type { FileRecognition } from '../core/file-recognition';
 import { canOpenInObsidian } from '../core/file-capabilities';
-import { positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
+import { lane, positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
 import { TargetPreview, previewSpace, type PreviewTarget } from './target-preview';
-import { lane } from './layout-engine';
 import { type PortChoice } from './connector-renderer';
 import { connectorBatch, ConnectorRouteCache, type ConnectorBatch, type BatchRelationInput } from './connector-batch';
 import { applyAppearance } from './appearance';
@@ -114,7 +113,9 @@ export class MarginOverlay {
     }, (key, relative) => this.savePosition(key, relative));
     this.mutation = new MutationObserver(records => {
       if (records.some(r => {
-        if (this.root.contains(r.target) || this.decorations.contains(r.target)) return false;
+        // Style records for transient ink or a dismissed panel can be delivered
+        // after removal. Detached targets cannot change this pane's geometry.
+        if (!container.contains(r.target) || this.root.contains(r.target) || this.decorations.contains(r.target)) return false;
         if (r.type === 'childList' && [...r.removedNodes].includes(this.decorations.element) && !this.decorations.element.isConnected) {
           this.schedule();
           return false;
@@ -264,6 +265,7 @@ export class MarginOverlay {
       this.continuationNumbers = new Map(occurrences.map((a, index) => [String(a.start), index + 1]));
     }
     if (this.layoutGeometry !== geometryKey || this.layoutSource !== source) {
+      this.preview?.close();
       this.stableLayout.clear(); this.contentAnchors.clear(); this.textObstacles.invalidate();
       this.routeCache?.clear();
       this.measurementsDirty = true;
@@ -333,24 +335,7 @@ export class MarginOverlay {
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.classList.add('margin-link-connector'); path.dataset.members = JSON.stringify([p.key]); path.dataset.logical = 'true'; path.style.display = 'none'; shell.dataset.relation = p.key; this.svg.appendChild(path);
         card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
-        shell.addEventListener('pointerenter', e => { this.hover(p.key); if (!e.buttons && !this.cardDrag.dragging) this.showPreview(p.key); });
-        shell.addEventListener('pointerleave', () => { this.hover(undefined); this.preview?.leave(button); });
-        shell.addEventListener('focusin', () => { this.focused = p.key; this.hover(undefined); });
-        shell.addEventListener('focusout', e => { this.focused = undefined; this.refreshFocus(); this.preview?.blurOwner(button, e.relatedTarget); });
-        button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, p.key)) void this.open(p.key, event); });
-        button.addEventListener('pointerdown', e => { this.preview?.close(); this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
-        button.addEventListener('keydown', e => this.onCardKey(e, p.key));
-        shell.addEventListener('contextmenu', e => {
-          e.preventDefault(); const menu = new Menu(); this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
-          menu.addItem(item => item.setTitle(this.pinned === p.key ? '取消固定高亮' : '固定此处关联高亮').setIcon('pin').onClick(() => this.togglePin(p.key)));
-          menu.addItem(item => item.setTitle('重新链接文件…').setIcon('link-2').onClick(() => {
-            const occurrence = this.cards.get(p.key)?.anchor.occurrence;
-            if (occurrence) this.host.selection.relink(this.view, occurrence, this.bridge());
-          }));
-          menu.addItem(item => item.setTitle(this.host.preferences.placementMode === 'manual' ? '重置此卡片初始位置' : '恢复此卡片初始位置').setIcon('rotate-ccw').onClick(() => {
-            const key = this.cards.get(p.key)?.anchor.layoutKey; if (key) this.host.layouts.clear(this.path, key, this.legacyLayoutKeys.get(key));
-          })); menu.showAtMouseEvent(e);
-        });
+        this.bindCard(p.key, card);
       }
       card.anchor = anchor; card.placement = p;
       if (card.signature !== signature) {
@@ -373,6 +358,43 @@ export class MarginOverlay {
     // First stable display is the initial UI placement, not an invitation to
     // rebalance on the next visit. A gesture only writes on its final commit.
     if (prefs.placementMode !== 'auto') this.freezeLayout(false);
+  }
+  private bindCard(key: string, card: Card): void {
+    const { shell, button } = card;
+    button.setAttribute('aria-keyshortcuts', 'P V Escape');
+    shell.addEventListener('pointerenter', event => {
+      this.hover(key);
+      if (!event.buttons && !this.cardDrag.dragging) this.showPreview(key);
+    });
+    shell.addEventListener('pointerleave', () => { this.hover(undefined); this.preview?.leave(button); });
+    shell.addEventListener('focusin', () => { this.focused = key; this.hover(undefined); });
+    shell.addEventListener('focusout', event => {
+      this.focused = undefined;
+      this.refreshFocus();
+      this.preview?.blurOwner(button, event.relatedTarget);
+    });
+    button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, key)) void this.open(key, event); });
+    button.addEventListener('pointerdown', event => { this.preview?.close(); this.drag.cancel(); this.cardDrag.start(event, key, button); });
+    button.addEventListener('keydown', event => this.onCardKey(event, key));
+    shell.addEventListener('contextmenu', event => {
+      event.preventDefault(); this.preview?.close();
+      const menu = new Menu();
+      this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
+      const raw = card.anchor.occurrence.raw, source = this.layoutSource;
+      const valid = () => this.cards.get(key) === card && card.anchor.occurrence.raw === raw &&
+        this.path === this.view.file?.path && this.layoutSource === source;
+      menu.addItem(item => item.setTitle(this.pinned === key ? '取消固定高亮' : '固定此处关联高亮').setIcon('pin').onClick(() => {
+        if (valid()) this.togglePin(key);
+      }));
+      menu.addItem(item => item.setTitle('重新链接文件…').setIcon('link-2').onClick(() => {
+        if (valid()) this.host.selection.relink(this.view, card.anchor.occurrence, this.bridge());
+      }));
+      menu.addItem(item => item.setTitle(this.host.preferences.placementMode === 'manual' ? '重置此卡片初始位置' : '恢复此卡片初始位置').setIcon('rotate-ccw').onClick(() => {
+        const layoutKey = card.anchor.layoutKey;
+        if (valid() && layoutKey) this.host.layouts.clear(this.path, layoutKey, this.legacyLayoutKeys.get(layoutKey));
+      }));
+      menu.showAtMouseEvent(event);
+    });
   }
   private sourceReady(): boolean {
     if (this.confirmedSource === this.path) return true;
@@ -593,12 +615,23 @@ export class MarginOverlay {
     this.preview ??= new TargetPreview(this.root, this.host.app.vault);
     this.preview.request(card.button, (): PreviewTarget | undefined => {
       const input = this.layoutInput, path = this.path, signature = card.signature, mode = this.mode;
+      const bridge = mode === 'source' ? this.bridge() : undefined, revision = bridge?.revision;
       const valid = () => !this.stopped && this.view.file?.path === path && this.view.getMode() === mode &&
-        this.cards.get(key) === card && card.signature === signature;
+        this.cards.get(key) === card && card.signature === signature && bridge?.revision === revision;
       if (!input || !valid()) return;
       const resolved = resolveLink(this.host.app, card.anchor.occurrence.target, path);
       const box = (p: Placement): Box => ({ left: p.x, right: p.x + p.width, top: p.y, bottom: p.y + p.height });
-      const space = previewSpace(lane(input, card.placement.side), box(card.placement), this.routePlacements.map(box));
+      const occupied = this.routePlacements.map(box);
+      const hostRect = this.hostRect!;
+      const reserve = (element?: HTMLElement | null) => {
+        if (!element || element.hidden) return;
+        const rect = element.getBoundingClientRect();
+        if (rect.width && rect.height) occupied.push({ left: rect.left - hostRect.left, right: rect.right - hostRect.left,
+          top: rect.top - hostRect.top, bottom: rect.bottom - hostRect.top });
+      };
+      reserve(this.root.querySelector<HTMLElement>('.margin-link-handle'));
+      for (const other of this.cards.values()) other.continuation?.forEach(reserve);
+      const space = previewSpace(lane(input, card.placement.side), box(card.placement), occupied);
       return { file: resolved.file, label: card.button.dataset.tooltip!, space, valid, open: event => { void this.open(key, event); } };
     }, keyboard);
   }

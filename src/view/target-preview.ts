@@ -119,11 +119,15 @@ export class TargetPreview {
       if (text) void this.summaries.read(info.file, current).then(value => { if (current()) text.textContent = value; });
     };
     this.root.ownerDocument.addEventListener('pointerdown', this.outside, true);
+    this.root.ownerDocument.addEventListener('keydown', this.escape, true);
     this.win.addEventListener('blur', this.dismiss);
     this.win.addEventListener('resize', this.dismiss);
     if (keyboard) show(); else session.delay = this.win.setTimeout(show, 500);
   }
   private dismiss = (): void => this.close();
+  private escape = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && (this.session?.owner.matches(':hover') || this.session?.panel?.matches(':hover'))) this.close(true);
+  };
   private outside = (event: PointerEvent): void => {
     const s = this.session;
     if (s && !s.owner.contains(event.target as Node) && !s.panel?.contains(event.target as Node)) this.close();
@@ -152,6 +156,7 @@ export class TargetPreview {
     this.win.clearTimeout(s.delay); this.win.clearTimeout(s.leave);
     const returnFocus = restore && s.panel?.contains(this.root.ownerDocument.activeElement);
     this.root.ownerDocument.removeEventListener('pointerdown', this.outside, true);
+    this.root.ownerDocument.removeEventListener('keydown', this.escape, true);
     this.win.removeEventListener('blur', this.dismiss);
     this.win.removeEventListener('resize', this.dismiss);
     s.panel?.remove(); s.owner.removeAttribute('aria-controls'); delete s.owner.dataset.previewHint;

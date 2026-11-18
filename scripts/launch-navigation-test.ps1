@@ -11,7 +11,9 @@ $vaultDir = New-Item -ItemType Directory -Path "test-vault/.v03-desktop/$runId"
 $profileDir = New-Item -ItemType Directory -Path "test-profile/v03/$runId"
 $pluginPath = New-Item -ItemType Directory -Path "$vaultDir/.obsidian/plugins/margin-link"
 foreach ($name in 'manifest.json','main.js','styles.css','LICENSE','THIRD_PARTY_NOTICES.txt') { Copy-Item -LiteralPath (Join-Path $PluginDir $name) -Destination $pluginPath }
-New-Item -ItemType HardLink -Path (Join-Path $profileDir (Split-Path -Leaf $HostAsar)) -Target (Resolve-Path -LiteralPath $HostAsar) | Out-Null
+if ($HostAsar -ne 'bundled') {
+  New-Item -ItemType HardLink -Path (Join-Path $profileDir (Split-Path -Leaf $HostAsar)) -Target (Resolve-Path -LiteralPath $HostAsar) | Out-Null
+}
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 function Write-Utf8 ($file, $content) { [IO.File]::WriteAllText($file, $content, $utf8) }
 Write-Utf8 "$profileDir/obsidian.json" (@{communityPluginWarning=$true;vaults=@{a1b2c3d4e5f60718=@{path=$vaultDir.FullName;ts=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();open=$true}}} | ConvertTo-Json -Depth 5)

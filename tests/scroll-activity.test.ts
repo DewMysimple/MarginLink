@@ -16,6 +16,7 @@ class ElementStub extends EventTarget {
   createDiv() { return this.appendChild(this.ownerDocument.createElement()); }
   setAttribute() {}
   appendChild(child: ElementStub) { child.parent = this; this.children.push(child); return child; }
+  contains(node: ElementStub): boolean { return this === node || this.children.some(child => child.contains(node)); }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this); this.parent = undefined; }
 }
 interface DocumentStub {
@@ -30,6 +31,7 @@ interface DocumentStub {
   createElementNS(): ElementStub;
 }
 interface ActivityProbe {
+  decorations: { element: ElementStub };
   scrolling: boolean;
   scroller?: ElementStub;
   scrollIdleTimer?: number;
@@ -66,6 +68,18 @@ afterEach(() => {
 });
 
 describe('per-view native scroll activity lifecycle', () => {
+  it('ignores detached ink style records but schedules repair of host-removed reading decorations', () => {
+    let notify!: (records: object[]) => void;
+    vi.stubGlobal('MutationObserver', class {
+      constructor(callback: typeof notify) { notify = callback; }
+      observe() {} disconnect() {}
+    });
+    const f = fixture();
+    notify([{ type: 'attributes', target: f.nested, attributeName: 'style' }]);
+    expect(f.schedule).not.toHaveBeenCalled();
+    notify([{ type: 'childList', target: f.container, addedNodes: [], removedNodes: [f.probe.decorations.element] }]);
+    expect(f.schedule).toHaveBeenCalledOnce();
+  });
   it('keeps one quiet timer across wheel packets, then requests one settled render', () => {
     const f = fixture();
     f.scroll(); expect(f.probe.scrolling).toBe(true); expect(vi.getTimerCount()).toBe(1);
