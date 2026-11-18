@@ -12,6 +12,8 @@ import { canOpenInObsidian } from '../core/file-capabilities';
 import { positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
+import { TargetPreview, previewSpace, type PreviewTarget } from './target-preview';
+import { lane } from './layout-engine';
 import { type PortChoice } from './connector-renderer';
 import { connectorBatch, ConnectorRouteCache, type ConnectorBatch, type BatchRelationInput } from './connector-batch';
 import { applyAppearance } from './appearance';
@@ -70,6 +72,7 @@ export class MarginOverlay {
   private scrollIdleTimer?: number;
   private geometrySignature = '';
   private hostRect?: DOMRect;
+  private preview?: TargetPreview;
   private highlighted?: string;
   private pinned?: string;
   private hovered?: string;
@@ -138,6 +141,7 @@ export class MarginOverlay {
   };
   private onScroll = (event: Event): void => {
     if (event.target === this.scroller) {
+      this.preview?.close();
       this.scrolling = true; this.win.clearTimeout(this.scrollIdleTimer);
       // A wheel packet can emit scrollend in the very same event turn. Wait
       // for a short quiet interval before optional corridor exploration instead.
@@ -157,7 +161,8 @@ export class MarginOverlay {
     this.render();
     if (this.diagnostics) { this.diagnostics.renders++; this.diagnostics.work.push(performance.now() - start); }
   };
-  cancelInteractions(): void { cardTooltip.hideWithin(this.root); if (this.decorations) cardTooltip.hideWithin(this.decorations.element); this.cardDrag.cancel(); this.drag.cancel(); }
+  invalidatePreview(path: string): void { this.preview?.invalidate(path); }
+  cancelInteractions(): void { this.preview?.close(); cardTooltip.hideWithin(this.root); this.cardDrag.cancel(); this.drag.cancel(); }
   resetLayout(): void {
     this.cancelInteractions(); this.stableLayout.clear(); this.schedule();
   }
@@ -234,7 +239,7 @@ export class MarginOverlay {
     // the same frame. Keep following native sidebar animation until it settles.
     const geometry = [hostRect.left, hostRect.top, hostRect.width, hostRect.height, body.left, body.right, ...Object.values(viewport)].map(v => v.toFixed(1)).join(':');
     if (geometry !== this.geometrySignature) {
-      this.geometrySignature = geometry; cardTooltip.hideWithin(this.root); this.schedule();
+      this.geometrySignature = geometry; this.preview?.close(); cardTooltip.hideWithin(this.root); this.schedule();
     }
     // Keep the historical last-line/bottom+2 reference, independent of which
     // fragment currently intersects the viewport or is used by a connector.
@@ -247,7 +252,7 @@ export class MarginOverlay {
       bridge?.cm.dom.closest('.markdown-source-view')?.classList.contains('is-live-preview')].join(':');
     const source = bridge?.text ?? this.view.data;
     if (this.layoutSource !== source) {
-      this.clearFocus();
+      this.clearFocus(); this.preview?.close();
       const occurrences = bridge?.parsed.links ?? parseWikilinks(source);
       this.validOccurrences = new Map(occurrences.map(a => [String(a.start), a.raw]));
       this.continuationNumbers = new Map(occurrences.map((a, index) => [String(a.start), index + 1]));
@@ -298,7 +303,7 @@ export class MarginOverlay {
       .filter(p => p.x + p.width > viewport.left && p.x < viewport.right);
     this.routePlacements = placements.map(p => this.cardDrag.placement(p.key) ?? p);
     const keep = new Set(placements.map(p => p.key));
-    for (const [key, card] of this.cards) if (!keep.has(key)) { cardTooltip.hideWithin(card.button); card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); this.cards.delete(key); }
+    for (const [key, card] of this.cards) if (!keep.has(key)) { this.preview?.closeOwner(card.button); card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); this.cards.delete(key); }
     const anchorMap = new Map(this.anchors.map(a => [a.key, a]));
     for (const p of placements) {
       const anchor = anchorMap.get(p.key)!;
@@ -311,12 +316,12 @@ export class MarginOverlay {
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.classList.add('margin-link-connector'); path.dataset.members = JSON.stringify([p.key]); path.dataset.logical = 'true'; path.style.display = 'none'; shell.dataset.relation = p.key; this.svg.appendChild(path);
         card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
-        shell.addEventListener('pointerenter', e => { this.hover(p.key); if (!e.buttons && !this.cardDrag.dragging) cardTooltip.show(button); });
-        shell.addEventListener('pointerleave', () => { this.hover(undefined); cardTooltip.hideWithin(button); });
+        shell.addEventListener('pointerenter', e => { this.hover(p.key); if (!e.buttons && !this.cardDrag.dragging) this.showPreview(p.key); });
+        shell.addEventListener('pointerleave', () => { this.hover(undefined); this.preview?.leave(button); });
         shell.addEventListener('focusin', () => { this.focused = p.key; this.hover(undefined); });
-        shell.addEventListener('focusout', () => { this.focused = undefined; this.refreshFocus(); });
+        shell.addEventListener('focusout', e => { this.focused = undefined; this.refreshFocus(); this.preview?.blurOwner(button, e.relatedTarget); });
         button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, p.key)) void this.open(p.key, event); });
-        button.addEventListener('pointerdown', e => { cardTooltip.hideWithin(button); this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
+        button.addEventListener('pointerdown', e => { this.preview?.close(); this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
         button.addEventListener('keydown', e => this.onCardKey(e, p.key));
         shell.addEventListener('contextmenu', e => {
           e.preventDefault(); const menu = new Menu(); this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
@@ -331,9 +336,9 @@ export class MarginOverlay {
         });
       }
       card.anchor = anchor; card.placement = p;
-      if (card.signature !== signature) { cardTooltip.hideWithin(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
+      if (card.signature !== signature) { this.preview?.closeOwner(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
       card.button.classList.toggle('margin-link-card-movable', prefs.placementMode !== 'auto');
-      card.button.setAttribute('aria-description', 'Enter 打开，P 固定或取消高亮，Escape 取消固定。' +
+      card.button.setAttribute('aria-description', 'Enter 打开，V 预览，P 固定或取消高亮，Escape 关闭预览和固定。' +
         (prefs.placementMode !== 'auto' ? '方向键移动，Shift+左右键跨侧，Delete 重置位置。' : ''));
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
@@ -536,7 +541,13 @@ export class MarginOverlay {
     if (this.cardDrag.dragging && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete', 'Backspace'].includes(event.key)) {
       event.preventDefault(); event.stopPropagation(); return;
     }
-    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing && event.key.toLowerCase() === 'p') {
+    const singleKey = !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing;
+    if (singleKey && event.key.toLowerCase() === 'v') {
+      event.preventDefault(); event.stopPropagation();
+      if (!event.repeat && !this.cardDrag.dragging) this.showPreview(key, true);
+      return;
+    }
+    if (singleKey && event.key.toLowerCase() === 'p') {
       event.preventDefault(); event.stopPropagation();
       if (!event.repeat && !this.cardDrag.dragging) this.togglePin(key);
       return;
@@ -551,6 +562,21 @@ export class MarginOverlay {
     else { x += event.key === 'ArrowLeft' ? -12 : event.key === 'ArrowRight' ? 12 : 0; y += event.key === 'ArrowUp' ? -24 : event.key === 'ArrowDown' ? 24 : 0; }
     const result = positionFromDrop(context.input, context.anchor, x, y, context.occupied);
     if (result) this.savePosition(key, result.relative);
+  }
+  private showPreview(key: string, keyboard = false): void {
+    const card = this.cards.get(key);
+    if (!card) return;
+    this.preview ??= new TargetPreview(this.root, this.host.app.vault);
+    this.preview.request(card.button, (): PreviewTarget | undefined => {
+      const input = this.layoutInput, path = this.path, signature = card.signature, mode = this.mode;
+      const valid = () => !this.stopped && this.view.file?.path === path && this.view.getMode() === mode &&
+        this.cards.get(key) === card && card.signature === signature;
+      if (!input || !valid()) return;
+      const resolved = resolveLink(this.host.app, card.anchor.occurrence.target, path);
+      const box = (p: Placement): Box => ({ left: p.x, right: p.x + p.width, top: p.y, bottom: p.y + p.height });
+      const space = previewSpace(lane(input, card.placement.side), box(card.placement), this.routePlacements.map(box));
+      return { file: resolved.file, label: card.button.dataset.tooltip!, space, valid, open: event => { void this.open(key, event); } };
+    }, keyboard);
   }
   private async open(key: string, event: MouseEvent): Promise<void> {
     const anchor = this.cards.get(key)?.anchor;
@@ -580,8 +606,9 @@ export class MarginOverlay {
     this.refreshFocus(true);
   }
   private onEscape = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape' || !this.pinned) return;
-    this.clearFocus();
+    if (event.key !== 'Escape') return;
+    this.preview?.close(true);
+    if (this.pinned) this.clearFocus();
   };
   private clearFocus(): void {
     this.pinned = this.hovered = this.focused = undefined;
@@ -630,7 +657,7 @@ export class MarginOverlay {
   }
   private clearCards(): void {
     this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
-    cardTooltip.hideWithin(this.root); if (this.decorations) cardTooltip.hideWithin(this.decorations.element);
+    this.preview?.invalidate(); cardTooltip.hideWithin(this.root);
     this.clearFocus(); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
     this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
     this.routeCache?.clear();

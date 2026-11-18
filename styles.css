@@ -88,6 +88,11 @@
 .margin-link-has-focus.margin-link-lines-always .margin-link-connector:not(.margin-link-active) { opacity: calc(var(--margin-link-opacity, .65) * .55); }
 .margin-link-has-focus:is(.margin-link-lines-always, .margin-link-lines-numbers) .margin-link-continuation:not(.margin-link-active) { opacity: .6; }
 .margin-link-pinned .margin-link-card { outline: 2px dashed var(--interactive-accent); outline-offset: 1px; }
+.margin-link-target-preview { position: absolute; z-index: 5; pointer-events: auto; box-sizing: border-box; padding: 10px; overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere; color: var(--text-normal); background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; box-shadow: var(--shadow-s); font-size: var(--font-ui-small); }
+.margin-link-target-preview p { margin: 6px 0; white-space: pre-wrap; }
+.margin-link-target-preview:focus-visible, .margin-link-target-preview button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+.margin-link-preview-compact { padding: 3px; font-size: var(--font-ui-smaller); }
+.margin-link-card[data-preview-hint]::after { content: attr(data-preview-hint); position: absolute; inset: 0; display: grid; align-content: center; overflow: hidden; overflow-wrap: anywhere; color: var(--text-normal); background: var(--background-primary); font-size: var(--font-ui-smaller); }
 .margin-link-anchor-active { text-decoration: underline !important; }
 .margin-link-anchor-ink { position: absolute; pointer-events: none; box-shadow: inset 0 -2px var(--interactive-accent); background: var(--text-selection); border-radius: 2px; }
 .margin-link-card-shell:focus-within { z-index: 2; }

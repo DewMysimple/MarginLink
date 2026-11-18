@@ -99,6 +99,45 @@ try {
       assert.equal(sha(await data()), before);
     }
   }
+  if (!baseline) {
+    const before = sha(await data()), preview = page.locator('.margin-link-target-preview');
+    const context = () => page.evaluate(() => {
+      const view = app.workspace.activeLeaf.view;
+      return [view.leaf.id, view.editor.getCursor(), app.plugins.plugins['margin-link'].overlays.get(view).scroller.scrollTop];
+    });
+    const entry = await context();
+    await first.hover();
+    await preview.getByText(/Plain text/).waitFor();
+    assert.equal(await preview.locator('script, img, iframe, a').count(), 0);
+    assert((await preview.innerText()).includes('<script>void 0</script>'));
+    await preview.hover(); await page.waitForTimeout(260);
+    assert(await preview.isVisible());
+    assert.deepEqual(await context(), entry);
+    await first.focus(); await page.keyboard.press('v');
+    assert(await preview.evaluate(e => e === document.activeElement));
+    await page.keyboard.press('Escape');
+    assert(await first.evaluate(e => e === document.activeElement));
+    assert.equal(await preview.count(), 0);
+    await page.locator('.margin-link-card').nth(3).focus(); await page.keyboard.press('v');
+    await preview.getByText('附件仅显示文件信息。').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.margin-link-card').nth(4).focus(); await page.keyboard.press('v');
+    await preview.getByText('未找到目标文件。').waitFor();
+    await page.keyboard.press('Escape');
+    await first.focus(); await page.keyboard.press('v');
+    await page.evaluate(() => app.vault.modify(app.vault.getFileByPath('Docs/Target.md'), 'Changed preview target.'));
+    await wait(() => !document.querySelector('.margin-link-target-preview'));
+    await first.focus(); await page.keyboard.press('v');
+    await preview.getByText('Changed preview target.').waitFor();
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => app.vault.rename(app.vault.getFileByPath('Docs/Target.md'), 'Docs/Renamed.md'));
+    await first.focus(); await page.keyboard.press('v');
+    await preview.getByText('未找到目标文件。').waitFor();
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => app.vault.rename(app.vault.getFileByPath('Docs/Renamed.md'), 'Docs/Target.md'));
+    assert.equal(sha(await data()), before);
+    report.preview = 'hover, panel handoff, literal Markdown, keyboard return, attachment/missing, modify/rename, leaf/cursor/scroll and disk invariants';
+  }
   assert.equal(sha(await source()), report.source);
   assert.deepEqual(report.errors, []);
   report.status = 'passed';

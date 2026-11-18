@@ -76,10 +76,10 @@ export default class MarginLinkPlugin extends Plugin {
       if (file.extension === 'md' && ![...this.overlays.keys()].some(view => view.file?.path === file.path && view.getMode() === 'source' && normalize(view.editor.getValue()) !== normalize(text))) this.layouts.reconcileDocument(file.path, text);
       this.refresh();
     }));
-    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => { this.layouts.renameSource(oldPath, file.path); this.cancelInteractions(); this.refresh(); }));
-    this.registerEvent(this.app.vault.on('delete', file => { this.layouts.deleteSource(file.path); this.cancelInteractions(); this.refresh(); }));
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => { this.invalidatePreviews(oldPath); this.layouts.renameSource(oldPath, file.path); this.cancelInteractions(); this.refresh(); }));
+    this.registerEvent(this.app.vault.on('delete', file => { this.invalidatePreviews(file.path); this.layouts.deleteSource(file.path); this.cancelInteractions(); this.refresh(); }));
     this.registerEvent(this.app.vault.on('create', () => this.refresh()));
-    this.registerEvent(this.app.vault.on('modify', () => this.refresh()));
+    this.registerEvent(this.app.vault.on('modify', file => { this.invalidatePreviews(file.path); this.refresh(); }));
     this.app.workspace.onLayoutReady(() => {
       if (this.unloaded) return;
       // Give dedicated file viewers loaded at startup first use of their extensions.
@@ -90,6 +90,7 @@ export default class MarginLinkPlugin extends Plugin {
       for (const view of this.overlays.keys()) if (view.getMode() === 'preview') view.previewMode.rerender(true);
     });
   }
+  private invalidatePreviews(path: string): void { for (const overlay of this.overlays.values()) overlay.invalidatePreview(path); }
   private sync(): void {
     if (this.unloaded) return;
     const live = new Set<MarkdownView>();
