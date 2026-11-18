@@ -39,6 +39,9 @@ interface CardStub {
 interface OverlayProbe {
   paintConnectors(): void;
   highlight(key?: string): void;
+  togglePin(key: string): void;
+  hover(key?: string): void;
+  clearFocus(): void;
   batch?: ConnectorBatch;
   sharedPaths: Map<string, ElementStub>;
   scrollTop: number;
@@ -157,6 +160,21 @@ describe('actual overlay shared-path drawing', () => {
     f.overlay.highlight('dives');
     for (const [id, path] of f.overlay.sharedPaths) expect(active(path)).toBe(f.overlay.batch!.segments.find(s => s.id === id)!.members.includes('dives'));
     f.overlay.highlight(); expect([...f.overlay.sharedPaths.values()].some(active)).toBe(false);
+  });
+  it('pins one occurrence per leaf without rebuilding geometry and restores temporary focus after unpinning', () => {
+    const a = fixture(), b = fixture();
+    a.overlay.paintConnectors(); b.overlay.paintConnectors();
+    const batch = a.overlay.batch;
+    const geometry = [...a.overlay.sharedPaths.values()].map(el => el.getAttribute('d'));
+    a.overlay.hover('ship'); a.overlay.togglePin('ship'); a.overlay.hover('dives');
+    expect(active(a.cards.get('ship')!.button)).toBe(true);
+    expect(active(b.cards.get('ship')!.button)).toBe(false);
+    a.overlay.togglePin('ship');
+    expect(active(a.cards.get('dives')!.button)).toBe(true);
+    a.overlay.clearFocus();
+    expect([...a.overlay.sharedPaths.values()].some(active)).toBe(false);
+    expect(a.overlay.batch).toBe(batch);
+    expect([...a.overlay.sharedPaths.values()].map(el => el.getAttribute('d'))).toEqual(geometry);
   });
   it('removes obsolete shared paths and member references after deleting one occurrence', () => {
     const f = fixture(); f.overlay.paintConnectors(); const before = new Map(f.overlay.sharedPaths);

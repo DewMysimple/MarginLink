@@ -84,4 +84,10 @@
 .margin-link-continuation.margin-link-active { background: var(--background-secondary); outline: 2px solid var(--interactive-accent); }
 .margin-link-lines-none .margin-link-continuation { display: none; }
 .margin-link-lines-numbers .margin-link-connectors { display: none; }
+.margin-link-has-focus .margin-link-card-shell:not(.margin-link-focused) { opacity: .65; }
+.margin-link-has-focus.margin-link-lines-always .margin-link-connector:not(.margin-link-active) { opacity: calc(var(--margin-link-opacity, .65) * .55); }
+.margin-link-has-focus:is(.margin-link-lines-always, .margin-link-lines-numbers) .margin-link-continuation:not(.margin-link-active) { opacity: .6; }
+.margin-link-pinned .margin-link-card { outline: 2px dashed var(--interactive-accent); outline-offset: 1px; }
+.margin-link-anchor-active { text-decoration: underline !important; }
+.margin-link-anchor-ink { position: absolute; pointer-events: none; box-shadow: inset 0 -2px var(--interactive-accent); background: var(--text-selection); border-radius: 2px; }
 .margin-link-card-shell:focus-within { z-index: 2; }

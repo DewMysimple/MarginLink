@@ -84,6 +84,7 @@ artifacts/*
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/
+test-vault/.v03-desktop/
 __pycache__/
 *.py[cod]
 .env

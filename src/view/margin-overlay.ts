@@ -71,6 +71,10 @@ export class MarginOverlay {
   private geometrySignature = '';
   private hostRect?: DOMRect;
   private highlighted?: string;
+  private pinned?: string;
+  private hovered?: string;
+  private focused?: string;
+  private anchorInk: HTMLSpanElement[] = [];
   private highlightedElements: HTMLElement[] = [];
   private observedBody?: Element;
   private measurementsDirty = true;
@@ -105,6 +109,10 @@ export class MarginOverlay {
     this.mutation = new MutationObserver(records => {
       if (records.some(r => {
         if (this.root.contains(r.target) || this.decorations.contains(r.target)) return false;
+        if (r.type === 'childList' && [...r.removedNodes].includes(this.decorations.element) && !this.decorations.element.isConnected) {
+          this.schedule();
+          return false;
+        }
         if (r.type === 'childList' && [...r.addedNodes, ...r.removedNodes].every(node => this.decorations.contains(node))) return false;
         if (r.type === 'attributes' && r.attributeName === 'class') {
           const strip = (v: string) => v.replace(/\bmargin-link-[\w-]+\b/g, '').trim();
@@ -120,6 +128,7 @@ export class MarginOverlay {
     this.resize = new ResizeObserver(() => { this.measurementsDirty = true; this.textObstacles.invalidate(); this.flushFrame(); }); this.resize.observe(container);
     container.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
     container.addEventListener('pointermove', this.onPointerMove); container.addEventListener('pointerleave', this.onLeave);
+    container.addEventListener('keydown', this.onEscape);
     this.win.addEventListener('resize', this.schedule);
     container.ownerDocument.fonts?.addEventListener('loadingdone', this.onFontsLoaded); this.schedule();
   }
@@ -238,6 +247,7 @@ export class MarginOverlay {
       bridge?.cm.dom.closest('.markdown-source-view')?.classList.contains('is-live-preview')].join(':');
     const source = bridge?.text ?? this.view.data;
     if (this.layoutSource !== source) {
+      this.clearFocus();
       const occurrences = bridge?.parsed.links ?? parseWikilinks(source);
       this.validOccurrences = new Map(occurrences.map(a => [String(a.start), a.raw]));
       this.continuationNumbers = new Map(occurrences.map((a, index) => [String(a.start), index + 1]));
@@ -301,14 +311,16 @@ export class MarginOverlay {
         const path = container.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.classList.add('margin-link-connector'); path.dataset.members = JSON.stringify([p.key]); path.dataset.logical = 'true'; path.style.display = 'none'; shell.dataset.relation = p.key; this.svg.appendChild(path);
         card = { shell, button, path, signature: '', anchor, placement: p }; this.cards.set(p.key, card);
-        shell.addEventListener('pointerenter', e => { this.highlight(p.key); if (!e.buttons && !this.cardDrag.dragging) cardTooltip.show(button); });
-        shell.addEventListener('pointerleave', () => { this.highlight(undefined); cardTooltip.hideWithin(button); });
-        shell.addEventListener('focusin', () => this.highlight(p.key)); shell.addEventListener('focusout', () => this.highlight(undefined));
+        shell.addEventListener('pointerenter', e => { this.hover(p.key); if (!e.buttons && !this.cardDrag.dragging) cardTooltip.show(button); });
+        shell.addEventListener('pointerleave', () => { this.hover(undefined); cardTooltip.hideWithin(button); });
+        shell.addEventListener('focusin', () => { this.focused = p.key; this.hover(undefined); });
+        shell.addEventListener('focusout', () => { this.focused = undefined; this.refreshFocus(); });
         button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, p.key)) void this.open(p.key, event); });
         button.addEventListener('pointerdown', e => { cardTooltip.hideWithin(button); this.drag.cancel(); this.cardDrag.start(e, p.key, button); });
         button.addEventListener('keydown', e => this.onCardKey(e, p.key));
         shell.addEventListener('contextmenu', e => {
           e.preventDefault(); const menu = new Menu(); this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
+          menu.addItem(item => item.setTitle(this.pinned === p.key ? '取消固定高亮' : '固定此处关联高亮').setIcon('pin').onClick(() => this.togglePin(p.key)));
           menu.addItem(item => item.setTitle('重新链接文件…').setIcon('link-2').onClick(() => {
             const occurrence = this.cards.get(p.key)?.anchor.occurrence;
             if (occurrence) this.host.selection.relink(this.view, occurrence, this.bridge());
@@ -321,14 +333,13 @@ export class MarginOverlay {
       card.anchor = anchor; card.placement = p;
       if (card.signature !== signature) { cardTooltip.hideWithin(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
       card.button.classList.toggle('margin-link-card-movable', prefs.placementMode !== 'auto');
-      if (prefs.placementMode !== 'auto') card.button.setAttribute('aria-description', '拖动调整位置；方向键移动，Shift+左右键跨侧，Delete 重置此卡片位置，Enter 打开文件');
-      else card.button.removeAttribute('aria-description');
+      card.button.setAttribute('aria-description', 'Enter 打开，P 固定或取消高亮，Escape 取消固定。' +
+        (prefs.placementMode !== 'auto' ? '方向键移动，Shift+左右键跨侧，Delete 重置位置。' : ''));
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
     this.paintConnectors();
     this.updateContinuations();
-    const selected = bridge?.cm.state.selection.main;
-    this.highlight(this.highlighted ?? (selected ? this.anchors.find(a => selected.from < a.occurrence.end && selected.to > a.occurrence.start)?.key : undefined));
+    this.refreshFocus(true);
     this.drag.update(this.cardDrag.dragging ? undefined : bridge, hostRect, viewport, body);
     // First stable display is the initial UI placement, not an invitation to
     // rebalance on the next visit. A gesture only writes on its final commit.
@@ -480,8 +491,10 @@ export class MarginOverlay {
         if (!card.continuation) card.continuation = ['source', 'target'].map(end => {
           const button = (this.decorations?.canvas ?? this.root).createEl('button', { cls: 'margin-link-continuation' });
           button.type = 'button'; button.dataset.relation = key; button.dataset.end = end;
-          button.addEventListener('pointerenter', () => this.highlight(key)); button.addEventListener('pointerleave', () => this.highlight(undefined));
-          button.addEventListener('focusin', () => this.highlight(key)); button.addEventListener('focusout', () => this.highlight(undefined));
+          button.addEventListener('pointerenter', () => this.hover(key)); button.addEventListener('pointerleave', () => this.hover(undefined));
+          button.addEventListener('focusin', () => { this.focused = key; this.hover(undefined); });
+          button.addEventListener('focusout', () => { this.focused = undefined; this.refreshFocus(); });
+          button.addEventListener('click', () => this.togglePin(key));
           return button;
         }) as [HTMLButtonElement, HTMLButtonElement];
         card.continuation.forEach((button, i) => {
@@ -523,6 +536,11 @@ export class MarginOverlay {
     if (this.cardDrag.dragging && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete', 'Backspace'].includes(event.key)) {
       event.preventDefault(); event.stopPropagation(); return;
     }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing && event.key.toLowerCase() === 'p') {
+      event.preventDefault(); event.stopPropagation();
+      if (!event.repeat && !this.cardDrag.dragging) this.togglePin(key);
+      return;
+    }
     const card = this.cards.get(key), context = this.dragContext(key);
     if (!card || !context) return;
     if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); if (card.anchor.layoutKey) this.host.layouts.clear(this.path, card.anchor.layoutKey, this.legacyLayoutKeys.get(card.anchor.layoutKey)); return; }
@@ -549,34 +567,71 @@ export class MarginOverlay {
     if (this.root.contains(event.target as Node) || this.decorations?.contains(event.target as Node) || this.cardDrag.dragging) return;
     const bridge = this.view.getMode() === 'source' ? this.bridge() : undefined;
     const pos = bridge?.cm.posAtCoords({ x: event.clientX, y: event.clientY });
-    this.highlight(bridge && pos !== null && pos !== undefined ? this.anchors.find(a => pos >= a.occurrence.start && pos < a.occurrence.end)?.key : this.anchors.find(a => a.element?.contains(event.target as Node))?.key);
+    this.hover(bridge && pos !== null && pos !== undefined ? this.anchors.find(a => pos >= a.occurrence.start && pos < a.occurrence.end)?.key : this.anchors.find(a => a.element?.contains(event.target as Node))?.key);
   };
-  private onLeave = (): void => this.highlight(undefined);
-  private highlight(key: string | undefined): void {
+  private onLeave = (): void => this.hover(undefined);
+  private hover(key?: string): void {
+    this.hovered = key;
+    this.refreshFocus();
+  }
+  private togglePin(key: string): void {
+    if (!this.cards.has(key)) return;
+    this.pinned = this.pinned === key ? undefined : key;
+    this.refreshFocus(true);
+  }
+  private onEscape = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || !this.pinned) return;
+    this.clearFocus();
+  };
+  private clearFocus(): void {
+    this.pinned = this.hovered = this.focused = undefined;
+    this.highlight(undefined);
+  }
+  private refreshFocus(redraw = false): void {
+    const selected = this.layoutInput && this.mode === 'source' ? this.bridge()?.cm.state.selection.main : undefined;
+    const key = this.pinned ?? this.hovered ?? this.focused ?? (selected && selected.from !== selected.to
+      ? this.anchors.find(a => selected.from < a.occurrence.end && selected.to > a.occurrence.start)?.key : undefined);
+    this.highlight(key !== undefined && this.cards.has(key) ? key : undefined, redraw);
+  }
+  private highlight(key?: string, redraw = false): void {
+    const previous = this.highlighted;
+    if (previous === key && (!redraw || key === undefined)) return;
+    const feedback = this.host.preferences.hoverFeedback;
+    const mark = (id: string, on: boolean) => {
+      const card = this.cards.get(id);
+      if (!card) return;
+      card.button.classList.toggle('margin-link-active', on && feedback);
+      card.shell.classList.toggle('margin-link-focused', on && feedback);
+      card.shell.classList.toggle('margin-link-pinned', on && id === this.pinned);
+      card.path.classList.toggle('margin-link-active', on);
+      card.continuation?.forEach(el => el.classList.toggle('margin-link-active', on));
+      for (const ref of this.batch?.relations.get(id)?.segments ?? []) this.sharedPaths.get(ref.id)?.classList.toggle('margin-link-active', on);
+    };
+    if (previous !== undefined && previous !== key) mark(previous, false);
     this.highlighted = key;
-    this.sharedPaths?.forEach(path => path.classList.toggle('margin-link-active', (JSON.parse(path.dataset.members ?? '[]') as string[]).includes(key ?? '')));
-    this.highlightedElements.forEach(el => el.classList.remove('margin-link-anchor-active')); this.highlightedElements = [];
-    for (const [id, card] of this.cards) {
-      card.button.classList.toggle('margin-link-active', id === key && this.host.preferences.hoverFeedback);
-      card.path.classList.toggle('margin-link-active', id === key);
-      card.continuation?.forEach(el => el.classList.toggle('margin-link-active', id === key));
-      if (id !== key || !this.host.preferences.hoverFeedback) continue;
-      let element = card.anchor.element;
-      if (!element) {
-        const bridge = this.bridge(), occurrence = card.anchor.occurrence;
-        if (this.view.file?.path !== this.path) continue;
-        try {
-          const dom = bridge?.cm.domAtPos(occurrence.start + Math.max(2, occurrence.raw.indexOf('|') + 1));
-          element = dom?.node.nodeType === 1 ? dom.node as HTMLElement : dom?.node.parentElement ?? undefined;
-        } catch { /* Focus can leave a card while CM replaces the document/viewport. */ }
-      }
-      if (element && this.view.contentEl.contains(element)) { element.classList.add('margin-link-anchor-active'); this.highlightedElements.push(element); }
+    this.decorations?.element.classList.toggle('margin-link-has-focus', key !== undefined && feedback);
+    this.highlightedElements.forEach(el => el.classList.remove('margin-link-anchor-active'));
+    this.highlightedElements = [];
+    const card = key !== undefined ? this.cards.get(key) : undefined;
+    if (key !== undefined) mark(key, true);
+    const element = card?.anchor.element;
+    if (feedback && element && this.view.contentEl.contains(element)) {
+      element.classList.add('margin-link-anchor-active'); this.highlightedElements.push(element);
     }
+    // Draw the measured text fragments outside CM. domAtPos may return a whole
+    // line or only the alias's first syntax span; neither identifies the range.
+    const fragments = feedback && card && !element ? card.anchor.fragments : [];
+    for (const [index, box] of fragments.entries()) {
+      const ink = this.anchorInk[index] ??= this.decorations.canvas.createSpan({ cls: 'margin-link-anchor-ink', attr: { 'aria-hidden': 'true' } });
+      Object.assign(ink.style, { left: (box.left - this.hostRect!.left) + 'px', top: (box.top - this.hostRect!.top + this.scrollTop) + 'px',
+        width: (box.right - box.left) + 'px', height: (box.bottom - box.top) + 'px' });
+    }
+    this.anchorInk?.splice(fragments.length).forEach(el => el.remove());
   }
   private clearCards(): void {
     this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
     cardTooltip.hideWithin(this.root); if (this.decorations) cardTooltip.hideWithin(this.decorations.element);
-    this.highlight(undefined); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
+    this.clearFocus(); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
     this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
     this.routeCache?.clear();
     this.cards.clear(); this.continuationNumbers?.clear(); this.routePlacements = []; this.anchors = []; this.layoutInput = undefined;
@@ -587,6 +642,7 @@ export class MarginOverlay {
     this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
     for (const menu of [...this.menus]) menu.hide(); this.menus.clear();
     const container = this.view.contentEl;
+    container.removeEventListener('keydown', this.onEscape);
     container.removeEventListener('scroll', this.onScroll, true);
     container.removeEventListener('pointermove', this.onPointerMove); container.removeEventListener('pointerleave', this.onLeave);
     this.win.removeEventListener('resize', this.schedule); container.ownerDocument.fonts?.removeEventListener('loadingdone', this.onFontsLoaded);
