@@ -8,6 +8,7 @@ import { layoutIdentities } from '../core/layout-identity';
 interface Entry { sourcePath: string; text: string; element: HTMLElement; identities: Map<number, string>; links: { element: HTMLElement; occurrence: WikilinkOccurrence }[] }
 export class ReadingAnchors {
   private entries = new Map<HTMLElement, Entry>();
+  private refreshing = new WeakMap<MarkdownView, string>();
   private children = new Set<MarkdownRenderChild>();
   // One current full source per rendered document, only in memory.
   private documents = new Map<string, { text: string; parsed: ParsedDocument; identities: Map<number, string>; users: number }>();
@@ -54,7 +55,7 @@ export class ReadingAnchors {
   }
   sourceText(view: MarkdownView, occurrence: WikilinkOccurrence): string | undefined {
     for (const entry of this.entries.values()) {
-      if (entry.sourcePath === view.file?.path && view.previewMode.containerEl.contains(entry.element) &&
+      if (entry.text === view.data && entry.sourcePath === view.file?.path && view.previewMode.containerEl.contains(entry.element) &&
         entry.links.some(link => link.occurrence.start === occurrence.start && link.occurrence.raw === occurrence.raw)) return entry.text;
     }
   }
@@ -62,8 +63,12 @@ export class ReadingAnchors {
     const viewport = view.previewMode.containerEl.getBoundingClientRect();
     const result: Anchor[] = [];
     const seen = new Set<HTMLElement>();
+    let stale = false;
     for (const entry of this.entries.values()) {
       if (entry.sourcePath !== view.file?.path || !view.previewMode.containerEl.contains(entry.element) || entry.element.closest('.internal-embed')) continue;
+      // Obsidian can retain an unchanged paragraph after an earlier edit.
+      // Its postprocessor still refers to offsets in the previous document.
+      if (entry.text !== view.data) { stale = true; continue; }
       for (const { element, occurrence } of entry.links) {
         if (!element.isConnected || seen.has(element)) continue;
         seen.add(element);
@@ -80,6 +85,10 @@ export class ReadingAnchors {
         if (fragments.length) result.push({ key: String(occurrence.start), occurrence, rect, fragments, element, layoutKey: entry.identities.get(occurrence.start) });
       }
     }
+    if (stale && this.refreshing.get(view) !== view.data) {
+      this.refreshing.set(view, view.data);
+      view.previewMode.rerender(true);
+    } else if (!stale && result.length) this.refreshing.delete(view);
     return result;
   }
   clear(): void {

@@ -6,6 +6,7 @@ import type { WikilinkOccurrence } from '../src/types';
 import { DEFAULT_PREFERENCES } from '../src/types';
 import { parseDocument, parseWikilinks } from '../src/core/wikilink-parser';
 import { LayoutStore } from '../src/core/layout-store';
+import { layoutIdentities } from '../src/core/layout-identity';
 
 const ui = vi.hoisted(() => ({ pickers: [] as FakePicker[], modals: [] as { buttons: { text: string; onclick?: () => void }[] }[], notices: [] as string[] }));
 interface FakePicker {
@@ -69,6 +70,38 @@ function note(initial: string, initialMode: 'source' | 'preview') {
   return { view, bridge, editor, scroller, mutate: (next: string) => { text = next; bridge.text = next; bridge.revision++; } };
 }
 beforeEach(() => { ui.pickers.length = 0; ui.modals.length = 0; ui.notices.length = 0; vi.mocked(resolveSubpath).mockReset(); });
+describe('unlink from a card', () => {
+  it('unwraps one duplicate while preserving the remaining manual layout records', async () => {
+    const s = fixture(), before = s.origin.editor.getValue(), links = parseWikilinks(before), oldKeys = layoutIdentities(before, links);
+    const first = { side: 'left' as const, xNormalized: .3, yOffset: 2 };
+    const last = { side: 'right' as const, xNormalized: .6, yOffset: -4 };
+    s.layouts.set('Source.md', oldKeys.get(links[0].start)!, first);
+    s.layouts.set('Source.md', oldKeys.get(links[2].start)!, last);
+    await s.action.unlink(s.origin.view, links[1], s.origin.bridge as unknown as EditorBridge);
+    const after = s.origin.editor.getValue(), remaining = parseWikilinks(after), newKeys = layoutIdentities(after, remaining);
+    expect(after).toBe('first [[old/a.html|streams]] then streams [[neighbor|旁卡]] end');
+    expect(s.layouts.get('Source.md', newKeys.get(remaining[0].start))).toEqual(first);
+    expect(s.layouts.get('Source.md', newKeys.get(remaining[1].start))).toEqual(last);
+    expect(ui.pickers).toHaveLength(0); expect(s.changed).toHaveBeenCalledOnce();
+    expect(s.origin.editor.transaction).toHaveBeenCalledOnce();
+  });
+  it.each([['[[missing/f#^block]]', 'missing/f#^block'], ['[[missing/f|]]', 'missing/f'], ['[[f| 中文 🐈 ]]', ' 中文 🐈 ']])(
+    'restores the text of %s through a CRLF reading view', async (link, replacement) => {
+      const original = '正文\r\n\r\n' + link, s = fixture(original, true);
+      s.origin.mutate(original.replaceAll('\r\n', '\n'));
+      await s.action.unlink(s.origin.view, parseWikilinks(original)[0]);
+      expect(s.origin.editor.getValue()).toBe('正文\n\n' + replacement);
+      expect(s.origin.view.getMode()).toBe('preview');
+      expect(s.origin.view.setEphemeralState).toHaveBeenCalledWith({ scroll: 12.3 });
+    });
+  it('refuses to unlink from a stale reading split', async () => {
+    const original = '[[f|文字]]', s = fixture(original, true), other = note('modified ' + original, 'source');
+    s.notes.push(other);
+    await s.action.unlink(s.origin.view, parseWikilinks(original)[0]);
+    expect(other.editor.transaction).not.toHaveBeenCalled(); expect(s.origin.view.setState).not.toHaveBeenCalled();
+    expect(ui.notices[0]).toContain('其他分栏');
+  });
+});
 describe('the shared checked source transaction', () => {
   it('does not reveal the old offscreen cursor when the host transaction forcibly scrolls to it', async () => {
     const s = fixture(); s.origin.scroller.scrollTop = 4503;

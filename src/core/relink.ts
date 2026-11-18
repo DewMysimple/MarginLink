@@ -23,18 +23,21 @@ export function relinkText(occurrence: WikilinkOccurrence, path: string, subpath
 
 // A single checked splice proves the correspondence of both the changed link
 // and every untouched occurrence. Hashes alone never establish correspondence.
-export function relinkLayoutAliases(before: string, after: string, from: number, to: number, replacement: string): Map<string, string> {
+export function relinkLayoutAliases(before: string, after: string, from: number, to: number, replacement: string, edit: 'relink' | 'unlink' = 'relink'): Map<string, string> {
   if (before.slice(0, from) + replacement + before.slice(to) !== after) throw new Error('链接事务的实际结果不符，无法迁移卡片位置。');
   const oldLinks = parseWikilinks(before), newLinks = parseWikilinks(after);
   const changed = oldLinks.find(link => link.start === from && link.end === to);
-  if (!changed || oldLinks.length !== newLinks.length) throw new Error('链接事务改变了其他出现位置。');
+  if (!changed || newLinks.length !== oldLinks.length - (edit === 'unlink' ? 1 : 0)) throw new Error('链接事务改变了其他出现位置。');
   const oldKeys = layoutIdentities(before, oldLinks), newKeys = layoutIdentities(after, newLinks);
+  const byStart = new Map(newLinks.map(link => [link.start, link]));
   const delta = replacement.length - (to - from), aliases = new Map<string, string>();
   for (const link of oldLinks) {
+    if (edit === 'unlink' && link === changed) continue;
     const start = link.start >= to ? link.start + delta : link.start;
     const raw = link === changed ? replacement : link.raw;
-    const next = newLinks.find(next => next.start === start && next.raw === raw);
-    const oldKey = oldKeys.get(link.start), newKey = next && newKeys.get(next.start);
+    const next = byStart.get(start);
+    if (next?.raw !== raw) throw new Error('链接事务改变了其他出现位置。');
+    const oldKey = oldKeys.get(link.start), newKey = newKeys.get(next.start);
     if (oldKey && newKey && oldKey !== newKey) aliases.set(newKey, oldKey);
   }
   return aliases;

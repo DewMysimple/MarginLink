@@ -18,6 +18,7 @@ class ElementStub {
   appendChild(child: ElementStub) { this.children.push(child); }
   prepend(child: ElementStub) { this.children.unshift(child); }
   addClass() {}
+  setText() {}
   setAttribute() {}
   empty() { this.children = []; }
 }
@@ -31,7 +32,8 @@ class ControlStub {
   setValue(value: unknown) { this.value = value; return this; }
   addOptions(options: Record<string, string>) { this.options = { ...options }; return this; }
   setDisabled(disabled: boolean) { this.disabled = disabled; return this; }
-  setLimits() { return this; }
+  limits?: number[];
+  setLimits(min: number, max: number, step: number) { this.limits = [min, max, step]; return this; }
   setDynamicTooltip() { return this; }
   setButtonText(text: string) { this.text = text; return this; }
   setCta() { return this; }
@@ -65,7 +67,6 @@ vi.mock('../src/ui/file-type-settings', () => ({ renderFileTypeSettings: () => (
 vi.mock('../src/ui/new-note-folders', () => ({ renderFolderSettings: () => () => {} }));
 vi.mock('../src/view/appearance', () => ({ applyAppearance() {} }));
 vi.mock('../src/view/connector-renderer', () => ({ connectorRoute: () => undefined }));
-vi.mock('../src/view/layout-engine', () => ({ dimensions: () => ({ width: 84, height: 84, shape: 'square' }) }));
 
 function fixture(placementMode: PlacementMode = 'manual') {
   const listeners = new Set<() => void>();
@@ -87,6 +88,13 @@ function fixture(placementMode: PlacementMode = 'manual') {
 beforeEach(() => { state.rows.length = 0; });
 
 describe('complete manual settings semantics', () => {
+  it('can open and refresh the preview with the maximum padding even when the sample card cannot fit', async () => {
+    const f = fixture(); f.render();
+    const control = f.row('edgePadding').controls[0];
+    expect(control.limits).toEqual([8, 300, 2]);
+    await control.change!(300); expect(control.value).toBe(300);
+    expect(() => f.render()).not.toThrow();
+  });
   it('uses one placement selector and action across the full panel and quick controls', async () => {
     const f = fixture('free'), dispose = f.render();
     const full = f.row('placementMode').controls[0];

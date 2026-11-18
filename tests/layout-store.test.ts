@@ -23,6 +23,13 @@ describe('v0.2 UI data whitelist and migration', () => {
     expect(readPreferences(Object.create({ enabled: false }))).toEqual(DEFAULT_PREFERENCES);
     expect(readPreferences({ lineWidth: 1.74 }).lineWidth).toBe(1.5);
   });
+  it('restores edge padding up to 300px without changing existing values', () => {
+    for (const px of [8, 16, 32, 34, 200, 298, 300]) {
+      expect(readStoredData({ schemaVersion: 2, preferences: { edgePadding: px } }).preferences.edgePadding).toBe(px);
+    }
+    expect(readPreferences({ edgePadding: 302 }).edgePadding).toBe(300);
+    expect(readPreferences({ edgePadding: NaN }).edgePadding).toBe(16);
+  });
   it.each([null, [], 'bad', 2])('handles malformed data %s', data => {
     expect(readStoredData(data)).toEqual({ schemaVersion: 2, preferences: DEFAULT_PREFERENCES, layouts: [] });
   });

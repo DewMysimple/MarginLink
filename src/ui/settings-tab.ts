@@ -1,6 +1,6 @@
 import { PluginSettingTab, Setting, setIcon, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
-import { DEFAULT_PREFERENCES, GROUP_OPTIONS, LINE_MODE_OPTIONS, PLACEMENT_MODE_OPTIONS, type PlacementMode, type Preferences } from '../types';
+import { DEFAULT_PREFERENCES, GROUP_OPTIONS, LINE_MODE_OPTIONS, MAX_EDGE_PADDING, PLACEMENT_MODE_OPTIONS, type PlacementMode, type Preferences } from '../types';
 import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
@@ -13,7 +13,11 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   container.createEl('h2', { text: 'MarginLink' });
   container.createEl('p', { text: '关联保存在笔记的原生双链中。卡片位置、文件类型和新建目录保存在插件设置中。' });
   const sync: (() => void)[] = [renderFileTypeSettings(container, plugin)];
+  // Some Obsidian controls emit onChange even for a programmatic setValue.
+  // Opening or syncing a panel must not enqueue writes to data.json.
+  let syncing = true;
   const update = (key: keyof Preferences, value: unknown) => {
+    if (syncing || plugin.preferences[key] === value) return;
     if (key === 'placementMode') { void plugin.setPlacementMode(value as PlacementMode); return; }
     Object.assign(plugin.preferences, { [key]: value }); void plugin.savePreferences();
   };
@@ -43,9 +47,11 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   const refreshPreview = () => {
     preview.empty(); const p = plugin.preferences; applyAppearance(preview, p);
     const anchor = preview.createSpan({ cls: 'margin-link-preview-anchor', text: '原生双链' });
-    const input: LayoutInput = { width: 400, height: 150, body: { left: 0, right: 180, top: 0, bottom: 150 }, viewport: { left: 0, right: 400, top: 0, bottom: 150 }, anchors: [], density: p.density, layout: p.layout, preferences: p };
-    const dim = dimensions(input, 'right')!;
-    const placement = { key: 'preview', side: 'right' as const, x: 192, y: (150 - dim.height) / 2, ...dim, compact: dim.shape === 'icon' };
+    const width = preview.clientWidth || 400;
+    const input: LayoutInput = { width, height: 150, body: { left: 0, right: Math.min(180, width / 2), top: 0, bottom: 150 }, viewport: { left: 0, right: width, top: 0, bottom: 150 }, anchors: [], density: p.density, layout: p.layout, preferences: p };
+    const dim = dimensions(input, 'right');
+    if (!dim) { anchor.setText('当前预览宽度不足以显示卡片'); return; }
+    const placement = { key: 'preview', side: 'right' as const, x: input.body.right + p.edgePadding, y: (150 - dim.height) / 2, ...dim, compact: dim.shape === 'icon' };
     const shell = preview.createDiv({ cls: 'margin-link-card-shell' }); shell.dataset.shape = dim.shape;
     Object.assign(shell.style, { width: `${dim.width}px`, height: `${dim.height}px`, transform: `translate(${placement.x}px, ${placement.y}px)` });
     const card = shell.createEl('button', { cls: 'margin-link-card', attr: { type: 'button', 'aria-label': '示例文件卡片，仅预览' } });
@@ -82,7 +88,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
     .setDesc('完全手动不自动平衡或避让；自由拖动和智能吸附只在首次显示时自动初排，随后保留位置。');
   dropdown('layout', '自动排布左右优先', { balanced: '自动平衡', left: '优先左侧', right: '优先右侧' }, () => plugin.preferences.placementMode === 'manual')
     .setDesc('仅影响自动排列和首次自动初排。完全手动时不使用此选项，原选择会保留。');
-  slider('edgePadding', '正文边缘留白（px）', 8, 32, 2);
+  slider('edgePadding', '正文边缘留白（px）', 8, MAX_EDGE_PADDING, 2);
   slider('snapGrid', '吸附栅格间距（px）', 4, 32, 2, () => plugin.preferences.placementMode !== 'snap')
     .setDesc('仅在智能吸附模式使用。');
   const noteReset = new Setting(container).setName('重置当前笔记卡片位置');
@@ -108,7 +114,12 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   heading('交互与辅助功能'); toggle('hoverFeedback', '悬停与焦点高亮反馈'); toggle('dragHints', '显示拖动边界'); toggle('reduceMotion', '减少动画');
   container.createEl('p', { text: '单击卡片打开文件；完全手动、自由拖动或智能吸附模式下，按住卡片任意位置移动即可拖动。聚焦卡片后可用方向键移动、Shift+左右键换侧、Delete 重置此卡片位置；右键卡片也可重置。Esc/失焦/滚动取消拖动。系统减少动画偏好始终优先。' });
   refreshPreview();
-  return plugin.subscribe(() => { sync.forEach(s => s()); refreshPreview(); });
+  syncing = false;
+  return plugin.subscribe(() => {
+    syncing = true;
+    try { sync.forEach(s => s()); refreshPreview(); }
+    finally { syncing = false; }
+  });
 }
 export class MarginLinkSettings extends PluginSettingTab {
   private dispose?: () => void;

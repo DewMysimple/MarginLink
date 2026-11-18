@@ -394,6 +394,11 @@ export class MarginOverlay {
       menu.addItem(item => item.setTitle('重新链接文件…').setIcon('link-2').onClick(() => {
         if (valid()) this.host.selection.relink(this.view, card.anchor.occurrence, this.bridge());
       }));
+      menu.addItem(item => item.setTitle('取消链接文件').setIcon('unlink').onClick(() => {
+        if (valid() && source === (this.view.getMode() === 'source' ? this.bridge()?.text : this.view.data)) {
+          void this.host.selection.unlink(this.view, card.anchor.occurrence, this.bridge());
+        }
+      }));
       menu.addItem(item => item.setTitle(this.host.preferences.placementMode === 'manual' ? '重置此卡片初始位置' : '恢复此卡片初始位置').setIcon('rotate-ccw').onClick(() => {
         const layoutKey = card.anchor.layoutKey;
         if (valid() && layoutKey) this.host.layouts.clear(this.path, layoutKey, this.legacyLayoutKeys.get(layoutKey));

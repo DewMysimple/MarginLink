@@ -11,6 +11,7 @@ export function renderFileTypeSettings(container: HTMLElement, plugin: MarginLin
     setting.settingEl.dataset.marginKey = preference;
     setting.addToggle(toggle => {
       toggle.onChange(enabled => {
+        if (plugin.preferences[preference] === enabled) return;
         plugin.preferences[preference] = enabled;
         void plugin.savePreferences();
       });

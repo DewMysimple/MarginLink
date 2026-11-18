@@ -54,14 +54,24 @@ export class SelectionAction {
   }
   relink(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge): void {
     try {
-      const source = view.getMode() === 'source' ? bridge?.text : this.context?.readingSource(view, occurrence);
-      if (!view.file || source === undefined) throw new Error('无法确认该卡片的源文本，请刷新笔记后重试。');
-      checkedOccurrence(source, occurrence);
-      const text = normalized(source), from = normalized(source.slice(0, occurrence.start)).length;
-      const current = { ...occurrence, start: from, end: from + occurrence.raw.length };
-      checkedOccurrence(text, current);
-      this.openOperation(view, { sourcePath: view.file.path, text, from, to: current.end, label: current.label, occurrence: current }, view.getMode() === 'source' ? bridge : undefined);
+      this.openOperation(view, this.cardOperation(view, occurrence, bridge), bridge);
     } catch (error) { new Notice(error instanceof Error ? error.message : '无法重新链接该文件。'); }
+  }
+  async unlink(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge): Promise<void> {
+    try {
+      const operation = this.cardOperation(view, occurrence, bridge);
+      const { replace } = this.prepareEdit(view, operation, bridge);
+      await replace(operation.occurrence.alias || operation.occurrence.target);
+      this.changed();
+    } catch (error) { new Notice(error instanceof Error ? error.message : '无法取消链接文件。'); }
+  }
+  private cardOperation(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge) {
+    const source = view.getMode() === 'source' ? bridge?.text : this.context?.readingSource(view, occurrence);
+    if (!view.file || source === undefined) throw new Error('无法确认该卡片的源文本，请刷新笔记后重试。');
+    if (source.slice(occurrence.start, occurrence.end) !== occurrence.raw) throw new Error('原链接已改变，请重新右键选择卡片。');
+    const text = normalized(source), from = normalized(source.slice(0, occurrence.start)).length;
+    const current = checkedOccurrence(text, { ...occurrence, start: from, end: from + occurrence.raw.length });
+    return { sourcePath: view.file.path, text, from, to: current.end, label: current.label, occurrence: current };
   }
   private editors(sourcePath: string): { view: MarkdownView; bridge?: EditorBridge }[] {
     const editors: { view: MarkdownView; bridge?: EditorBridge }[] = [];
@@ -74,12 +84,12 @@ export class SelectionAction {
     });
     return editors;
   }
-  private openOperation(view: MarkdownView, operation: LinkOperation, bridge?: EditorBridge, side?: Side): void {
+  private prepareEdit(view: MarkdownView, operation: LinkOperation, bridge?: EditorBridge) {
     this.cancel();
     const generation = this.generation;
     const mode = view.getMode();
     const revisions = new Map(this.editors(operation.sourcePath).flatMap(editor => editor.bridge ? [[editor.bridge, editor.bridge.revision] as const] : []));
-    if (bridge) revisions.set(bridge, bridge.revision);
+    if (mode === 'source' && bridge) revisions.set(bridge, bridge.revision);
     let borrowed = false;
     const validate = () => {
       if (generation !== this.generation || view.file?.path !== operation.sourcePath || (!borrowed && view.getMode() !== mode)) throw new Error('源笔记或本次操作已改变，请重新选择。');
@@ -96,19 +106,7 @@ export class SelectionAction {
         throw new Error('原选区已改变，请重新选择文字。');
       }
     };
-    const write = async (file: TFile, target: string) => {
-      validate();
-      if (this.app.vault.getFileByPath(file.path) !== file) throw new Error('目标文件已删除或改变，请重新选择。');
-      let subpath = operation.occurrence ? parseLinktext(operation.occurrence.target).subpath : '';
-      if (subpath) {
-        const cache = this.app.metadataCache.getFileCache(file);
-        if (!cache || !resolveSubpath(cache, subpath)) {
-          const preserve = await new Promise<boolean | undefined>(done => { this.subpathChoice = new SubpathChoice(this.app, subpath, done); this.subpathChoice.open(); });
-          this.subpathChoice = undefined;
-          if (preserve === undefined) throw new Error('已取消重新链接，原文与文件均保留。');
-          if (!preserve) subpath = '';
-        }
-      }
+    const replace = async (replacement: string, targetFile?: TFile) => {
       validate();
       let state: ReturnType<MarkdownView['getState']> | undefined, scrollTop: number | undefined, readingScroll: number | undefined;
       const captureReading = () => {
@@ -130,22 +128,19 @@ export class SelectionAction {
         else captureReading();
         validate();
         if (editorView.file?.path !== operation.sourcePath || normalized(editorView.editor.getValue()) !== operation.text) throw new Error('源编辑器的内容已改变，未修改链接。');
-        if (this.app.vault.getFileByPath(file.path) !== file) throw new Error('目标文件已删除或改变，请重新选择。');
-        if (operation.occurrence) checkedOccurrence(operation.text, operation.occurrence);
-        const link = operation.occurrence ? relinkText(operation.occurrence, target, subpath) : formatWikilink(target, operation.label);
-        const expected = operation.text.slice(0, operation.from) + link + operation.text.slice(operation.to);
-        const aliases = operation.occurrence ? relinkLayoutAliases(operation.text, expected, operation.from, operation.to, link) : undefined;
+        if (targetFile && this.app.vault.getFileByPath(targetFile.path) !== targetFile) throw new Error('目标文件已删除或改变，请重新选择。');
+        const expected = operation.text.slice(0, operation.from) + replacement + operation.text.slice(operation.to);
+        const aliases = operation.occurrence ? relinkLayoutAliases(operation.text, expected, operation.from, operation.to, replacement, targetFile ? 'relink' : 'unlink') : undefined;
         const from = editorView.editor.offsetToPos(operation.from), to = editorView.editor.offsetToPos(operation.to);
         const writer = this.editors(operation.sourcePath).find(editor => editor.view === editorView)?.bridge;
         const restoreViewport = operation.occurrence
-          ? preserveRelinkViewport(editorView.editor, writer?.cm, { from: operation.from, to: operation.to, insert: link }) : undefined;
+          ? preserveRelinkViewport(editorView.editor, writer?.cm, { from: operation.from, to: operation.to, insert: replacement }) : undefined;
         try {
-          editorView.editor.transaction({ changes: [{ from, to, text: link }],
-            ...(operation.selection ? { selection: { from: { line: from.line, ch: from.ch + link.length } } } : {}) }, 'margin-link');
+          editorView.editor.transaction({ changes: [{ from, to, text: replacement }],
+            ...(operation.selection ? { selection: { from: { line: from.line, ch: from.ch + replacement.length } } } : {}) }, 'margin-link');
         } finally { restoreViewport?.(); }
         if (normalized(editorView.editor.getValue()) !== expected) throw new Error('未能确认原文事务成功；外部原件会保留，请检查笔记。');
         if (aliases) this.context?.layouts().preserveRelink(operation.sourcePath, aliases);
-        if (side) bridge?.prefer(operation.from, target, side);
       } finally {
         if (borrowed && state && view.file?.path === operation.sourcePath) {
           try {
@@ -164,6 +159,28 @@ export class SelectionAction {
           view.setEphemeralState({ scroll: readingScroll });
         }
       }
+    };
+    return { validate, replace };
+  }
+  private openOperation(view: MarkdownView, operation: LinkOperation, bridge?: EditorBridge, side?: Side): void {
+    const mode = view.getMode();
+    const { validate, replace } = this.prepareEdit(view, operation, bridge);
+    const write = async (file: TFile, target: string) => {
+      validate();
+      if (this.app.vault.getFileByPath(file.path) !== file) throw new Error('目标文件已删除或改变，请重新选择。');
+      let subpath = operation.occurrence ? parseLinktext(operation.occurrence.target).subpath : '';
+      if (subpath) {
+        const cache = this.app.metadataCache.getFileCache(file);
+        if (!cache || !resolveSubpath(cache, subpath)) {
+          const preserve = await new Promise<boolean | undefined>(done => { this.subpathChoice = new SubpathChoice(this.app, subpath, done); this.subpathChoice.open(); });
+          this.subpathChoice = undefined;
+          if (preserve === undefined) throw new Error('已取消重新链接，原文与文件均保留。');
+          if (!preserve) subpath = '';
+        }
+      }
+      const link = operation.occurrence ? relinkText(operation.occurrence, target, subpath) : formatWikilink(target, operation.label);
+      await replace(link, file);
+      if (side) bridge?.prefer(operation.from, target, side);
       // Closing must not restore the selection captured before the transaction.
       picker.shouldRestoreSelection = false;
       picker.close();

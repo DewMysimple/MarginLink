@@ -29,6 +29,7 @@ export type CardShape = 'horizontal' | 'square' | 'icon';
 export type GroupMode = 'none' | 'folder' | 'type';
 export const GROUP_OPTIONS: Record<GroupMode, string> = { none: '无', folder: '文件夹', type: '文件类型' };
 export type PlacementMode = 'auto' | 'free' | 'snap' | 'manual';
+export const MAX_EDGE_PADDING = 300;
 export const PLACEMENT_MODE_OPTIONS: Record<PlacementMode, string> = {
   manual: '完全手动', free: '自由拖动（自动初排）', snap: '智能吸附（自动初排）', auto: '自动排列'
 };
@@ -98,7 +99,7 @@ export function readPreferences(value: unknown): Preferences {
     cardSize: choice('cardSize', ['small', 'medium', 'large'], 'medium'),
     cardRadius: finiteNumber(v.cardRadius, 8, 0, 20), cardBorder: bool('cardBorder'),
     cardShadow: choice('cardShadow', ['none', 'subtle', 'strong'], 'subtle'), showPath: bool('showPath'),
-    edgePadding: finiteNumber(v.edgePadding, 16, 8, 32), snapGrid: finiteNumber(v.snapGrid, 12, 4, 32),
+    edgePadding: finiteNumber(v.edgePadding, 16, 8, MAX_EDGE_PADDING), snapGrid: finiteNumber(v.snapGrid, 12, 4, 32),
     newNoteFolders: [0, 1, 2].map(index => {
       const folder = Array.isArray(v.newNoteFolders) ? v.newNoteFolders[index] : undefined;
       return typeof folder === 'string' ? folder : '';
