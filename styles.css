@@ -89,7 +89,10 @@
 .margin-link-has-focus:is(.margin-link-lines-always, .margin-link-lines-numbers) .margin-link-continuation:not(.margin-link-active) { opacity: .6; }
 .margin-link-pinned .margin-link-card { outline: 2px dashed var(--interactive-accent); outline-offset: 1px; }
 .margin-link-target-preview { position: absolute; z-index: 5; pointer-events: auto; box-sizing: border-box; padding: 10px; overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere; color: var(--text-normal); background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; box-shadow: var(--shadow-s); font-size: var(--font-ui-small); }
-.margin-link-target-preview p { margin: 6px 0; white-space: pre-wrap; }
+.margin-link-target-preview:not(.margin-link-preview-compact) { display: flex; flex-direction: column; overflow: hidden; }
+.margin-link-target-preview strong { flex: none; max-height: 2.8em; overflow: hidden; text-overflow: ellipsis; }
+.margin-link-target-preview p { min-height: 0; margin: 6px 0; overflow: auto; overscroll-behavior: contain; white-space: pre-wrap; }
+.margin-link-target-preview button { flex: none; align-self: flex-start; }
 .margin-link-target-preview:focus-visible, .margin-link-target-preview button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
 .margin-link-preview-compact { padding: 3px; font-size: var(--font-ui-smaller); }
 .margin-link-group-label { color: var(--text-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

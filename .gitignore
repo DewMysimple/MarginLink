@@ -81,6 +81,8 @@ artifacts/*
 !artifacts/route-aesthetics-before.png
 !artifacts/route-aesthetics-after.png
 !artifacts/release-0.2.27.json
+!artifacts/navigation-0.3.0.json
+!artifacts/navigation-preview-0.3.0.png
 test-vault/.obsidian/workspace*.json
 test-vault/.obsidian/plugins/
 test-profile/

@@ -63,6 +63,11 @@ describe('preview lifetime and layout', () => {
     controller.request(owner, resolve); controller.invalidate();
     expect(resolve).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
   });
+  it('aligns a preview alongside the card when the lane has room for both', () => {
+    const lane = { left: 8, right: 465, top: 10, bottom: 700 };
+    const card = { left: 413, right: 449, top: 240, bottom: 276 };
+    expect(previewSpace(lane, card, [card])).toEqual({ left: 129, right: 409, top: 240, bottom: 450 });
+  });
   it('selects a free lane interval without overlapping the owner, adjacent cards or body', () => {
     const lane = { left: 5, right: 190, top: 10, bottom: 500 };
     const card = { left: 90, right: 150, top: 60, bottom: 100 };

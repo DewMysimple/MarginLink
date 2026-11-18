@@ -1,5 +1,65 @@
 # MarginLink 验证记录
 
+## 0.3.0 空间导航 · 2026-11-18
+
+起点 `main/3c7f420`。审计、聚焦、预览、分组、生命周期整理依次为 `9ef2ceb`、`24750e0`、`119583e`、`18d0a63`、`71b0366`。最终包包含随后验收的边距预览定位及样式。Windows，Node 24.16.0，npm 12.0.1，Electron 37.10.2，Chromium 138。分别冷启动隔离 Obsidian 1.10.6 和 1.15.1，应用版本取窗口标题，插件运行时版本与盘上 manifest 均为 0.3.0。[代码审计](docs/v0.3-audit.md) · [实施记录](docs/v0.3-implementation-plan.md) · [原始测量和失败记录](artifacts/navigation-0.3.0.json)
+
+| 检查 | 0.2.27 基线 | 0.3.0 最终 |
+| --- | --- | --- |
+| npm test | 0，51 文件、499 项 | 0，54 文件、522 项 |
+| npm run lint | 0 | 0，无诊断 |
+| npm run build | 0 | 0，严格 TypeScript 及 CJS bundle |
+| npm run package | 0 | 0，五文件安装目录 |
+| 隔离桌面导航 | 1.15.1 阅读步骤退出 1，内存 5 卡但 DOM 为 0 | 1.10.6、1.15.1 各自完整运行，均退出 0，pageerror 0 |
+| 发布文件核对 | 基线 bundle d1b827dd…a5c59 | ZIP 恰含五文件，与安装目录逐字节相同；两次桌面的 JS/CSS 均与安装目录相同 |
+
+最终 bundle SHA256 `374f76ec1a04f2e563e2187f1b90d8c3ae491d7515ae638fdf83922f73327451`，CSS `66d0a3f33e379380ccac8fffe07d7e8dfc007a1795dc6c98b313236845561037`，本机 ZIP `fd26a5ea5dc2dc065116419a4e74be2400aa5be28f41f985ffb2fa51062ffe2b`。manifest、package、lock 的两个根版本及 versions 对照均已校验。
+
+### 功能与数据
+
+- 两个宿主都验证了 Live Preview、源码、阅读下的单次出现高亮、悬停切换、P 固定和 Escape。另测右键固定、配对编号、resize 和同源双分栏各自固定。源码模式以真实文本片段画底纹。无安全路线、共享线段方向和裁切续接另有本轮既有集成测试覆盖。
+- 预览实测含 HTML/脚本字符串和嵌入语法的 Markdown、HTML 附件、未解析文件、鼠标跨入面板、V、Esc 还焦和“打开文件”。受控延迟真实 Vault 读取，先 A→B 悬停，再在读取中切笔记、卸载。验证修改、改名、删除后失效，旧结果不能回填，重新启用恢复。悬停前后活动 leaf、光标与滚动一致。最终截图可见滚动摘要和打开按钮。[阅读预览](artifacts/navigation-preview-0.3.0.png)
+- 设置页实际选择分组规则，标题栏原生菜单操作文件夹、类型；同名不同目录、同目标重复、未解析、隐藏线段成员及两个分栏均检查。四种布局分别比对折叠前后的全部 transform 和 data.json 字节。测试中的目标文件修改只发生在新建隔离夹具。源笔记全程 SHA256 `2073213f21170da9fc95a3f2347776ec479917044d45d0b8200a1a8172ef2aa5`。
+- 实际拖动取消恢复、Ctrl 点击新标签、插件禁用与重启通过。单测另测选区建链、撤销/重链、导入、三种线型、卸载保存、跨模式布局、空/大/读错文件、XMind/PDF/图片只读元信息、摘要限长和容量。9,000 次引用、9 个不同目标的分组用例只解析 9 次。
+- 本轮未在 macOS、Linux、第三方主题或大型 Vault 长时会话实测。未在最终桌面包复跑历版全部导入、原生正文 hover、重链与路线像素矩阵。单测或历史宿主结果各按对应证据使用。
+
+### 同夹具性能
+
+每次启动都创建新 profile 和同内容 Vault。比较使用同一 1.15.1 默认主题、字体、1620×920 窗口、5 个引用与 120 段滚动填充、auto/icon/always。启动后等字体加载及几何连续稳定 320ms 再测，表中为暖交互计时，冷启动耗时未单独量化。每模式合成 160 次 pointerenter/leave 组合，检查下一帧，再原生 scroller 上下各 24 个 14px 步长，含静默期共 49 个插件 render。真实鼠标跨面板和拖动另行验收。
+
+| 宿主 / 插件 / 模式 | 悬停事件 p50 / p95 / max（ms） | 滚动 render p50 / p95 / max（ms） |
+| --- | --- | --- |
+| 1.15.1 / 0.2.27 / Live Preview | 0 / 0.1 / 0.3 | 0.2 / 1.1 / 1.1 |
+| 1.15.1 / 0.2.27 / 源码 | 0 / 0.1 / 0.2 | 0.3 / 0.4 / 1.8 |
+| 1.15.1 / 0.2.27 / 阅读 | 装饰层脱离，无法采样 | 同左 |
+| 1.15.1 / 0.3.0 / Live Preview | 0 / 0.1 / 0.5 | 0.3 / 0.7 / 1.0 |
+| 1.15.1 / 0.3.0 / 源码 | 0 / 0.1 / 0.2 | 0.3 / 0.6 / 1.6 |
+| 1.15.1 / 0.3.0 / 阅读 | 0 / 0.1 / 0.1 | 0.2 / 0.6 / 1.1 |
+| 1.10.6 / 0.3.0 / Live Preview | 0 / 0.1 / 0.4 | 0.3 / 0.7 / 0.9 |
+| 1.10.6 / 0.3.0 / 源码 | 0 / 0.1 / 0.2 | 0.2 / 0.4 / 0.7 |
+| 1.10.6 / 0.3.0 / 阅读 | 0 / 0.1 / 0.2 | 0.3 / 0.4 / 0.5 |
+
+六组最终测量的悬停路由批次、SVG d 写入、目标文件读取、保存及观察到的 Long Tasks 均为 0。滚动期间也计入读取与保存。低于计时分辨率的值记为 0。数字仅描述这份夹具的插件工作，不能换算成整机 FPS。
+
+### 失败与修正
+
+基线阅读 sizer 重排后会只移除插件层，原 observer 将该记录当作自身变更忽略。现对仍断开的层请求重挂。候选版下一帧探针还捕获到一次多余批次，即使已等待稳定，几何代数仍从 11 到 13。原因是短暂的高亮片段移除后仍收到 style 记录；现在只处理仍属于当前视图的 mutation 目标，并单测区分这两种移除。没有放宽路线碰撞或更改求路算法。
+
+验收脚本曾用折叠前 DOM 顺序选错目标，曾选到宿主隐藏的下拉尺寸测量副本，也曾在切页焦点尚未稳定时发快捷键。现按具体别名、可访问的 select 和完成布局的目标分别校验。最低宿主首次信任后会打开设置，现关闭该弹窗再操作卡片。旧失败输出保存在同一证据文件；已通过的最终运行具有独立记录。目视发现短面板的按钮可能需要滚动才能看全，最终布局优先使用卡片旁完整边距，正文单独可滚动，并校验打开按钮始终位于面板内。
+
+### 复做
+
+从项目根运行 `npm ci`（已有锁定依赖时可复用）及 `npm run package`。Windows 需已安装桌面 Obsidian。下面的启动脚本在 `test-vault/.v03-desktop/` 和 `test-profile/v03/` 新建独立目录，测试脚本核对精确路径后操作；每次验收原生关闭该窗口。现有 Obsidian 程序路径可通过 `-ObsidianExe` 指定。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/launch-navigation-test.ps1 -HostAsar bundled
+node scripts/desktop-navigation.mjs
+powershell -ExecutionPolicy Bypass -File scripts/launch-navigation-test.ps1 -HostAsar test-profile/obsidian-1.15.1.asar
+node scripts/desktop-navigation.mjs --capture
+```
+
+第一个命令使用已安装程序自带的宿主（本机 1.10.6）；第二次启动需要已准备对应 asar。等待隔离窗口就绪后运行 Node。基线可将 3c7f420 构建的安装目录传给 `-PluginDir`，运行 `node scripts/desktop-navigation.mjs --baseline`。报告保留在 `artifacts/navigation/`，本次匹配基线、失败原始记录和最终两份原始记录已汇入上述 JSON。
+
 ## 0.2.27 连线路径美观 · 2026-11-17
 
 基线main/5482c0c、0.2.26实际bundle aecd1881…c98583。只读复制当前UE6笔记及23个目标，在隔离test-vault/profile、Windows Obsidian1.15.1/Chromium138验证。新旧使用同一源文SHA12ba3973…699c、UI布局SHA204c3fff…b4dcba、字体、偏好和视口；1614/1100两宽度×读写×三线型共12组比较，11卡原生屏幕坐标最大变化0px。效果见[优化前](artifacts/route-aesthetics-before.png)、[优化后](artifacts/route-aesthetics-after.png)。

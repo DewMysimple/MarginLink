@@ -50,7 +50,10 @@ try {
   report.hostTitle = await page.title();
   const pluginDir = path.join(vault, '.obsidian/plugins/margin-link');
   report.manifest = JSON.parse(await readFile(path.join(pluginDir, 'manifest.json')));
+  report.runtimeVersion = await page.evaluate(() => app.plugins.plugins['margin-link'].manifest.version);
+  assert.equal(report.runtimeVersion, report.manifest.version);
   report.bundle = sha(await readFile(path.join(pluginDir, 'main.js')));
+  report.styles = sha(await readFile(path.join(pluginDir, 'styles.css')));
   const source = () => readFile(path.join(vault, 'Navigation.md'));
   const data = () => readFile(path.join(pluginDir, 'data.json'));
   report.source = sha(await source());
@@ -135,6 +138,8 @@ try {
     assert((await preview.innerText()).includes('<script>void 0</script>'));
     await preview.hover(); await page.waitForTimeout(260);
     assert(await preview.isVisible());
+    const panelBox = await preview.boundingBox(), openBox = await preview.getByRole('button', {name: '打开文件'}).boundingBox();
+    assert(openBox.y >= panelBox.y && openBox.y + openBox.height <= panelBox.y + panelBox.height);
     if (process.argv.includes('--capture')) await page.screenshot({path: path.join(rawDir, 'reading-preview.png')});
     assert.deepEqual(await context(), entry);
     await first.focus(); await page.keyboard.press('v');
@@ -209,6 +214,13 @@ try {
       await sibling.setViewState({type: 'markdown', state: {file: 'Navigation.md', mode: 'preview'}, active: true});
     });
     await wait(() => document.querySelectorAll('.margin-link-card').length === 10);
+    const splitCards = page.locator('.margin-link-card');
+    await splitCards.first().focus(); await page.keyboard.press('p');
+    await splitCards.last().focus(); await page.keyboard.press('p');
+    assert.equal(await page.locator('.margin-link-pinned').count(), 2);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.margin-link-pinned').count(), 1);
+    await splitCards.first().focus(); await page.keyboard.press('Escape');
     await fold('Markdown · 3');
     const counts = await page.evaluate(() => app.workspace.getLeavesOfType('markdown').map(leaf => leaf.view.contentEl.querySelectorAll('.margin-link-card').length).sort());
     assert.deepEqual(counts, [2, 5]);

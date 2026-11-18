@@ -46,7 +46,9 @@ export interface PreviewTarget {
 // and the editor remain clickable; the available interval limits the excerpt.
 export function previewSpace(lane: Box, card: Box, occupied: readonly Box[]): Box {
   const width = Math.min(280, lane.right - lane.left);
-  const left = Math.max(lane.left, Math.min(card.left, lane.right - width));
+  let left = Math.max(lane.left, Math.min(card.left, lane.right - width));
+  if (card.left - 4 - width >= lane.left) left = card.left - 4 - width;
+  else if (card.right + 4 + width <= lane.right) left = card.right + 4;
   const blocks = occupied.filter(b => b.right >= left && b.left <= left + width && b.bottom > lane.top && b.top < lane.bottom)
     .sort((a, b) => a.top - b.top);
   const gaps: Box[] = [];
@@ -61,7 +63,7 @@ export function previewSpace(lane: Box, card: Box, occupied: readonly Box[]): Bo
   const gap = ordered.find(g => g.bottom - g.top >= 100) ?? ordered.find(g => g.bottom - g.top >= 26);
   if (!gap) return { left, right: left + width, top: card.bottom, bottom: card.bottom };
   const height = Math.min(210, gap.bottom - gap.top);
-  top = gap.bottom <= card.top ? gap.bottom - height : gap.top;
+  top = Math.max(gap.top, Math.min(card.top, gap.bottom - height));
   return { left, right: left + width, top, bottom: top + height };
 }
 
