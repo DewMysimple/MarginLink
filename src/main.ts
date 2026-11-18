@@ -58,6 +58,12 @@ export default class MarginLinkPlugin extends Plugin {
       const snapshot = this.selection.capture(ctx, bridge);
       if (snapshot) this.selection.open(ctx, bridge, snapshot);
     } });
+    this.addCommand({ id: 'card-groups', name: '折叠或展开当前笔记的卡片分组', checkCallback: checking => {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || !this.preferences.enabled || this.preferences.groupMode === 'none') return false;
+      if (!checking) this.overlays.get(view)?.openGroups();
+      return true;
+    } });
     this.registerEvent(this.app.workspace.on('layout-change', () => this.sync()));
     this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => {
       const active = leaf?.view instanceof MarkdownView ? leaf.view : undefined;
@@ -68,7 +74,7 @@ export default class MarginLinkPlugin extends Plugin {
     }));
     this.registerEvent(this.app.workspace.on('file-open', () => { this.cancelInteractions(); this.sync(); }));
     this.registerEvent(this.app.workspace.on('css-change', () => this.refresh()));
-    this.registerEvent(this.app.metadataCache.on('resolved', () => this.refresh()));
+    this.registerEvent(this.app.metadataCache.on('resolved', () => this.refreshGroups()));
     this.registerEvent(this.app.metadataCache.on('changed', (file, text) => {
       // Cache callbacks carry one complete, named source document. Ignore a stale
       // disk snapshot while an open editor already contains newer changes.
@@ -76,9 +82,9 @@ export default class MarginLinkPlugin extends Plugin {
       if (file.extension === 'md' && ![...this.overlays.keys()].some(view => view.file?.path === file.path && view.getMode() === 'source' && normalize(view.editor.getValue()) !== normalize(text))) this.layouts.reconcileDocument(file.path, text);
       this.refresh();
     }));
-    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => { this.invalidatePreviews(oldPath); this.layouts.renameSource(oldPath, file.path); this.cancelInteractions(); this.refresh(); }));
-    this.registerEvent(this.app.vault.on('delete', file => { this.invalidatePreviews(file.path); this.layouts.deleteSource(file.path); this.cancelInteractions(); this.refresh(); }));
-    this.registerEvent(this.app.vault.on('create', () => this.refresh()));
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => { this.invalidatePreviews(oldPath); this.layouts.renameSource(oldPath, file.path); this.cancelInteractions(); this.refreshGroups(); }));
+    this.registerEvent(this.app.vault.on('delete', file => { this.invalidatePreviews(file.path); this.layouts.deleteSource(file.path); this.cancelInteractions(); this.refreshGroups(); }));
+    this.registerEvent(this.app.vault.on('create', () => this.refreshGroups()));
     this.registerEvent(this.app.vault.on('modify', file => { this.invalidatePreviews(file.path); this.refresh(); }));
     this.app.workspace.onLayoutReady(() => {
       if (this.unloaded) return;
@@ -90,6 +96,7 @@ export default class MarginLinkPlugin extends Plugin {
       for (const view of this.overlays.keys()) if (view.getMode() === 'preview') view.previewMode.rerender(true);
     });
   }
+  private refreshGroups(): void { for (const overlay of this.overlays.values()) overlay.invalidateGroups(); this.refresh(); }
   private invalidatePreviews(path: string): void { for (const overlay of this.overlays.values()) overlay.invalidatePreview(path); }
   private sync(): void {
     if (this.unloaded) return;

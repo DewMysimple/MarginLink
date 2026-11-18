@@ -26,6 +26,8 @@ export const LINE_MODE_OPTIONS: Record<LineMode, string> = {
 };
 export type LineStyle = 'curve' | 'straight' | 'elbow';
 export type CardShape = 'horizontal' | 'square' | 'icon';
+export type GroupMode = 'none' | 'folder' | 'type';
+export const GROUP_OPTIONS: Record<GroupMode, string> = { none: '无', folder: '文件夹', type: '文件类型' };
 export type PlacementMode = 'auto' | 'free' | 'snap' | 'manual';
 export const PLACEMENT_MODE_OPTIONS: Record<PlacementMode, string> = {
   manual: '完全手动', free: '自由拖动（自动初排）', snap: '智能吸附（自动初排）', auto: '自动排列'
@@ -38,6 +40,7 @@ export interface Preferences {
   density: 'auto' | 'compact';
   layout: 'balanced' | 'left' | 'right';
   placementMode: PlacementMode;
+  groupMode: GroupMode;
   lineStyle: LineStyle;
   lineWidth: number;
   lineOpacity: number;
@@ -57,7 +60,7 @@ export interface Preferences {
   newNoteDefault: number;
 }
 export const DEFAULT_PREFERENCES: Preferences = {
-  recognizeHtml: true, recognizeXmind: true,
+  recognizeHtml: true, recognizeXmind: true, groupMode: 'none',
   enabled: true, lines: 'always', density: 'auto', layout: 'balanced', placementMode: 'free',
   lineStyle: 'curve', lineWidth: 1.5, lineOpacity: 0.65, lineColor: 'theme',
   cardShape: 'square', cardSize: 'medium', cardRadius: 8, cardBorder: true,
@@ -81,6 +84,7 @@ export function readPreferences(value: unknown): Preferences {
   const bool = (key: keyof Preferences) => typeof v[key] === 'boolean' ? v[key] as boolean : DEFAULT_PREFERENCES[key] as boolean;
   return {
     enabled: bool('enabled'),
+    groupMode: choice('groupMode', Object.keys(GROUP_OPTIONS) as GroupMode[], 'none'),
     recognizeHtml: bool('recognizeHtml'), recognizeXmind: bool('recognizeXmind'),
     lines: choice('lines', Object.keys(LINE_MODE_OPTIONS) as LineMode[], DEFAULT_PREFERENCES.lines),
     density: v.density === 'compact' ? 'compact' : 'auto',

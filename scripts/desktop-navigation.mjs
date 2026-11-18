@@ -138,6 +138,49 @@ try {
     assert.equal(sha(await data()), before);
     report.preview = 'hover, panel handoff, literal Markdown, keyboard return, attachment/missing, modify/rename, leaf/cursor/scroll and disk invariants';
   }
+  if (!baseline) {
+    const groups = page.locator('.margin-link-group-action').first();
+    const cards = page.locator('.margin-link-card-shell');
+    const slots = () => cards.evaluateAll(nodes => Object.fromEntries(nodes.map(el => [el.dataset.relation, el.style.transform])));
+    const fold = async label => {
+      await groups.click();
+      await page.locator('.menu-item').filter({ hasText: label }).click();
+      await frames();
+    };
+    assert.equal(await groups.count(), 0);
+    report.groupLayouts = [];
+    for (const placementMode of ['auto', 'free', 'snap', 'manual']) {
+      await page.evaluate(async placement => {
+        const plugin = app.plugins.plugins['margin-link'];
+        await plugin.setPlacementMode(placement); plugin.preferences.groupMode = 'folder'; await plugin.savePreferences();
+      }, placementMode);
+      await frames(); await page.waitForTimeout(350);
+      const before = await slots(), disk = sha(await data());
+      assert.equal(Object.keys(before).length, 5);
+      const members = await cards.evaluateAll(nodes => nodes.filter(n => n.dataset.group === 'Docs/').map(n => n.dataset.relation));
+      assert.equal(members.length, 2);
+      await fold('Docs/ · 2');
+      assert.equal(await cards.count(), 3);
+      for (const node of await page.locator('path[data-segment]').evaluateAll(nodes => nodes.flatMap(n => JSON.parse(n.dataset.members)))) assert(!members.includes(node));
+      await fold('Docs/ · 2');
+      assert.deepEqual(await slots(), before);
+      assert.equal(sha(await data()), disk);
+      report.groupLayouts.push(placementMode);
+    }
+    await page.evaluate(async () => { const p = app.plugins.plugins['margin-link']; p.preferences.groupMode = 'type'; await p.savePreferences(); });
+    await fold('Markdown · 3'); assert.equal(await cards.count(), 2);
+    await fold('Markdown · 3'); assert.equal(await cards.count(), 5);
+    await page.evaluate(async () => {
+      const sibling = app.workspace.getLeaf('split', 'horizontal');
+      await sibling.setViewState({type: 'markdown', state: {file: 'Navigation.md', mode: 'preview'}, active: true});
+    });
+    await wait(() => document.querySelectorAll('.margin-link-card').length === 10);
+    await fold('Markdown · 3');
+    const counts = await page.evaluate(() => app.workspace.getLeavesOfType('markdown').map(leaf => leaf.view.contentEl.querySelectorAll('.margin-link-card').length).sort());
+    assert.deepEqual(counts, [2, 5]);
+    await page.evaluate(() => app.workspace.getLeavesOfType('markdown').at(-1).detach());
+    report.groups = 'folder/type, independent duplicate occurrences, hidden route membership, unchanged slots and layout snapshot, split leaf independence';
+  }
   assert.equal(sha(await source()), report.source);
   assert.deepEqual(report.errors, []);
   report.status = 'passed';

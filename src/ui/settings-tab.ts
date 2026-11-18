@@ -1,6 +1,6 @@
 import { PluginSettingTab, Setting, setIcon, type App } from 'obsidian';
 import type MarginLinkPlugin from '../main';
-import { DEFAULT_PREFERENCES, LINE_MODE_OPTIONS, PLACEMENT_MODE_OPTIONS, type PlacementMode, type Preferences } from '../types';
+import { DEFAULT_PREFERENCES, GROUP_OPTIONS, LINE_MODE_OPTIONS, PLACEMENT_MODE_OPTIONS, type PlacementMode, type Preferences } from '../types';
 import { connectorRoute } from '../view/connector-renderer';
 import { applyAppearance } from '../view/appearance';
 import { dimensions, type LayoutInput } from '../view/layout-engine';
@@ -97,6 +97,8 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   });
   new Setting(container).setName('清除所有卡片位置').setDesc('清除全部已保存位置，保留布局模式、外观偏好和全部双链。').addButton(b => b.setButtonText('清除全部位置').onClick(() => plugin.confirmReset()));
   heading('卡片'); dropdown('cardShape', '卡片形状', { horizontal: '横向卡片', square: '正方形卡片', icon: '极简图标' });
+  dropdown('groupMode', '分组方式', GROUP_OPTIONS)
+    .setDesc('通过笔记标题栏的分组按钮或命令折叠、展开当前分栏的卡片。手动位置保留。');
   dropdown('cardSize', '卡片尺寸', { small: '小', medium: '中', large: '大' });
   dropdown('density', '窄边距策略（兼容旧设置）', { auto: '按可用空间自动调整', compact: '始终紧凑图标' });
   slider('cardRadius', '卡片圆角（px）', 0, 20, 1); toggle('cardBorder', '显示卡片边框');

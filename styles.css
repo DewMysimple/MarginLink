@@ -92,6 +92,7 @@
 .margin-link-target-preview p { margin: 6px 0; white-space: pre-wrap; }
 .margin-link-target-preview:focus-visible, .margin-link-target-preview button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
 .margin-link-preview-compact { padding: 3px; font-size: var(--font-ui-smaller); }
+.margin-link-group-label { color: var(--text-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .margin-link-card[data-preview-hint]::after { content: attr(data-preview-hint); position: absolute; inset: 0; display: grid; align-content: center; overflow: hidden; overflow-wrap: anywhere; color: var(--text-normal); background: var(--background-primary); font-size: var(--font-ui-smaller); }
 .margin-link-anchor-active { text-decoration: underline !important; }
 .margin-link-anchor-ink { position: absolute; pointer-events: none; box-shadow: inset 0 -2px var(--interactive-accent); background: var(--text-selection); border-radius: 2px; }

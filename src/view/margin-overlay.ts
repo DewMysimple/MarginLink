@@ -1,5 +1,6 @@
 import { MarkdownView, Menu, Notice, type App } from 'obsidian';
-import type { Anchor, Preferences, RelativePosition } from '../types';
+import type { Anchor, Preferences, RelativePosition, WikilinkOccurrence } from '../types';
+import { GroupControls } from './group-controls';
 import type { EditorBridge } from '../editor/editor-extension';
 import type { ReadingAnchors } from '../reading/reading-anchors';
 import type { SelectionAction } from '../editor/selection-action';
@@ -73,6 +74,8 @@ export class MarginOverlay {
   private geometrySignature = '';
   private hostRect?: DOMRect;
   private preview?: TargetPreview;
+  private groups?: GroupControls;
+  private occurrences: readonly WikilinkOccurrence[] = [];
   private highlighted?: string;
   private pinned?: string;
   private hovered?: string;
@@ -162,6 +165,8 @@ export class MarginOverlay {
     if (this.diagnostics) { this.diagnostics.renders++; this.diagnostics.work.push(performance.now() - start); }
   };
   invalidatePreview(path: string): void { this.preview?.invalidate(path); }
+  invalidateGroups(): void { this.groups?.invalidate(); }
+  openGroups(): void { this.groups?.open(); }
   cancelInteractions(): void { this.preview?.close(); cardTooltip.hideWithin(this.root); this.cardDrag.cancel(); this.drag.cancel(); }
   resetLayout(): void {
     this.cancelInteractions(); this.stableLayout.clear(); this.schedule();
@@ -254,6 +259,7 @@ export class MarginOverlay {
     if (this.layoutSource !== source) {
       this.clearFocus(); this.preview?.close();
       const occurrences = bridge?.parsed.links ?? parseWikilinks(source);
+      this.occurrences = occurrences;
       this.validOccurrences = new Map(occurrences.map(a => [String(a.start), a.raw]));
       this.continuationNumbers = new Map(occurrences.map((a, index) => [String(a.start), index + 1]));
     }
@@ -299,8 +305,18 @@ export class MarginOverlay {
       anchors: this.anchors.map(a => ({ key: a.key, x: (a.rect.left + a.rect.right) / 2 - hostRect.left, y: a.rect.bottom + 2 - hostRect.top,
         preferred: bridge?.preferred(a.occurrence.start, a.occurrence.target), manual: this.host.layouts.get(this.path, a.layoutKey, this.legacyLayoutKeys.get(a.layoutKey ?? '')) }))
     };
+    if (prefs.groupMode !== 'none') {
+      this.groups ??= new GroupControls(this.view, () => {
+        this.cancelInteractions();
+        if (this.highlighted && !this.groups?.visible(this.highlighted)) this.clearFocus();
+        this.schedule();
+      });
+      this.groups.update(prefs.groupMode, this.occurrences, this.path);
+    } else if (this.groups) {
+      this.groups.destroy(); this.groups = undefined;
+    }
     const placements = this.stableLayout.update(this.layoutInput, scrollTop, geometryKey)
-      .filter(p => p.x + p.width > viewport.left && p.x < viewport.right);
+      .filter(p => p.x + p.width > viewport.left && p.x < viewport.right && (!this.groups || this.groups.visible(p.key)));
     this.routePlacements = placements.map(p => this.cardDrag.placement(p.key) ?? p);
     const keep = new Set(placements.map(p => p.key));
     for (const [key, card] of this.cards) if (!keep.has(key)) { this.preview?.closeOwner(card.button); card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); this.cards.delete(key); }
@@ -309,7 +325,8 @@ export class MarginOverlay {
       const anchor = anchorMap.get(p.key)!;
       let card = this.cards.get(p.key);
       const resolved = resolveLink(this.host.app, anchor.occurrence.target, this.path);
-      const signature = `${anchor.occurrence.raw}\n${resolved.file?.path ?? '?'}`;
+      const group = this.groups?.label(p.key);
+      const signature = JSON.stringify([anchor.occurrence.raw, resolved.file?.path, group]);
       if (!card) {
         const shell = this.decorations.canvas.createDiv({ cls: 'margin-link-card-shell' });
         const button = shell.createEl('button');
@@ -336,9 +353,16 @@ export class MarginOverlay {
         });
       }
       card.anchor = anchor; card.placement = p;
-      if (card.signature !== signature) { this.preview?.closeOwner(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved); card.signature = signature; }
+      if (card.signature !== signature) {
+        this.preview?.closeOwner(card.button); card.button.replaceChildren(); renderCard(card.button, anchor.occurrence, resolved);
+        if (group) {
+          card.shell.dataset.group = group;
+          card.button.querySelector('.margin-link-card-text')?.createSpan({ cls: 'margin-link-group-label', text: group });
+        } else delete card.shell.dataset.group;
+        card.signature = signature;
+      }
       card.button.classList.toggle('margin-link-card-movable', prefs.placementMode !== 'auto');
-      card.button.setAttribute('aria-description', 'Enter 打开，V 预览，P 固定或取消高亮，Escape 关闭预览和固定。' +
+      card.button.setAttribute('aria-description', (group ? '分组 ' + group + '。' : '') + 'Enter 打开，V 预览，P 固定或取消高亮，Escape 关闭预览和固定。' +
         (prefs.placementMode !== 'auto' ? '方向键移动，Shift+左右键跨侧，Delete 重置位置。' : ''));
       this.place(card, this.cardDrag.placement(p.key) ?? p);
     }
@@ -657,7 +681,7 @@ export class MarginOverlay {
   }
   private clearCards(): void {
     this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
-    this.preview?.invalidate(); cardTooltip.hideWithin(this.root);
+    this.preview?.invalidate(); this.groups?.destroy(); this.groups = undefined; this.occurrences = []; cardTooltip.hideWithin(this.root);
     this.clearFocus(); for (const card of this.cards.values()) { card.shell.remove(); card.path.remove(); card.continuation?.forEach(el => el.remove()); }
     this.sharedPaths?.forEach(path => path.remove()); this.sharedPaths?.clear(); this.batch = undefined; this.batchSignature = '';
     this.routeCache?.clear();
