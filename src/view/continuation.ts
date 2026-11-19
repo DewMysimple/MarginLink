@@ -22,11 +22,12 @@ export function relationNumberPair(source: Box, target: Box, region: Box, body: 
   const bands = sourceRight ? ['right', 'left'] : ['left', 'right'];
   const sourceSlot = (): Box => {
     for (const side of bands) for (const dy of [0, -16, 16]) {
+      if (cy - 8 + dy < region.top || cy + 8 + dy > region.bottom) continue;
       for (let offset = 0; offset < region.right - region.left; offset += width + 2) {
         const left = side === 'right' ? body.right + 1 + offset : body.left - 1 - width - offset;
         const box = { left, right: left + width, top: cy - 8 + dy, bottom: cy + 8 + dy };
         if (!containsBox(region, box)) continue;
-        if (![...obstacles, target, ...occupied].some(o => intersects(box, o, 0))) return box;
+        if (!intersects(box, target, 0) && !obstacles.some(o => intersects(box, o, 0)) && !occupied.some(o => intersects(box, o, 0))) return box;
       }
     }
     // Even an intentionally overlapping card cannot erase its source badge.
@@ -40,16 +41,16 @@ export function relationNumberPair(source: Box, target: Box, region: Box, body: 
     { left: target.right + 4, right: target.right + 4 + width, top: cyTarget - 8, bottom: cyTarget + 8 },
     { left: target.left - 4 - width, right: target.left - 4, top: cyTarget - 8, bottom: cyTarget + 8 }
   ];
-  const b = candidates.find(box => containsBox(region, box) && (box.right <= body.left || box.left >= body.right)
-    && ![...obstacles, source, a, ...occupied].some(o => intersects(box, o)));
+  const free = (box: Box, pad: number) => containsBox(region, box) && (box.right <= body.left || box.left >= body.right)
+    && !intersects(box, source, pad) && !intersects(box, a, pad) && !obstacles.some(o => intersects(box, o, pad)) && !occupied.some(o => intersects(box, o, pad));
+  const b = candidates.find(box => free(box, 2));
   if (b) return [a, b];
   if (sharedTarget) {
     // Stack paired numbers beside a shared card before using its face.
     for (let row = 1; row <= occupied.length + 1; row++) {
       for (const dy of [-18 * row, 18 * row]) for (const candidate of candidates) {
         const box = { ...candidate, top: candidate.top + dy, bottom: candidate.bottom + dy };
-        if (containsBox(region, box) && (box.right <= body.left || box.left >= body.right) &&
-          ![...obstacles, source, a, ...occupied].some(o => intersects(box, o, 0))) return [a, box];
+        if (free(box, 0)) return [a, box];
       }
     }
   }
@@ -58,7 +59,7 @@ export function relationNumberPair(source: Box, target: Box, region: Box, body: 
   for (let top = target.top + 2; top + 16 <= target.bottom - 2; top += 18) {
     for (let left = target.right - width - 2; left >= target.left + 2; left -= width + 2) {
       const box = { left, right: left + width, top, bottom: top + 16 };
-      if (![a, ...occupied].some(o => intersects(box, o, 0))) return [a, box];
+      if (!intersects(box, a, 0) && !occupied.some(o => intersects(box, o, 0))) return [a, box];
     }
   }
   const left = Math.max(target.left, target.right - width - 2), top = target.top + 2;

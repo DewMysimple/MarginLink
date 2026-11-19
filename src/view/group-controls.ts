@@ -16,9 +16,10 @@ export class GroupControls {
     this.action = view.addAction('list-filter', '折叠或展开卡片分组', () => this.open());
     this.action.classList.add('margin-link-group-action');
   }
-  update(mode: ActiveGrouping, links: readonly WikilinkOccurrence[], source: string): void {
+  snapshot(): string[] { return [...this.folded]; }
+  update(mode: ActiveGrouping, links: readonly WikilinkOccurrence[], source: string, initialFolded?: readonly string[]): void {
     if (this.links === links && this.mode === mode && this.index) return;
-    if (this.mode !== mode) this.folded.clear();
+    if (this.mode !== mode) this.folded = new Set(initialFolded);
     this.links = links; this.mode = mode;
     this.index = groupOccurrences(mode, links, target => resolveLink(this.view.app, target, source).file);
     const present = new Set(this.index.groups.map(group => group.id));

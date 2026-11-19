@@ -1,0 +1,25 @@
+{
+  "base": "efa1c913f246593ae6ba682ab9815a67cbab963a",
+  "node": "v24.16.0",
+  "samples": 9,
+  "results": [
+    {
+      "count": 72,
+      "baselineMs": 1.205,
+      "candidateMs": 0.192,
+      "identicalRectangles": 72
+    },
+    {
+      "count": 200,
+      "baselineMs": 7.595,
+      "candidateMs": 0.856,
+      "identicalRectangles": 200
+    },
+    {
+      "count": 500,
+      "baselineMs": 86.442,
+      "candidateMs": 4.457,
+      "identicalRectangles": 500
+    }
+  ]
+}

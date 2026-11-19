@@ -14,7 +14,7 @@ const input: LayoutInput = {
 };
 const byKey = (cards: Placement[]) => new Map(cards.map(card => [card.key, card]));
 
-describe('fully manual layout has no automatic balancing or collision packing', () => {
+describe('fully manual requested positions before display clearance', () => {
   it('ignores left/right preference, neighbouring cards and anchor arrival order', () => {
     const reference = byKey(layoutCards(input));
     for (const layout of ['balanced', 'left', 'right'] as const) {
@@ -50,22 +50,22 @@ describe('fully manual layout has no automatic balancing or collision packing', 
     expect(layoutCards(data)).toEqual([]);
   });
 
-  it('never snaps or pushes neighbouring cards during a manual drop', () => {
+  it('fits a manual drop at the nearest clear edge without pushing neighbouring cards', () => {
     const occupied = layoutCards(input), neighbor = occupied[0], anchor = input.anchors[3];
     const drop = positionFromDrop({ ...input, preferences: { ...input.preferences!, snapGrid: 32 } }, anchor,
       neighbor.x + 42 - 7, neighbor.y + 42 + 5, occupied)!;
-    expect(drop.placement).toMatchObject({ x: neighbor.x - 7, y: neighbor.y + 5, side: 'left' });
-    expect(drop.snapped).toBe(false);
-    expect(overlapsCard(drop.placement, neighbor)).toBe(true);
+    expect(drop.placement).toMatchObject({ x: neighbor.x - 7, y: neighbor.y + neighbor.height + 10, side: 'left' });
+    expect(overlapsCard(drop.placement, neighbor)).toBe(false);
   });
 });
 
 describe('manual cache restores each occurrence without an automatic base', () => {
   it('matches a clean reopen even when virtualized sections arrive in a different order', () => {
-    const reference = byKey(layoutCards(input)), cache = new StableLayout();
+    const reference = byKey(new StableLayout().update(input, 0, 'same')), cache = new StableLayout();
     cache.update({ ...input, anchors: input.anchors.slice(2) }, 0, 'same');
     const expanded = cache.update({ ...input, anchors: input.anchors.slice(0, 2) }, 0, 'same');
     for (const card of expanded) expect(card).toEqual(reference.get(card.key));
+    expect(overlapsCard(reference.get('right-a')!, reference.get('right-b')!)).toBe(false);
     const reopened = new StableLayout().update(input, 0, 'same');
     for (const card of reopened) expect(card).toEqual(reference.get(card.key));
   });
@@ -85,7 +85,7 @@ describe('manual cache restores each occurrence without an automatic base', () =
   it('changes placement strategy without retaining a previous automatic reservation', () => {
     const cache = new StableLayout();
     cache.update({ ...input, preferences: { ...input.preferences!, placementMode: 'auto' } }, 0, 'same');
-    expect(cache.update(input, 0, 'same')).toEqual(layoutCards(input));
+    expect(cache.update(input, 0, 'same')).toEqual(new StableLayout().update(input, 0, 'same'));
   });
 });
 

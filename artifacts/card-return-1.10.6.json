@@ -1,0 +1,367 @@
+{
+  "host": "1.10.6",
+  "bundle": "3a543b356f66c0cc1b253ef1f0c0bf010efdebf483a086c7a10baf5c35d1fbf7",
+  "results": [
+    {
+      "mode": "reading",
+      "placement": "auto",
+      "merged": true,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "auto",
+      "merged": false,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 20,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "manual",
+      "merged": true,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "manual",
+      "merged": false,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "free",
+      "merged": true,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "free",
+      "merged": false,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "snap",
+      "merged": true,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "placement": "snap",
+      "merged": false,
+      "before": 2400,
+      "after": 2400,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "auto",
+      "merged": true,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 7,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "auto",
+      "merged": false,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 19,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "manual",
+      "merged": true,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 6,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "manual",
+      "merged": false,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "free",
+      "merged": true,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 6,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "free",
+      "merged": false,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "snap",
+      "merged": true,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 6,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "placement": "snap",
+      "merged": false,
+      "before": 2400,
+      "after": 2448,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "auto",
+      "merged": true,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 6,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "auto",
+      "merged": false,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 12,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "manual",
+      "merged": true,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 5,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "manual",
+      "merged": false,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 10,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "free",
+      "merged": true,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 5,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "free",
+      "merged": false,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "snap",
+      "merged": true,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 5,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "placement": "snap",
+      "merged": false,
+      "before": 2400,
+      "after": 2208,
+      "sampled": 9,
+      "changedCards": 0,
+      "addedCards": 0,
+      "movedText": 0,
+      "collisions": 0
+    }
+  ],
+  "otherReturns": [
+    {
+      "mode": "reading",
+      "method": "markdown-back",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "method": "close-tab",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "method": "direct-reopen",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "method": "markdown-back",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "method": "close-tab",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "live",
+      "method": "direct-reopen",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "method": "markdown-back",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "method": "close-tab",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "source",
+      "method": "direct-reopen",
+      "movedText": 0,
+      "changedCards": 0,
+      "collisions": 0
+    },
+    {
+      "mode": "reading",
+      "method": "embedded-image-back",
+      "pictures": 2,
+      "cards": 4,
+      "collisions": 0
+    }
+  ],
+  "errors": []
+}

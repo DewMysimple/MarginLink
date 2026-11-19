@@ -39,12 +39,12 @@ describe('bounded initialization of observed UI positions', () => {
     expect(store.snapshot()).toEqual(records);
     expect(changed).not.toHaveBeenCalled();
 
-    // A real move to the inner edge can intentionally overlap even a member
-    // of the repaired stack. The neighbouring display slots stay where seen.
+    // An older overlapping manual request keeps every neighbour in its slot.
     store.set('A.md', data.anchors[0].key, { side: 'right', xNormalized: 0, yOffset: (b.y + 42 - data.anchors[0].y) / 24 });
     const moved = layout.update({ ...data, anchors: data.anchors.map(a => ({ ...a, manual: store.get('A.md', a.key) })) }, 0, 'fixed');
     for (const card of before.slice(1)) expect(moved.find(p => p.key === card.key)).toEqual(card);
-    expect(moved.find(p => p.key === a.key)?.y).toBeCloseTo(b.y);
+    const fitted = moved.find(p => p.key === a.key)!;
+    expect(Math.abs(fitted.y - b.y)).toBeGreaterThanOrEqual(b.height + 10);
     expect(new LayoutStore(store.snapshot(), changed).get('A.md', a.key)?.initial).toBeUndefined();
   });
 
@@ -59,7 +59,7 @@ describe('bounded initialization of observed UI positions', () => {
     const manual = { ...input, preferences: { ...DEFAULT_PREFERENCES, placementMode: 'manual' as const },
       anchors: [1, 2].map(i => ({ key: key(i), x: 380, y: 160, manual: reopened.get('A.md', key(i)) })) };
     const [a, b] = new StableLayout().update(manual, 0, 'fixed');
-    expect([a.x, a.y]).toEqual([b.x, b.y]);
+    expect(a.x).toBe(b.x); expect(Math.abs(a.y - b.y)).toBe(a.height + 10);
   });
   it('initializes one batch without replacing existing positions or refreshing timestamps on another render', () => {
     const changed = vi.fn(), store = new LayoutStore([], changed);

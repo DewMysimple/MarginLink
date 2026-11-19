@@ -1,32 +1,46 @@
 import { MarkdownRenderChild, parseLinktext, type App, type MarkdownPostProcessorContext, type MarkdownView } from 'obsidian';
-import { parseDocument, type ParsedDocument } from '../core/wikilink-parser';
+import { parseDocument } from '../core/wikilink-parser';
 import type { Anchor, WikilinkOccurrence } from '../types';
 import { textFragments } from '../view/text-fragments';
-import { mapReadingLinks } from './source-mapping';
+import { mapReadingLinks, type SourceLink } from './source-mapping';
 import { layoutIdentities } from '../core/layout-identity';
 
 interface Entry { sourcePath: string; text: string; element: HTMLElement; identities: Map<number, string>; links: { element: HTMLElement; occurrence: WikilinkOccurrence }[] }
+
+function indexDocument(text: string) {
+  const parsed = parseDocument(text);
+  const starts = [0];
+  for (let offset = text.indexOf('\n'); offset !== -1; offset = text.indexOf('\n', offset + 1)) starts.push(offset + 1);
+  const events: SourceLink[] = [
+    ...parsed.links.map(occurrence => ({ start: occurrence.start, target: occurrence.target, occurrence })),
+    ...parsed.markdownLinks.map(link => ({ start: link.start, target: link.target }))
+  ].sort((a, b) => a.start - b.start);
+  const firstEvent = (offset: number) => {
+    let lo = 0, hi = events.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (events[mid].start < offset) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  return { text, identities: layoutIdentities(text, parsed.links), users: 0,
+    section: (from: number, to: number) => events.slice(firstEvent(starts[from] ?? text.length), firstEvent(starts[to + 1] ?? text.length)) };
+}
 export class ReadingAnchors {
   private entries = new Map<HTMLElement, Entry>();
   private refreshing = new WeakMap<MarkdownView, string>();
   private children = new Set<MarkdownRenderChild>();
   // One current full source per rendered document, only in memory.
-  private documents = new Map<string, { text: string; parsed: ParsedDocument; identities: Map<number, string>; users: number }>();
+  private documents = new Map<string, ReturnType<typeof indexDocument>>();
   constructor(private app: App, private changed: () => void) {}
   process(element: HTMLElement, ctx: MarkdownPostProcessorContext): void {
     const info = ctx.getSectionInfo(element);
     if (!info) return;
     const existing = this.documents.get(ctx.docId);
-    const parsed = existing?.text === info.text ? existing.parsed : parseDocument(info.text);
-    const document = existing?.text === info.text ? existing : { text: info.text, parsed, identities: layoutIdentities(info.text, parsed.links), users: 0 };
+    const document = existing?.text === info.text ? existing : indexDocument(info.text);
     this.documents.set(ctx.docId, document);
-    const lines = info.text.split('\n');
-    const start = lines.slice(0, info.lineStart).reduce((n, line) => n + line.length + 1, 0);
-    const end = lines.slice(0, info.lineEnd + 1).reduce((n, line) => n + line.length + 1, 0);
-    const events = [
-      ...document.parsed.links.filter(l => l.start >= start && l.start < end).map(l => ({ start: l.start, target: l.target, occurrence: l as WikilinkOccurrence | undefined })),
-      ...document.parsed.markdownLinks.filter(l => l.start >= start && l.start < end).map(l => ({ start: l.start, target: l.target, occurrence: undefined as WikilinkOccurrence | undefined }))
-    ].sort((a, b) => a.start - b.start);
+    const events = document.section(info.lineStart, info.lineEnd);
     const anchors = [...element.querySelectorAll<HTMLElement>('a.internal-link, a.external-link')]
       .filter(a => !a.closest('.internal-embed, .markdown-embed, pre, code'));
     const normalize = (value: string) => {

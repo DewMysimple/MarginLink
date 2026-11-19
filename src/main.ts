@@ -1,4 +1,5 @@
-import { MarkdownView, Modal, Notice, Plugin } from 'obsidian';
+import { MarkdownView, Modal, Notice, Plugin, type WorkspaceLeaf } from 'obsidian';
+import { CardNavigation } from './view/card-navigation';
 import { readPreferences, DEFAULT_PREFERENCES, type PlacementMode, type Preferences } from './types';
 import { editorExtension, type EditorBridge } from './editor/editor-extension';
 import { ReadingAnchors } from './reading/reading-anchors';
@@ -14,6 +15,7 @@ import { AttachmentView } from './view/attachment-view';
 export default class MarginLinkPlugin extends Plugin {
   preferences: Preferences = { ...DEFAULT_PREFERENCES };
   readonly fileRecognition = new FileRecognition();
+  readonly cardNavigation = new CardNavigation();
   bridges = new Set<EditorBridge>();
   reading!: ReadingAnchors;
   selection!: SelectionAction;
@@ -101,7 +103,9 @@ export default class MarginLinkPlugin extends Plugin {
   private sync(): void {
     if (this.unloaded) return;
     const live = new Set<MarkdownView>();
+    const leaves = new Set<WorkspaceLeaf>();
     this.app.workspace.iterateAllLeaves(leaf => {
+      leaves.add(leaf);
       if (leaf.view instanceof MarkdownView) {
         const view = leaf.view; live.add(view);
         if (!this.overlays.has(view)) {
@@ -117,6 +121,7 @@ export default class MarginLinkPlugin extends Plugin {
         }
       }
     });
+    this.cardNavigation.retain(leaves);
     for (const [view, overlay] of this.overlays) if (!live.has(view)) { overlay.destroy(); this.overlays.delete(view); this.noteListeners.get(view)?.(); this.noteListeners.delete(view); }
     const active = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (active) this.rememberMarkdown(active);
@@ -170,6 +175,7 @@ export default class MarginLinkPlugin extends Plugin {
       : '清除保存的卡片位置，下次显示重新给定初始位置；当前布局模式、原生双链与笔记内容保留。';
     new ConfirmAction(this.app, this, source ? '重置当前笔记卡片位置' : '重置所有笔记卡片位置', description, () => {
       this.layouts.clear(source);
+      this.cardNavigation.forget(source);
       // Explicit reset discards measured slots; the selected mode supplies
       // initial positions. Per-card reset stays local to that occurrence.
       for (const [view, overlay] of this.overlays) if (source === undefined || view.file?.path === source) overlay.resetLayout();
@@ -215,6 +221,7 @@ export default class MarginLinkPlugin extends Plugin {
   }
   onunload(): void {
     this.unloaded = true; this.selection?.cancel();
+    this.cardNavigation.retain(new Set());
     if (this.saveTimer !== undefined) void this.flush().catch(() => new Notice('MarginLink 关闭时保存布局失败。'));
     this.app.workspace.detachLeavesOfType(SETTINGS_VIEW_TYPE);
     for (const dialog of [...this.dialogs]) dialog.close(); this.dialogs.clear(); this.listeners.clear();

@@ -91,12 +91,13 @@ describe('relative spatial layout', () => {
       const band = lane(p, c.side); expect(c.x).toBeGreaterThanOrEqual(band.left); expect(c.x + c.width).toBeLessThanOrEqual(band.right);
     }
   });
-  it('snaps only the moving card to its grid and permits intentional overlap', () => {
+  it('snaps only the moving card to the nearest clear grid row', () => {
     const p = { ...input, preferences: { ...input.preferences!, placementMode: 'snap' as const } };
     const first = positionFromDrop(p, input.anchors[0], 1200, 500, [])!;
     const second = positionFromDrop(p, { key: 'b', x: 700, y: 320 }, 1200, 500, [first.placement])!;
-    expect(second.snapped).toBe(true); expect(overlapsCard(first.placement, second.placement)).toBe(true);
-    expect(second.placement).toMatchObject({ x: first.placement.x, y: first.placement.y });
+    expect(second.snapped).toBe(true); expect(overlapsCard(first.placement, second.placement)).toBe(false);
+    expect(second.placement.x).toBe(first.placement.x);
+    expect(Math.abs(second.placement.y - first.placement.y)).toBe(Math.ceil((first.placement.height + 10) / p.preferences.snapGrid) * p.preferences.snapGrid);
   });
   it('scales vertical offsets with line height without clamping static display', () => {
     const manual = { side: 'left' as const, xNormalized: 1, yOffset: 2 };
@@ -105,6 +106,14 @@ describe('relative spatial layout', () => {
     expect(larger.y - normal.y).toBe(24);
     const clipped = layoutCards({ ...input, anchors: [{ ...input.anchors[0], manual: { ...manual, yOffset: 80 } }] })[0];
     expect(clipped.y + clipped.height / 2).toBe(input.anchors[0].y + 80 * 24);
+  });
+  it.each(['free', 'snap', 'manual'] as const)('leaves the original card in place when a %s drop has no clear row', placementMode => {
+    const data = { ...input, height: 150, viewport: { ...input.viewport, top: 0, bottom: 150 },
+      preferences: { ...input.preferences!, placementMode } };
+    const occupied = [{ key: 'neighbour', side: 'right' as const, x: 1130, y: 30, width: 84, height: 84, compact: false }];
+    expect(positionFromDrop(data, input.anchors[0], 1172, 75, occupied)).toBeUndefined();
+    const beside = positionFromDrop(data, input.anchors[0], 1328, 75, occupied)!;
+    expect(beside).toBeDefined(); expect(overlapsCard(beside.placement, occupied[0])).toBe(false);
   });
 });
 describe('connector geometry', () => {

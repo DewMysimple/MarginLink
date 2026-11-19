@@ -10,7 +10,7 @@ export interface Placement {
   key: string; side: Side; x: number; y: number; width: number; height: number;
   compact: boolean; shape?: CardShape; manual?: boolean;
 }
-const CARD_GAP = 10;
+export const CARD_GAP = 10;
 
 /** Pack each automatic column in document coordinates. A stack with colliding
  * desired tops shares the displacement equally, so a dense cluster doesn't
@@ -72,20 +72,37 @@ export function dimensions(input: LayoutInput, side: Side): { width: number; hei
 export function overlapsCard(a: Placement, b: Placement, gap = CARD_GAP): boolean {
   return a.x < b.x + b.width + gap && a.x + a.width + gap > b.x && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y;
 }
+// Intersecting rectangles forbid an open interval of top coordinates. Merge
+// those intervals once instead of testing every candidate against every card.
+function freeTop(card: Placement, occupied: Placement[], min = -Infinity, max = Infinity, grid = 0): number | undefined {
+  const target = clamp(card.y, min, max);
+  const exact = { ...card, y: target };
+  if (!occupied.some(other => overlapsCard(exact, other))) return target;
+  const intervals = occupied.filter(other => other.x < card.x + card.width + CARD_GAP && other.x + other.width + CARD_GAP > card.x)
+    .map(other => [other.y - card.height - CARD_GAP, other.y + other.height + CARD_GAP]).sort((a, b) => a[0] - b[0]);
+  let lower = min, best: number | undefined;
+  const consider = (upper: number) => {
+    const lo = grid ? min + Math.ceil((lower - min) / grid) * grid : lower;
+    const hi = grid ? min + Math.floor((upper - min) / grid) * grid : upper;
+    if (lo > hi) return;
+    const y = clamp(target, lo, hi);
+    if (best === undefined || Math.abs(y - target) < Math.abs(best - target)) best = y;
+  };
+  for (const [start, end] of intervals) {
+    if (start > max) break;
+    if (lower <= start) consider(start);
+    lower = Math.max(lower, end);
+  }
+  consider(max);
+  return best;
+}
 function legalize(candidate: Placement, input: LayoutInput, occupied: Placement[]): Placement | undefined {
   const band = lane(input, candidate.side);
   if (candidate.height > band.bottom - band.top) return;
   const x = clamp(candidate.x, band.left, band.right - candidate.width);
-  const target = clamp(candidate.y, band.top, band.bottom - candidate.height);
-  // User-directed placement may intentionally overlap another card. Only the
-  // moving card is clamped to its lane; automatic solving owns collision gaps.
-  if (input.preferences && input.preferences.placementMode !== 'auto') return { ...candidate, x, y: target };
-  const ys = [target, ...occupied.flatMap(c => [c.y + c.height + CARD_GAP, c.y - candidate.height - CARD_GAP])]
-    .filter(y => y >= band.top && y + candidate.height <= band.bottom).sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b);
-  for (const y of ys) {
-    const card = { ...candidate, x, y };
-    if (!occupied.some(c => overlapsCard(card, c))) return card;
-  }
+  const y = freeTop({ ...candidate, x }, occupied, band.top, band.bottom - candidate.height,
+    input.preferences?.placementMode === 'snap' ? input.preferences.snapGrid : 0);
+  return y === undefined ? undefined : { ...candidate, x, y };
 }
 export function positionFromDrop(input: LayoutInput, anchor: LayoutAnchor, x: number, y: number, occupied: Placement[], grabPoint: GrabPoint = { u: 0.5, v: 0.5 }): { placement: Placement; relative: RelativePosition; snapped: boolean } | undefined {
   if (![x, y, grabPoint.u, grabPoint.v, input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport), anchor.y].every(Number.isFinite) ||
@@ -126,14 +143,8 @@ export function displayPosition(candidate: Placement, input: LayoutInput, occupi
   const band = lane(input, candidate.side);
   const x = clamp(candidate.x, band.left, band.right - candidate.width);
   const exact = { ...candidate, x };
-  if (!occupied.some(c => overlapsCard(exact, c))) return exact;
-  const ys = [candidate.y, ...occupied.flatMap(c => [c.y + c.height + CARD_GAP, c.y - candidate.height - CARD_GAP])]
-    .sort((a, b) => Math.abs(a - candidate.y) - Math.abs(b - candidate.y) || a - b);
-  for (const y of ys) {
-    const card = { ...candidate, x, y };
-    if (!occupied.some(c => overlapsCard(card, c))) return card;
-  }
-  return { ...candidate, x }; // Finite occupied rectangles always leave an outer slot.
+  exact.y = freeTop(exact, occupied)!; // With no vertical bounds there is always an outer slot.
+  return exact;
 }
 export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Placement[] {
   if (![input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport)].every(Number.isFinite) || input.width <= 0 || input.height < 36) return [];
@@ -141,7 +152,8 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
   if (p?.placementMode === 'manual') {
     // Each missing position has a local, repeatable starting point. Neither
     // viewport arrival order, other cards nor automatic side preferences may
-    // rebalance a completely manual note. A user may deliberately overlap it.
+    // rebalance a completely manual note. StableLayout fits these requested
+    // rectangles against the physical slots already visible in this view.
     return input.anchors.filter(a => Number.isFinite(a.x) && Number.isFinite(a.y)).flatMap(a => {
       const saved = a.manual;
       const side = saved?.side ?? a.preferred ?? (Math.abs(a.x - input.body.left) <= Math.abs(a.x - input.body.right) ? 'left' : 'right');
@@ -195,8 +207,8 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
     const x = saved ? band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width) : side === 'left' ? band.right - dim.width : band.left;
     const y = a.y + (saved?.yOffset ?? 0) * (input.lineHeight ?? 24) - dim.height / 2;
     const candidate = { key: a.key, side, x, y, ...dim, compact: dim.shape === 'icon', manual: !!saved };
-    // A persisted manual position is the user's exact relative placement,
-    // including deliberate overlap. Never legalize it against neighbouring UI.
+    // Preserve the requested relative coordinates. StableLayout resolves
+    // collisions between the final projected rectangles without rewriting them.
     const card = saved ? candidate : displayPosition(candidate, input, [...occupied, ...output]);
     if (card) { counts[side]++; output.push(card); }
   }

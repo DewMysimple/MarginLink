@@ -28,6 +28,8 @@ it('retains leaf-local folds across metadata refresh, clears them on rule change
   groups.open(); expect(items.get('folder/ · 1')?.checked).toBe(true);
   items.get('folder/ · 1')!.click(); expect(redraw).toHaveBeenCalledTimes(1);
   groups.invalidate(); groups.update('folder', links, 'a.md'); expect(groups.visible('0')).toBe(false);
+  const back = new GroupControls(view, redraw);
+  back.update('folder', links, 'a.md', groups.snapshot()); expect(back.visible('0')).toBe(false);
   groups.update('type', links, 'a.md'); expect(groups.visible('0')).toBe(true);
   expect(groups.label('0')).toBe('Markdown'); groups.destroy(); expect(action.remove).toHaveBeenCalledOnce();
 });

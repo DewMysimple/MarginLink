@@ -23,6 +23,7 @@ import { applyAppearance } from './appearance';
 import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
 import { StableLayout } from './stable-layout';
+import type { CardNavigation, CardVisit } from './card-navigation';
 import { TextObstacles } from './text-obstacles';
 import { relationNumberPair, containsBox } from './continuation';
 import { NativeScrollLayer } from './native-scroll-layer';
@@ -46,6 +47,7 @@ interface Card extends Relation {
   placementStyle?: string;
 }
 export interface OverlayHost {
+  cardNavigation: CardNavigation;
   fileRecognition: FileRecognition;
   app: App; preferences: Preferences; bridges: Set<EditorBridge>;
   reading: ReadingAnchors; selection: SelectionAction; layouts: LayoutStore;
@@ -96,6 +98,8 @@ export class MarginOverlay {
   private scroller?: HTMLElement;
   private scrolling = false;
   private scrollIdleTimer?: number;
+  private returning?: { visit: CardVisit; shift: number; applied: boolean; until: number };
+  private cancelReturn = (): void => { this.returning = undefined; };
   private geometrySignature = '';
   private hostRect?: DOMRect;
   private preview?: TargetPreview;
@@ -164,6 +168,7 @@ export class MarginOverlay {
     container.addEventListener('focusin', this.onAnchorFocus);
     container.addEventListener('focusout', this.onAnchorBlur);
     container.addEventListener('keydown', this.onEscape);
+    for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.addEventListener(event, this.cancelReturn, { capture: true, passive: true });
     this.win.addEventListener('resize', this.schedule);
     container.ownerDocument.fonts?.addEventListener('loadingdone', this.onFontsLoaded); this.schedule();
   }
@@ -198,7 +203,7 @@ export class MarginOverlay {
   openGroups(): void { this.groups?.open(); }
   cancelInteractions(): void { this.referenceList?.close(); this.preview?.close(); cardTooltip.hideWithin(this.root); this.cardDrag.cancel(); this.drag.cancel(); }
   resetLayout(): void {
-    this.cancelInteractions(); this.stableLayout.clear(); this.schedule();
+    this.cancelReturn(); this.cancelInteractions(); this.stableLayout.clear(); this.schedule();
   }
   /** Snapshot only this confirmed note's measured coordinates. Relative UI
    * records survive navigation; no unmeasured or ambiguous link is invented. */
@@ -207,8 +212,9 @@ export class MarginOverlay {
     if (this.visibleRelations || input?.preferences?.mergeReferences || !input || this.cardDrag.dragging || this.confirmedSource !== this.path || this.view.file?.path !== this.path || this.view.getMode() !== this.mode) return false;
     const source = this.mode === 'source' ? this.bridge()?.text : this.view.data;
     if (source === undefined || source !== this.layoutSource) return false;
+    const byKey = new Map(input.anchors.map(anchor => [anchor.key, anchor]));
     const positions = [...this.cards.values()].flatMap(card => {
-      const key = card.anchor.layoutKey, anchor = input.anchors.find(a => a.key === card.placement.key);
+      const key = card.anchor.layoutKey, anchor = byKey.get(card.placement.key);
       if (!key || !anchor || claimed?.has(key) || (!overwrite && anchor.manual)) return [];
       const fixed = input.preferences?.placementMode === 'manual' || (input.preferences?.placementMode !== 'auto' && anchor.manual && !anchor.manual.initial);
       const origin: 'manual' | 'initial' = fixed ? 'manual' : 'initial';
@@ -239,7 +245,11 @@ export class MarginOverlay {
     this.hostRect = hostRect;
     this.root.hidden = !prefs.enabled || !this.path || hostRect.width < 1 || hostRect.height < 1;
     this.decorations.element.hidden = this.root.hidden;
-    if (this.root.hidden) { this.cancelInteractions(); this.clearCards(); return; }
+    if (this.root.hidden) {
+      this.cancelInteractions();
+      if (!prefs.enabled || !this.path) this.clearCards();
+      return;
+    }
     if (!!this.visibleRelations !== prefs.mergeReferences) {
       this.cancelInteractions(); this.clearCards();
       this.visibleRelations = prefs.mergeReferences ? new Map() : undefined;
@@ -286,8 +296,6 @@ export class MarginOverlay {
     }
     // Keep the historical last-line/bottom+2 reference, independent of which
     // fragment currently intersects the viewport or is used by a connector.
-    const scrollTop = scroller.scrollTop;
-    this.decorations.mount(scroller, bodyEl, hostRect, scrollTop);
     const lineHeight = Math.max(12, Math.min(72, parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.6 || 24));
     const geometryKey = [hostRect.width, body.left, body.right, viewport.left, viewport.right, viewport.top, scroller.scrollLeft,
       prefs.density, prefs.layout, prefs.placementMode, prefs.cardShape, prefs.cardSize, prefs.edgePadding,
@@ -309,6 +317,32 @@ export class MarginOverlay {
       this.measurementsDirty = true;
       this.layoutGeometry = geometryKey; this.layoutSource = source;
     }
+    const visit = this.host.cardNavigation.take(this.view);
+    if (visit && (visit.mode !== mode || (mode === 'source' && visit.sourceMode !== !!this.view.getState().source))) {
+      void this.host.cardNavigation.restoreMode(this.view, visit).then(this.schedule, this.schedule);
+      return;
+    }
+    if (visit && visit.source === source && visit.geometry === geometryKey && visit.merged === prefs.mergeReferences) {
+      this.contentAnchors = new Map(visit.anchors); this.stableLayout = visit.layout.copy();
+      this.groups?.destroy(); this.groups = undefined;
+      this.returning = { visit, shift: 0, applied: false, until: performance.now() + 3000 };
+      this.measurementsDirty = true; this.textObstacles.invalidate();
+    }
+    const returning = this.returning;
+    if (returning) {
+      if (returning.until < performance.now() || returning.visit.source !== source || returning.visit.geometry !== geometryKey) this.cancelReturn();
+      else if (!returning.applied) {
+        // Reading view can exist a frame before its virtual sizer has any
+        // content. A pixel write at that point is silently clamped to zero.
+        if (returning.visit.top > 0 && scroller.scrollHeight <= scroller.clientHeight) return;
+        returning.applied = true;
+        if (bridge && returning.visit.reference) this.view.currentMode.applyScroll(returning.visit.line);
+        else scroller.scrollTo(returning.visit.left, returning.visit.top);
+        this.schedule(); return;
+      }
+    }
+    const scrollTop = scroller.scrollTop;
+    this.decorations.mount(scroller, bodyEl, hostRect, scrollTop);
     if (this.pendingReadingLocate && mode === 'preview') {
       const element = this.host.reading.elementFor(this.view, this.pendingReadingLocate);
       if (element) {
@@ -317,7 +351,7 @@ export class MarginOverlay {
         this.measurementsDirty = true; this.schedule();
       }
     }
-    const scrolling = this.scrolling || this.scrollTop !== scrollTop;
+    const scrolling = !!this.returning || this.scrolling || this.scrollTop !== scrollTop;
     this.scrollTop = scrollTop;
     const measure = this.measurementsDirty || viewport.top + scrollTop < this.measuredTop || viewport.bottom + scrollTop > this.measuredBottom;
     const needsRoutes = prefs.lines !== 'numbers' && prefs.lines !== 'none';
@@ -334,6 +368,28 @@ export class MarginOverlay {
       top: r.top - hostRect.top + scrollTop, bottom: r.bottom - hostRect.top + scrollTop });
     if (measure) {
       const measured = bridge ? bridge.anchors() : this.host.reading.anchors(this.view, Math.max(80 * lineHeight + 100, viewport.bottom - viewport.top));
+      // CM and Reading view may rebuild virtual spacers at different heights.
+      // Restore the native text's screen position and translate every old slot
+      // by that same document-origin change, including unmounted references.
+      const restore = this.returning;
+      if (restore?.visit.reference) {
+        const previous = restore.visit.anchors.get(restore.visit.reference)!;
+        const current = measured.find(a => a.key === previous.key);
+        if (current) {
+          const shift = current.rect.top - hostRect.top + scrollTop - previous.rect.top;
+          const delta = shift - restore.shift;
+          if (delta) {
+            const move = (box: Box) => ({ ...box, top: box.top + delta, bottom: box.bottom + delta });
+            for (const [key, a] of this.contentAnchors) this.contentAnchors.set(key, { ...a, rect: move(a.rect), fragments: a.fragments.map(move) });
+            this.stableLayout.translateY(delta); restore.shift = shift;
+          }
+          const top = restore.visit.top + shift;
+          if (Math.abs(scroller.scrollTop - top) > 0.51) {
+            scroller.scrollTo(restore.visit.left, top);
+            if (scroller.scrollTop !== scrollTop) { this.measurementsDirty = true; this.schedule(); return; }
+          }
+        }
+      }
       if (prefs.mergeReferences) measured.sort((a, b) => a.occurrence.start - b.occurrence.start);
       for (const anchor of measured) {
         if (this.validOccurrences.get(anchor.key) !== anchor.occurrence.raw) continue;
@@ -374,12 +430,13 @@ export class MarginOverlay {
         preferred: bridge?.preferred(a.occurrence.start, a.occurrence.target), manual: prefs.mergeReferences ? undefined : this.host.layouts.get(this.path, a.layoutKey, this.legacyLayoutKeys.get(a.layoutKey ?? '')) }))
     };
     if (prefs.groupMode !== 'none') {
+      const saved = !this.groups ? this.returning?.visit.groups : undefined;
       this.groups ??= new GroupControls(this.view, () => {
         this.cancelInteractions();
         if (this.highlighted && !this.groups?.visible(this.highlighted)) this.clearFocus();
         this.schedule();
       });
-      this.groups.update(prefs.groupMode, this.occurrences, this.path);
+      this.groups.update(prefs.groupMode, this.occurrences, this.path, saved?.mode === prefs.groupMode ? saved.folded : undefined);
     } else if (this.groups) {
       this.groups.destroy(); this.groups = undefined;
     }
@@ -511,7 +568,12 @@ export class MarginOverlay {
       this.preview?.blurOwner(button, event.relatedTarget);
     });
     button.addEventListener('click', event => { if (!this.cardDrag.consumeClick(event, key)) void this.open(key, event); });
-    button.addEventListener('pointerdown', event => { this.preview?.close(); this.drag.cancel(); this.cardDrag.start(event, key, button); });
+    button.addEventListener('pointerdown', event => {
+      this.preview?.close(); this.drag.cancel(); this.cardDrag.start(event, key, button);
+      if (event.button === 0 && !event.defaultPrevented) {
+        event.preventDefault(); button.focus({ preventScroll: true });
+      }
+    });
     button.addEventListener('keydown', event => this.onCardKey(event, key));
     shell.addEventListener('contextmenu', event => {
       event.preventDefault(); this.preview?.close();
@@ -674,8 +736,8 @@ export class MarginOverlay {
     const layout = this.markerSignature !== signature;
     this.markerSignature = signature;
     const used: Box[] = [];
-    const cards = this.routePlacements.map(p => ({ left: p.x, right: p.x + p.width,
-      top: p.y + this.scrollTop, bottom: p.y + p.height + this.scrollTop }));
+    const obstacles = layout ? [...this.obstacles, ...this.routePlacements.map(p => ({ left: p.x, right: p.x + p.width,
+      top: p.y + this.scrollTop, bottom: p.y + p.height + this.scrollTop }))] : [];
     const region = { ...input.viewport,
       top: Number.isFinite(this.measuredTop) ? this.measuredTop : input.viewport.top + this.scrollTop,
       bottom: Number.isFinite(this.measuredBottom) ? this.measuredBottom : input.viewport.bottom + this.scrollTop };
@@ -691,7 +753,7 @@ export class MarginOverlay {
       if (layout && mode !== 'none' && source) {
         if (!this.continuationNumbers.has(key)) this.continuationNumbers.set(key, this.continuationNumbers.size + 1);
         const number = this.continuationNumbers.get(key)!;
-        const pair = relationNumberPair(source, target, region, input.body, [...this.obstacles, ...cards], used, Math.max(16, String(number).length * 7 + 4), !!this.visibleRelations);
+        const pair = relationNumberPair(source, target, region, input.body, obstacles, used, Math.max(16, String(number).length * 7 + 4), !!this.visibleRelations);
         used.push(...pair);
         (card.routeData ?? card.shell.dataset).number = String(number);
         if (!card.continuation) card.continuation = ['source', 'target'].map(end => {
@@ -803,8 +865,22 @@ export class MarginOverlay {
     if (!resolved.file) { new Notice('未找到该文件。请核对链接路径，以及设置中的“Obsidian 能识别的文件类型”。'); return; }
     if (!this.host.fileRecognition.canOpen(resolved.file.extension) && !canOpenInObsidian(this.host.app, resolved.file.extension)) { new Notice('文件已被 Vault 识别，但无法通过公开 API 确认此类型的打开能力。请先用相应文件类型插件打开一个该类型文件并保留其标签，再点击卡片；也可使用正文原生双链。'); return; }
     try {
-      const leaf = event.ctrlKey || event.metaKey ? this.host.app.workspace.getLeaf('tab') : this.view.leaf;
-      await leaf.openFile(resolved.file, { eState: !this.cards.get(key)?.group && resolved.subpath ? { subpath: resolved.subpath } : undefined });
+      const newTab = event.ctrlKey || event.metaKey;
+      const leaf = newTab ? this.host.app.workspace.getLeaf('tab') : this.view.leaf;
+      const file = resolved.file;
+      const navigate = () => leaf.openFile(file, { eState: !group && resolved.subpath ? { subpath: resolved.subpath } : undefined });
+      if (newTab || file === this.view.file || !this.scroller) await navigate();
+      else {
+        const viewport = this.scroller.getBoundingClientRect();
+        const reference = this.anchors.find(a => a.rect.top >= viewport.top && a.rect.bottom <= viewport.bottom);
+        await this.host.cardNavigation.open(this.view, file.path, {
+          path: this.path, source: this.layoutSource, mode: this.mode, geometry: this.layoutGeometry, merged: !!this.visibleRelations,
+          top: this.scroller.scrollTop, left: this.scroller.scrollLeft, line: this.view.currentMode.getScroll(),
+          reference: reference?.key, sourceMode: !!this.view.getState().source, layout: this.stableLayout.copy(),
+          groups: this.groups && { mode: this.host.preferences.groupMode, folded: this.groups.snapshot() },
+          anchors: new Map(Array.from(this.contentAnchors, ([id, a]) => [id, { ...a, element: undefined }]))
+        }, navigate);
+      }
     } catch { new Notice('Obsidian 无法打开该文件类型，请先安装对应的文件类型处理插件。'); }
   }
   private onAnchorFocus = (event: FocusEvent): void => {
@@ -887,6 +963,7 @@ export class MarginOverlay {
     this.anchorInk?.splice(fragments.length).forEach(el => el.remove());
   }
   private clearCards(): void {
+    this.returning = undefined;
     this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
     this.referenceList?.close(); this.clearLocated(); this.referenceIndex = undefined;
     for (const relation of this.visibleRelations?.values() ?? []) { relation.path.remove(); relation.continuation?.forEach(el => el.remove()); }
@@ -903,6 +980,7 @@ export class MarginOverlay {
     this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
     for (const menu of [...this.menus]) menu.hide(); this.menus.clear();
     const container = this.view.contentEl;
+    for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.removeEventListener(event, this.cancelReturn, true);
     container.removeEventListener('focusin', this.onAnchorFocus);
     container.removeEventListener('focusout', this.onAnchorBlur);
     container.removeEventListener('keydown', this.onEscape);

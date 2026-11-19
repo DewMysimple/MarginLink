@@ -15,16 +15,15 @@ function unchangedOthers(before: Placement[], after: Placement[], target = 'ship
   for (const p of before.filter(p => p.key !== target)) expect(after.find(a => a.key === p.key)).toEqual(p);
 }
 describe('independent user-directed card placement', () => {
-  it('free drops preserve each corner grab point even on top of another card', () => {
+  it('free drops keep horizontal grab position and fit beside occupied slots without moving neighbours', () => {
     const target = input.anchors.find(a => a.key === 'ship')!;
     const occupied = layoutCards(input).filter(a => a.key !== target.key), original = structuredClone(occupied);
     for (const side of ['left', 'right'] as const) for (const [u, v] of [[0, 0], [1, 0], [0, 1], [1, 1], [.5, .5]]) {
       const neighbor = occupied.find(p => p.side === side)!;
       const dx = side === 'left' ? -8 : 8;
       const drop = positionFromDrop(input, target, neighbor.x + dx + 84 * u, neighbor.y + 10 + 84 * v, occupied, { u, v })!;
-      expect(drop.placement).toMatchObject({ x: neighbor.x + dx, y: neighbor.y + 10, side });
-      expect(overlapsCard(drop.placement, neighbor)).toBe(true);
-      expect(drop.snapped).toBe(false);
+      expect(drop.placement).toMatchObject({ x: neighbor.x + dx, side });
+      expect(occupied.some(p => overlapsCard(drop.placement, p))).toBe(false);
     }
     expect(occupied).toEqual(original);
   });
@@ -41,12 +40,12 @@ describe('independent user-directed card placement', () => {
     }
     const reset = cache.update(data, 0, 'fixed'); unchangedOthers(initial, reset);
   });
-  it('restores deliberately overlapping saved rectangles without moving either member', () => {
+  it('round-trips a drop onto another card at its nearest free position', () => {
     const a = input.anchors[1], b = input.anchors[5];
     const first = positionFromDrop(input, a, 1200, 350, [])!;
     const second = positionFromDrop(input, b, 1210, 360, [first.placement])!;
     const saved = { ...input, anchors: [{ ...a, manual: first.relative }, { ...b, manual: second.relative }] };
-    expect(overlapsCard(first.placement, second.placement)).toBe(true);
+    expect(overlapsCard(first.placement, second.placement)).toBe(false);
     for (const cache of [new StableLayout(), new StableLayout()]) {
       const frame = cache.update(saved, 0, 'reopen');
       expect(frame.find(p => p.key === a.key)).toEqual(first.placement);
@@ -76,11 +75,14 @@ describe('independent user-directed card placement', () => {
     const cards = layoutCards({ ...auto, anchors: input.anchors.map(a => ({ ...a, manual: { side: 'right', xNormalized: .2, yOffset: 0 } })) });
     for (let i = 0; i < cards.length; i++) for (let j = i + 1; j < cards.length; j++) expect(overlapsCard(cards[i], cards[j])).toBe(false);
   });
-  it('snap ignores a nearby neighbour that is off-grid', () => {
+  it('snap selects a free grid position next to an off-grid neighbour', () => {
     const data = { ...input, preferences: { ...input.preferences!, placementMode: 'snap' as const, snapGrid: 12 } };
     const target = input.anchors[5], occupied = [{ ...layoutCards(input)[0], side: 'right' as const, x: 1111, y: 300 }];
     const alone = positionFromDrop(data, target, 1158, 342, [])!;
-    expect(positionFromDrop(data, target, 1158, 342, occupied)).toEqual(alone);
+    const fitted = positionFromDrop(data, target, 1158, 342, occupied)!;
+    expect(fitted.placement.x).toBe(alone.placement.x);
+    expect((fitted.placement.y - alone.placement.y) % 12).toBeCloseTo(0);
+    expect(overlapsCard(fitted.placement, occupied[0])).toBe(false);
   });
   it('reopens a six-link note without changing any unedited automatic card after ship moves across sides', () => {
     const cache = new StableLayout(), original = cache.update(input, 0, 'fixed');

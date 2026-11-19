@@ -85,6 +85,12 @@ artifacts/*
 !artifacts/reference-aggregation-1.15.1.json
 !artifacts/reference-scroll-1.10.6.json
 !artifacts/reference-scroll-1.15.1.json
+!artifacts/card-return-baseline-1.10.6.json
+!artifacts/card-return-1.10.6.json
+!artifacts/card-return-1.15.1.json
+!artifacts/card-clearance-scroll-1.10.6.json
+!artifacts/card-clearance-scroll-1.15.1.json
+!artifacts/card-placement-performance.json
 !artifacts/navigation-0.3.0.json
 !artifacts/navigation-preview-0.3.0.png
 test-vault/.obsidian/workspace*.json

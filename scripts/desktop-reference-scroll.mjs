@@ -51,15 +51,19 @@ try {
     await page.evaluate(() => {
       const v = app.workspace.activeLeaf.view, o = app.plugins.plugins['margin-link'].overlays.get(v);
       const scroller = o.scroller, original = new Map(), switched = new Set(), replaced = new Set(), missing = new Set();
-      const offsets = new Map();
+      const offsets = new Map(), nativePositions = new Map();
+      let nativeShift = 0, collisions = 0;
       let maxX = 0, maxY = 0, relativeDrift = 0, comparisons = 0, deepRelations = 0, hitChecks = 0;
       const frame = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
       const sample = () => {
         const clip = scroller.getBoundingClientRect();
         // Measure native text again, independently of the overlay's anchor cache.
         const native = new Map((o.bridge() && v.getMode() === 'source' ? o.bridge().anchors() : o.host.reading.anchors(v)).map(a => [a.key, a.rect]));
+        const rects = [];
         for (const [key, c] of o.cards) {
           const box = c.shell.getBoundingClientRect(), docY = box.top + scroller.scrollTop;
+          for (const other of rects) if (other.right > box.left && other.left < box.right && other.bottom > box.top + .01 && other.top < box.bottom - .01) collisions++;
+          rects.push(box);
           if (!original.has(key)) original.set(key, { shell: c.shell, x: box.left, y: docY, height: box.height, anchor: c.anchor.key });
           const first = original.get(key);
           const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
@@ -73,6 +77,9 @@ try {
           maxY = Math.max(maxY, Math.abs(docY - first.y));
           const text = native.get(c.anchor.key);
           if (text) {
+            const nativeY = text.bottom + scroller.scrollTop;
+            if (!nativePositions.has(key)) nativePositions.set(key, nativeY);
+            nativeShift = Math.max(nativeShift, Math.abs(nativeY - nativePositions.get(key)));
             const offset = box.top - text.bottom;
             if (!offsets.has(key)) offsets.set(key, offset);
             else { relativeDrift = Math.max(relativeDrift, Math.abs(offset - offsets.get(key))); comparisons++; }
@@ -87,7 +94,7 @@ try {
           (r.path.getAttribute('d') || r.continuation?.[0] && !r.continuation[0].hidden)).length);
       };
       window.scrollProbe = { sample, frame, done: () => ({ maxX, maxY, relativeDrift, comparisons, switched: switched.size,
-        replaced: replaced.size, missing: missing.size, deepRelations, hitChecks, sampled: original.size }) };
+        replaced: replaced.size, missing: missing.size, deepRelations, hitChecks, nativeShift, collisions, sampled: original.size }) };
       sample();
     });
     const scroller = await page.evaluate(() => {
@@ -120,9 +127,13 @@ try {
     results.push(row); console.log(JSON.stringify(row));
   }
   assert.deepEqual(errors, []);
-  assert(results.every(r => r.wheelDistance > 0 && r.sampled > 10 && r.comparisons > 100 && r.hitChecks > 100 && r.maxX <= 1 && r.relativeDrift <= 1 &&
+  // A spacer can move one end of a tightly packed stack into its neighbour.
+  // Both the card and its text-relative offset must stay within the actual
+  // native geometry correction; an entire row jump or any overlap fails.
+  assert(results.every(r => r.wheelDistance > 0 && r.sampled > 10 && r.comparisons > 100 && r.hitChecks > 100 && r.maxX <= 1 &&
+    r.maxY <= r.nativeShift + 1 && r.relativeDrift <= r.nativeShift + 1 && !r.collisions &&
     !r.switched && !r.replaced && !r.missing && r.deepRelations));
-  await writeFile('artifacts/reference-scroll-' + host + '.json', JSON.stringify({
+  await writeFile('artifacts/card-clearance-scroll-' + host + '.json', JSON.stringify({
     host, bundle: createHash('sha256').update(bundle).digest('hex'), results, errors
   }, null, 2) + '\n');
 } finally { await browser.close(); }

@@ -50,14 +50,14 @@ describe('stable scroll projection', () => {
     const corrected = cache.update({ ...input, anchors: input.anchors.map(a => ({ ...a, y: a.y - 80 + 7 })) }, 80, 'same');
     for (const p of initial) expect(corrected.find(a => a.key === p.key)).toMatchObject({ side: p.side, y: p.y - 73 });
   });
-  it('keeps established offsets while virtualization corrects one section and introduces a crowded snapshot', () => {
+  it('keeps the stationary neighbour clear when a spacer correction and a new snapshot hit it', () => {
     const cache = new StableLayout(), initial = { side: 'right' as const, xNormalized: 0, yOffset: 0, initial: true as const };
     const anchors = [200, 228].map((y, i) => ({ key: String(i), x: 700, y, manual: initial }));
     const before = cache.update({ ...input, anchors }, 0, 'fixed');
     const after = cache.update({ ...input, anchors: [
       { ...anchors[0], y: 120 }, { ...anchors[1], y: 128 }, { ...anchors[1], key: 'new', y: 118 }
     ] }, 100, 'fixed', true);
-    expect(after[0].y).toBe(before[0].y - 80);
+    expect(after[0].y + after[0].height + 10).toBeLessThanOrEqual(after[1].y);
     expect(after[1].y).toBe(before[1].y - 100);
     expect(after.slice(0, 2).every(p => after[2].y >= p.y + p.height + 10 || after[2].y + after[2].height + 10 <= p.y)).toBe(true);
   });
@@ -72,6 +72,14 @@ describe('stable scroll projection', () => {
       expect(card.y + card.height / 2).toBe(252 - scroll);
     }
     expect(store.snapshot()).toEqual(before); expect(changed).not.toHaveBeenCalled();
+  });
+  it('follows real image reflow past a stale offscreen reservation', () => {
+    const layout = new StableLayout(), initial = { ...input, preferences: { ...DEFAULT_PREFERENCES, placementMode: 'manual' as const },
+      anchors: [{ key: 'image-caption', x: 850, y: 250 }, { key: 'unmounted-later-section', x: 850, y: 500 }] };
+    const before = layout.update(initial, 0, 'image');
+    const after = layout.update({ ...initial, anchors: [{ ...initial.anchors[0], y: 1770 }] }, 0, 'image', true);
+    expect(after[0].y - before[0].y).toBe(1520);
+    expect(after[1]).toEqual(before[1]);
   });
   it('keeps drop constraints bounded independently of static scroll display', () => {
     expect(positionFromDrop(input, input.anchors[0], 870, -2, [])).toBeUndefined();
