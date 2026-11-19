@@ -3,7 +3,7 @@ import type { TFile } from 'obsidian';
 import type { Anchor } from '../src/types';
 import { readPreferences } from '../src/types';
 import { parseWikilinks } from '../src/core/wikilink-parser';
-import { buildReferenceListItems, groupOccurrencesByResolvedTarget, selectRepresentativeOccurrence } from '../src/view/reference-groups';
+import { buildReferenceListItems, groupOccurrencesByResolvedTarget, referenceCardAnchors } from '../src/view/reference-groups';
 import { connectorBatch } from '../src/view/connector-batch';
 import { clearConnectorSegments } from '../src/view/connector-renderer';
 
@@ -31,11 +31,12 @@ describe('reference aggregation', () => {
     const group = groups(text).groups.get('file:A/Plan.md')!;
     expect(group.members.map(m => text.slice(m.occurrence.start, m.occurrence.end))).toEqual(['[[A/Plan]]', '[[Plan#^block|second]]', '[[A/Plan|added]]']);
   });
-  it('keeps a visible representative, then uses distance and source order', () => {
-    const anchors = links.slice(0, 3).map((occurrence, i) => ({ occurrence, key: String(i), rect: { top: i * 10, bottom: i * 10 + 4 } } as Anchor));
-    expect(selectRepresentativeOccurrence(anchors, 18).key).toBe('2');
-    expect(selectRepresentativeOccurrence(anchors, 17, '0').key).toBe('0');
-    expect(selectRepresentativeOccurrence(anchors.slice(1).reverse(), 17, '0').key).toBe('1');
+  it('retains the first measured owner when a deep-opened view later measures earlier occurrences', () => {
+    const index = groups(), anchors = links.map(occurrence => ({ occurrence, key: String(occurrence.start) } as Anchor));
+    const order = [anchors[2], ...anchors.slice(0, 2), ...anchors.slice(3)];
+    const cards = referenceCardAnchors(order, index.byOccurrence);
+    expect(cards.get('file:A/Plan.md')).toBe(anchors[2]);
+    expect(cards.size).toBe(4);
   });
   it.each([undefined, 1, 'true', null])('defaults off for invalid or absent preference %s', value => {
     expect(readPreferences({ mergeReferences: value }).mergeReferences).toBe(false);

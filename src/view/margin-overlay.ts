@@ -2,7 +2,7 @@ import { MarkdownView, Menu, Notice, type App } from 'obsidian';
 import type { Anchor, Preferences, RelativePosition, WikilinkOccurrence } from '../types';
 import { EditorView } from '@codemirror/view';
 import { ReferenceList } from './reference-list';
-import { groupOccurrencesByResolvedTarget, selectRepresentativeOccurrence, type ReferenceGroup } from './reference-groups';
+import { groupOccurrencesByResolvedTarget, referenceCardAnchors, type ReferenceGroup } from './reference-groups';
 import { GroupControls } from './group-controls';
 import type { EditorBridge } from '../editor/editor-extension';
 import type { ReadingAnchors } from '../reading/reading-anchors';
@@ -13,7 +13,7 @@ import { CardDragController, type CardDragContext } from './card-drag-controller
 import { resolveLink } from '../core/link-resolver';
 import type { FileRecognition } from '../core/file-recognition';
 import { canOpenInObsidian } from '../core/file-capabilities';
-import { layoutCards, lane, positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
+import { lane, positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
 import { renderCard } from './card-renderer';
 import { cardTooltip } from './card-tooltip';
 import { TargetPreview, previewSpace, type PreviewTarget } from './target-preview';
@@ -114,7 +114,7 @@ export class MarginOverlay {
   private geometryRevision = 0;
   private markerSignature = '';
   /** Enabled only by an explicit development probe; no persistent telemetry. */
-  diagnostics?: { routeSearches?: number; groupRecomputes?: number; repSwitches?: number; renders: number; measurements: number; routes: number; svgWrites: number; markerWrites: number; work: number[] };
+  diagnostics?: { routeSearches?: number; groupRecomputes?: number; renders: number; measurements: number; routes: number; svgWrites: number; markerWrites: number; work: number[] };
   private win: Window;
   constructor(readonly view: MarkdownView, private host: OverlayHost) {
     const container = view.contentEl;
@@ -317,6 +317,7 @@ export class MarginOverlay {
         this.measurementsDirty = true; this.schedule();
       }
     }
+    const scrolling = this.scrolling || this.scrollTop !== scrollTop;
     this.scrollTop = scrollTop;
     const measure = this.measurementsDirty || viewport.top + scrollTop < this.measuredTop || viewport.bottom + scrollTop > this.measuredBottom;
     const needsRoutes = prefs.lines !== 'numbers' && prefs.lines !== 'none';
@@ -325,14 +326,16 @@ export class MarginOverlay {
       this.geometryRevision++;
     }
     if (measure) {
-      const overscan = prefs.mergeReferences && !bridge ? 0 : Math.max(160, viewport.bottom - viewport.top);
+      const overscan = Math.max(160, viewport.bottom - viewport.top);
       this.measuredTop = viewport.top + scrollTop - overscan; this.measuredBottom = viewport.bottom + scrollTop + overscan;
       this.geometryRevision++; if (this.diagnostics) this.diagnostics.measurements++;
     }
     const contentBox = (r: Box): Box => ({ left: r.left - hostRect.left, right: r.right - hostRect.left,
       top: r.top - hostRect.top + scrollTop, bottom: r.bottom - hostRect.top + scrollTop });
     if (measure) {
-      for (const anchor of bridge ? bridge.anchors() : this.host.reading.anchors(this.view, prefs.mergeReferences ? 0 : 80 * lineHeight + 100)) {
+      const measured = bridge ? bridge.anchors() : this.host.reading.anchors(this.view, Math.max(80 * lineHeight + 100, viewport.bottom - viewport.top));
+      if (prefs.mergeReferences) measured.sort((a, b) => a.occurrence.start - b.occurrence.start);
+      for (const anchor of measured) {
         if (this.validOccurrences.get(anchor.key) !== anchor.occurrence.raw) continue;
         this.contentAnchors.set(anchor.key, { ...anchor, rect: contentBox(anchor.rect), fragments: anchor.fragments.map(contentBox) });
       }
@@ -349,25 +352,21 @@ export class MarginOverlay {
     applyAppearance(this.decorations.element, prefs);
     if (prefs.mergeReferences && !this.referenceIndex) {
       this.referenceIndex = groupOccurrencesByResolvedTarget(this.occurrences, target => resolveLink(this.host.app, target, this.path));
+      this.stableLayout.retain(this.referenceIndex.groups);
       if (this.diagnostics) this.diagnostics.groupRecomputes = (this.diagnostics.groupRecomputes ?? 0) + 1;
     }
     const visible = new Map<string, Anchor[]>();
-    const anchorMap = new Map<string, Anchor>();
+    const anchorMap = this.referenceIndex ? referenceCardAnchors(this.anchors, this.referenceIndex.byOccurrence)
+      : new Map(this.anchors.map(anchor => [anchor.key, anchor]));
     if (this.referenceIndex) {
       for (const anchor of this.anchors) {
-        if (!anchor.fragments.some(f => f.bottom > viewport.top + hostRect.top && f.top < viewport.bottom + hostRect.top)) continue;
+        if (!anchor.fragments.some(f => f.bottom - hostRect.top + scrollTop > this.measuredTop && f.top - hostRect.top + scrollTop < this.measuredBottom)) continue;
         const group = this.referenceIndex.byOccurrence.get(anchor.key);
         if (!group) continue;
         const members = visible.get(group.key) ?? [];
         members.push(anchor); visible.set(group.key, members);
       }
-      for (const [key, members] of visible) {
-        const previous = this.cards.get(key)?.anchor.key;
-        const rep = selectRepresentativeOccurrence(members, hostRect.top + (viewport.top + viewport.bottom) / 2, previous);
-        if (previous && previous !== rep.key && this.diagnostics) this.diagnostics.repSwitches = (this.diagnostics.repSwitches ?? 0) + 1;
-        anchorMap.set(key, rep);
-      }
-    } else for (const a of this.anchors) anchorMap.set(a.key, a);
+    }
     this.layoutInput = {
       width: hostRect.width, height: hostRect.height, body, viewport, density: prefs.density, layout: prefs.layout, preferences: prefs,
       lineHeight,
@@ -384,7 +383,7 @@ export class MarginOverlay {
     } else if (this.groups) {
       this.groups.destroy(); this.groups = undefined;
     }
-    const placements = (prefs.mergeReferences ? layoutCards(this.layoutInput) : this.stableLayout.update(this.layoutInput, scrollTop, geometryKey))
+    const placements = this.stableLayout.update(this.layoutInput, scrollTop, geometryKey, scrolling)
       .filter(p => p.x + p.width > viewport.left && p.x < viewport.right && (!this.groups || this.groups.visible(anchorMap.get(p.key)!.key)));
     this.routePlacements = placements.map(p => this.cardDrag.placement(p.key) ?? p);
     const keep = new Set(placements.map(p => p.key));
@@ -429,7 +428,7 @@ export class MarginOverlay {
         (!fileGroup && prefs.placementMode !== 'auto' ? '方向键移动，Shift+左右键跨侧，Delete 重置位置。' : ''));
       this.place(card, this.cardDrag.placement(p.key) ?? p);
       if (fileGroup && this.visibleRelations) {
-        for (const member of visible.get(p.key)!) {
+        for (const member of visible.get(p.key) ?? []) {
           activeRelations.add(member.key);
           let relation = this.visibleRelations.get(member.key);
           if (!relation) {
@@ -447,6 +446,10 @@ export class MarginOverlay {
       }
     }
     for (const [key, relation] of this.visibleRelations ?? []) if (!activeRelations.has(key)) {
+      if (key === this.highlighted) {
+        relation.button.classList.remove('margin-link-active');
+        relation.shell.classList.remove('margin-link-focused', 'margin-link-pinned');
+      }
       relation.path.remove(); relation.continuation?.forEach(el => el.remove()); this.visibleRelations!.delete(key); this.geometryRevision++;
     }
     if (this.referenceList?.owner && !this.referenceList?.owner.isConnected) this.referenceList?.close();
@@ -623,8 +626,8 @@ export class MarginOverlay {
       left: relation.card.x, right: relation.card.x + relation.card.width, top: relation.card.y, bottom: relation.card.y + relation.card.height
     }));
     const activeCards = new Set(active.map(relation => relation.cardKey));
-    const inactiveCards = relations.filter(relation => !activeCards.has(relation.cardKey)).map(({ card }) => ({
-      left: card.x, right: card.x + card.width, top: card.y, bottom: card.y + card.height
+    const inactiveCards = [...this.cards.values()].map(c => c.placement).filter(card => !activeCards.has(card.key)).map(card => ({
+      left: card.x, right: card.x + card.width, top: card.y + this.scrollTop, bottom: card.y + this.scrollTop + card.height
     }));
     // Reserve the widest highlighted stroke as well as at least .5px of real
     // whitespace. Dense rows may use the compact budget; their full DOM text
@@ -850,7 +853,7 @@ export class MarginOverlay {
     if (previous === key && (!redraw || key === undefined)) return;
     const feedback = this.host.preferences.hoverFeedback;
     const members = (id: string) => this.visibleRelations && this.cards.has(id)
-      ? [...this.visibleRelations].filter(([, c]) => c.placement.key === id).map(([k]) => k) : [id];
+      ? [id, ...[...this.visibleRelations].filter(([, c]) => c.placement.key === id).map(([k]) => k)] : [id];
     const mark = (id: string, on: boolean) => {
       const card = this.visibleRelations?.get(id) ?? this.cards.get(id);
       if (!card) return;
@@ -870,6 +873,7 @@ export class MarginOverlay {
     for (const id of key === undefined ? [] : members(key)) {
       mark(id, true);
       const card = this.visibleRelations?.get(id) ?? this.cards.get(id);
+      if (this.visibleRelations && this.cards.has(id)) continue;
       const element = card?.anchor.element;
       if ((feedback || this.located) && element && this.view.contentEl.contains(element)) {
         element.classList.add('margin-link-anchor-active'); this.highlightedElements.push(element);

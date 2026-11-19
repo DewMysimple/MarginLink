@@ -25,10 +25,15 @@ export function groupOccurrencesByResolvedTarget(links: readonly WikilinkOccurre
   return { groups, byOccurrence, ordinal };
 }
 
-export function selectRepresentativeOccurrence(visible: Anchor[], center: number, previous?: string): Anchor {
-  const distance = (a: Anchor) => Math.abs((a.rect.top + a.rect.bottom) / 2 - center);
-  return visible.find(a => a.key === previous) ?? visible.reduce((a, b) =>
-    distance(b) < distance(a) || (distance(b) === distance(a) && b.occurrence.start < a.occurrence.start) ? b : a);
+/** Anchors arrive in measurement order. Re-measuring a Map entry preserves its
+ * insertion order, so later virtualized sections cannot take over a file card. */
+export function referenceCardAnchors(measured: Anchor[], byOccurrence: ReadonlyMap<string, ReferenceGroup>) {
+  const cards = new Map<string, Anchor>();
+  for (const anchor of measured) {
+    const group = byOccurrence.get(anchor.key);
+    if (group && !cards.has(group.key)) cards.set(group.key, anchor);
+  }
+  return cards;
 }
 
 export function buildReferenceListItems(group: ReferenceGroup, source: string) {

@@ -29,6 +29,16 @@ const host = { left: 40, top: 20, width: 900 } as DOMRect;
 const element = (value: ElementStub) => value as unknown as HTMLElement;
 
 describe('native note decoration layer', () => {
+  it('keeps the top reading margin available to densely packed cards', () => {
+    const sizer = new ElementStub(), scroller = new ElementStub();
+    const layer = new NativeScrollLayer(doc as unknown as Document);
+    for (const scrollTop of [0, 35, 300, 0]) {
+      sizer.y = scroller.y + 32 - scrollTop;
+      layer.mount(element(scroller), element(sizer), host, scrollTop);
+      expect((layer.element as unknown as ElementStub).values.top).toBe('-32px');
+      expect((layer.canvas as unknown as ElementStub).values.transform).toBe('translate(0px, 0px)');
+    }
+  });
   it('mounts beside editable content and keeps the same document origin during a native scroll', () => {
     const sizer = new ElementStub(), body = new ElementStub(), scroller = new ElementStub();
     sizer.appendChild(body);

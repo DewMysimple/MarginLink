@@ -1,7 +1,7 @@
 /** Decorations share the browser's native scroll transform with the note.
  * The layer lives beside editable content, never in CodeMirror's contentDOM.
- * Its clipped, contained box exactly spans the existing sizer, so descendants
- * cannot contribute overflow or increase the note's scrollHeight. */
+ * Its clipped box includes the scroller's leading padding and ends at the
+ * existing sizer, so descendants cannot increase the note's scrollHeight. */
 export class NativeScrollLayer {
   readonly element: HTMLDivElement;
   readonly canvas: HTMLDivElement;
@@ -30,10 +30,13 @@ export class NativeScrollLayer {
     if (this.element.parentElement !== parent) parent.appendChild(this.element);
     const origin = parent.getBoundingClientRect(), viewport = scroller.getBoundingClientRect();
     const left = viewport.left + scroller.clientLeft;
+    const sizerTop = origin.top + parent.clientTop + scrollTop;
+    const top = Math.min(0, viewport.top + scroller.clientTop - sizerTop);
     const stable = (value: number) => Math.round(value * 10000) / 10000;
+    this.style(this.element, 'top', `${stable(top)}px`);
     this.style(this.element, 'left', `${stable(left - origin.left - parent.clientLeft)}px`);
     this.style(this.element, 'width', `${scroller.clientWidth}px`);
-    this.style(this.canvas, 'transform', `translate(${stable(host.left - left)}px, ${stable(host.top - origin.top - parent.clientTop - scrollTop)}px)`);
+    this.style(this.canvas, 'transform', `translate(${stable(host.left - left)}px, ${stable(host.top - sizerTop - top)}px)`);
     this.style(this.canvas, 'width', `${host.width}px`);
     this.style(this.canvas, 'height', `${parent.clientHeight}px`);
   }

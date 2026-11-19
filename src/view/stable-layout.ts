@@ -1,4 +1,4 @@
-import { layoutCards, packInitialSlots, type LayoutInput, type Placement } from './layout-engine';
+import { displayPosition, layoutCards, packInitialSlots, type LayoutInput, type Placement } from './layout-engine';
 
 interface Slot { placement: Placement; offset: number }
 interface Entry extends Slot { manual: string; fixed: boolean }
@@ -10,10 +10,19 @@ export class StableLayout {
   private mode?: string;
   private automatic = new Map<string, Slot>();
   private initial = new Map<string, Slot>();
-  private packed = new Map<string, number>();
+  private packed = new Map<string, { desired: number; top: number }>();
   clear(): void { this.entries.clear(); this.automatic.clear(); this.initial.clear(); this.packed.clear(); this.geometry = ''; this.mode = undefined; }
+  retain(keys: { has(key: string): boolean }): void {
+    for (const key of this.entries.keys()) if (!keys.has(key)) {
+      this.entries.delete(key); this.automatic.delete(key); this.initial.delete(key); this.packed.delete(key);
+    }
+  }
+  private packedTop(p: Placement): number {
+    const slot = this.packed.get(p.key);
+    return slot ? slot.top + (p.y - slot.desired) : p.y;
+  }
   initialOffset(key: string): number | undefined { return this.automatic.get(key)?.offset; }
-  update(input: LayoutInput, scrollTop: number, geometry: string): Placement[] {
+  update(input: LayoutInput, scrollTop: number, geometry: string, scrolling = false): Placement[] {
     if (this.geometry !== geometry || this.mode !== input.preferences?.placementMode) {
       this.clear(); this.geometry = geometry; this.mode = input.preferences?.placementMode;
     }
@@ -31,7 +40,7 @@ export class StableLayout {
       for (const slot of [this.automatic.get(a.key), this.initial.get(a.key)]) {
         if (slot && slot.placement.y !== a.y + slot.offset) {
           slot.placement.y = a.y + slot.offset;
-          repack = true;
+          if (!scrolling) repack = true;
         }
       }
       const old = this.entries.get(a.key);
@@ -76,8 +85,23 @@ export class StableLayout {
         else if (!a.manual && this.initial.delete(a.key)) repack = true;
       }
     }
-    if (repack) this.packed = packInitialSlots([...this.automatic].map(([key, base]) => (this.initial.get(key) ?? base).placement));
+    if (repack) {
+      const slots = [...this.automatic].map(([key, base]) => (this.initial.get(key) ?? base).placement);
+      if (scrolling && this.packed.size) {
+        // Virtual spacers correct different sections in different frames.
+        // Reserve settled cards at their text-relative offsets. Fit only the
+        // newly discovered cards into free space during the gesture.
+        const occupied = slots.filter(p => this.packed.has(p.key)).map(p => ({ ...p, y: this.packedTop(p) }));
+        for (const p of slots) if (!this.packed.has(p.key)) {
+          const fitted = displayPosition(p, input, occupied);
+          this.packed.set(p.key, { desired: p.y, top: fitted.y }); occupied.push(fitted);
+        }
+      } else {
+        const tops = packInitialSlots(slots);
+        for (const p of slots) this.packed.set(p.key, { desired: p.y, top: tops.get(p.key) ?? p.y });
+      }
+    }
     return [...this.entries.values()].map(e => ({ ...e.placement,
-      y: (e.fixed ? e.placement.y : this.packed.get(e.placement.key) ?? e.placement.y) - scrollTop }));
+      y: (e.fixed ? e.placement.y : this.packedTop(e.placement)) - scrollTop }));
   }
 }

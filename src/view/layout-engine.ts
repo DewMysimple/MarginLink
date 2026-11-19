@@ -122,7 +122,7 @@ export function positionRelative(input: LayoutInput, anchor: LayoutAnchor, place
 }
 // Static display is unbounded vertically. Only a drop is constrained to the
 // viewport; scrolling must never push a card away from its text reference.
-function displayPosition(candidate: Placement, input: LayoutInput, occupied: Placement[]): Placement {
+export function displayPosition(candidate: Placement, input: LayoutInput, occupied: Placement[]): Placement {
   const band = lane(input, candidate.side);
   const x = clamp(candidate.x, band.left, band.right - candidate.width);
   const exact = { ...candidate, x };

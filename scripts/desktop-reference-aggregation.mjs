@@ -103,6 +103,8 @@ try {
         pairs:[...(o.visibleRelations ?? o.cards).values()].filter(r => r.continuation && !r.continuation[0].hidden).length,
         positions:[...o.cards].map(([key,c]) => [key,c.anchor.key,c.placement.y,c.anchor.rect.bottom - o.hostRect.top]) });
       const before = sample(), scroller = o.scroller;
+      const owners = new Map([...o.cards].map(([key, c]) => [key, c.anchor.key]));
+      let representativeSwitches = 0;
       const buttons = [...o.cards.values()].map(c => c.shell);
       for (const button of buttons) {
         button.dispatchEvent(new PointerEvent('pointerenter')); button.dispatchEvent(new PointerEvent('pointerleave'));
@@ -111,15 +113,19 @@ try {
       for (let i=0; i<48; i++) {
         scroller.scrollTop += i < 24 ? 26 : -26;
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve,0)));
+        for (const [key, c] of o.cards) {
+          if (owners.has(key) && owners.get(key) !== c.anchor.key) representativeSwitches++;
+          owners.set(key, c.anchor.key);
+        }
       }
       await new Promise(resolve => setTimeout(resolve, 300));
       const sorted = [...d.work].sort((a,b)=>a-b), q = n => sorted[Math.floor((sorted.length-1)*n)];
       o.diagnostics = undefined;
       return { enabled,before,after:sample(),hoverRoutes,hoverSearches,batches:d.routes,routeSearches:d.routeSearches ?? 0,
-        groupRecomputes:d.groupRecomputes ?? 0, representativeSwitches:d.repSwitches ?? 0, renderMs:{ p50:q(.5),p95:q(.95),max:q(1),raw:d.work } };
+        groupRecomputes:d.groupRecomputes ?? 0, representativeSwitches, renderMs:{ p50:q(.5),p95:q(.95),max:q(1),raw:d.work } };
     }, enabled));
   }
-  assert(report.performance.every(p => p.hoverRoutes === 0 && p.hoverSearches === 0 && p.groupRecomputes === 0 && p.renderMs.raw.length));
+  assert(report.performance.every(p => p.hoverRoutes === 0 && p.hoverSearches === 0 && p.groupRecomputes === 0 && p.representativeSwitches === 0 && p.renderMs.raw.length));
   report.markdownBefore = sourceBefore; report.markdownAfter = await markdown(); assert.equal(report.markdownAfter, sourceBefore);
   await mode('live'); await set({ mergeReferences:true });
   const fileCard = page.locator('[data-relation="file:Docs/Target.md"] .margin-link-card').first();

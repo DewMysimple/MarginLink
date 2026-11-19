@@ -50,6 +50,17 @@ describe('stable scroll projection', () => {
     const corrected = cache.update({ ...input, anchors: input.anchors.map(a => ({ ...a, y: a.y - 80 + 7 })) }, 80, 'same');
     for (const p of initial) expect(corrected.find(a => a.key === p.key)).toMatchObject({ side: p.side, y: p.y - 73 });
   });
+  it('keeps established offsets while virtualization corrects one section and introduces a crowded snapshot', () => {
+    const cache = new StableLayout(), initial = { side: 'right' as const, xNormalized: 0, yOffset: 0, initial: true as const };
+    const anchors = [200, 228].map((y, i) => ({ key: String(i), x: 700, y, manual: initial }));
+    const before = cache.update({ ...input, anchors }, 0, 'fixed');
+    const after = cache.update({ ...input, anchors: [
+      { ...anchors[0], y: 120 }, { ...anchors[1], y: 128 }, { ...anchors[1], key: 'new', y: 118 }
+    ] }, 100, 'fixed', true);
+    expect(after[0].y).toBe(before[0].y - 80);
+    expect(after[1].y).toBe(before[1].y - 100);
+    expect(after.slice(0, 2).every(p => after[2].y >= p.y + p.height + 10 || after[2].y + after[2].height + 10 <= p.y)).toBe(true);
+  });
   it('keeps old relative records intact, including cards displayed while their source is outside', () => {
     const changed = vi.fn(), store = new LayoutStore([], changed);
     const manual = { side: 'right' as const, xNormalized: 0.5, yOffset: 3 };

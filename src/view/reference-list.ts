@@ -23,6 +23,9 @@ export class ReferenceList {
     const panel = this.panel, owner = this.owner;
     if (!panel || !owner || !host || !viewport) return;
     const rect = owner.getBoundingClientRect();
+    if (rect.bottom <= host.top + viewport.top || rect.top >= host.top + viewport.bottom) {
+      this.close(); return;
+    }
     panel.style.maxWidth = Math.max(0, viewport.right - viewport.left) + 'px';
     panel.style.maxHeight = Math.max(0, viewport.bottom - viewport.top) + 'px';
     panel.style.left = Math.max(viewport.left, Math.min(rect.left - host.left, viewport.right - panel.offsetWidth)) + 'px';
