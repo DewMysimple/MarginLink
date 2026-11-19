@@ -17,6 +17,7 @@ export interface ConnectorOptions {
   cardObstacles?: readonly Box[];
   /** Current content-coordinate draw area; an offscreen detour is not a connection. */
   bounds?: Box;
+  targetFraction?: number;
   corridorX?: number;
   preferCorridor?: boolean;
 }
@@ -26,8 +27,8 @@ export interface Segment { from: Point; to: Point; control?: Point; control2?: P
 function validBox(box: Box): boolean {
   return Object.values(box).every(Number.isFinite) && box.right > box.left && box.bottom > box.top;
 }
-function ports(box: Box): Port[] {
-  const x = (box.left + box.right) / 2, y = (box.top + box.bottom) / 2;
+function ports(box: Box, fraction = 0.5): Port[] {
+  const x = box.left + (box.right - box.left) * fraction, y = box.top + (box.bottom - box.top) * fraction;
   return [
     { edge: 'left', x: box.left, y, nx: -1, ny: 0 },
     { edge: 'right', x: box.right, y, nx: 1, ny: 0 },
@@ -263,7 +264,7 @@ function routeAtClearance(fragments: Box[], card: Pick<Placement, 'x' | 'y' | 'w
   const protectedBoxes = obstacles.map(box => padded(box, padding));
   // Straight/elbow routes may use the exact clearance boundary. Curves need
   // a little extra normal lead so their first corner can genuinely round off.
-  const lead = padding + (style === 'curve' ? 0.25 : 0), targets = ports(cardBox);
+  const lead = padding + (style === 'curve' ? 0.25 : 0), targets = ports(cardBox, options.targetFraction);
   const tail = Math.max(12, 3 * (options.lineWidth ?? 1.5));
   const body = options.body ?? {
     left: Math.min(...sources.map(s => s.box.left)), right: Math.max(...sources.map(s => s.box.right)), top: 0, bottom: 0

@@ -34,6 +34,7 @@ export const PLACEMENT_MODE_OPTIONS: Record<PlacementMode, string> = {
   manual: '完全手动', free: '自由拖动（自动初排）', snap: '智能吸附（自动初排）', auto: '自动排列'
 };
 export interface Preferences {
+  mergeReferences: boolean;
   enabled: boolean;
   recognizeHtml: boolean;
   recognizeXmind: boolean;
@@ -61,7 +62,7 @@ export interface Preferences {
   newNoteDefault: number;
 }
 export const DEFAULT_PREFERENCES: Preferences = {
-  recognizeHtml: true, recognizeXmind: true, groupMode: 'none',
+  mergeReferences: false, recognizeHtml: true, recognizeXmind: true, groupMode: 'none',
   enabled: true, lines: 'always', density: 'auto', layout: 'balanced', placementMode: 'free',
   lineStyle: 'curve', lineWidth: 1.5, lineOpacity: 0.65, lineColor: 'theme',
   cardShape: 'square', cardSize: 'medium', cardRadius: 8, cardBorder: true,
@@ -84,7 +85,7 @@ export function readPreferences(value: unknown): Preferences {
   const choice = <T extends string>(key: keyof Preferences, values: readonly T[], fallback: T): T => values.includes(v[key] as T) ? v[key] as T : fallback;
   const bool = (key: keyof Preferences) => typeof v[key] === 'boolean' ? v[key] as boolean : DEFAULT_PREFERENCES[key] as boolean;
   return {
-    enabled: bool('enabled'),
+    mergeReferences: bool('mergeReferences'), enabled: bool('enabled'),
     groupMode: choice('groupMode', Object.keys(GROUP_OPTIONS) as GroupMode[], 'none'),
     recognizeHtml: bool('recognizeHtml'), recognizeXmind: bool('recognizeXmind'),
     lines: choice('lines', Object.keys(LINE_MODE_OPTIONS) as LineMode[], DEFAULT_PREFERENCES.lines),

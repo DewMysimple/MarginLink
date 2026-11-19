@@ -3,6 +3,8 @@ import type { Placement } from './layout-engine';
 import { connectorRoute, connectorPath, clearConnectorSegments, type Connector, type ConnectorOptions, type Point, type PortChoice, type Segment } from './connector-renderer';
 
 export interface BatchRelationInput {
+  cardKey?: string;
+  targetFraction?: number;
   key: string;
   fragments: Box[];
   card: Pick<Placement, 'x' | 'y' | 'width' | 'height'> & { side?: Side };
@@ -57,6 +59,7 @@ export class ConnectorRouteCache {
   clear(): void { this.entries.clear(); }
 }
 export interface BatchOptions extends ConnectorOptions {
+  onRouteSearch?: () => void;
   minSharedLength?: number;
   maxDetourRatio?: number;
   /** Defer exploratory shared-corridor searches during a live gesture. Existing
@@ -246,8 +249,12 @@ export function partitionConnectorRoutes(routes: RoutedConnector[], minimum: num
 /** A batch is ephemeral drawing data scoped to one view. No relation or layout
  * records are written. Safe existing routes are reused when another card moves. */
 export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, options: BatchOptions = {}, previous?: ConnectorBatch, cache?: ConnectorRouteCache): ConnectorBatch {
-  const minimum = Math.max(1, options.minSharedLength ?? 24), cards = inputs.map(i => ({ key: i.key, box: cardBox(i.card) }));
-  const perInput = (input: BatchRelationInput): ConnectorOptions => ({ ...options, bounds: input.bounds ?? options.bounds, cardObstacles: [...(options.cardObstacles ?? []), ...cards.filter(c => c.key !== input.key).map(c => c.box)] });
+  const minimum = Math.max(1, options.minSharedLength ?? 24), cards = inputs.map(i => ({ key: i.cardKey ?? i.key, box: cardBox(i.card) }));
+  const perInput = (input: BatchRelationInput): ConnectorOptions => ({ ...options, targetFraction: input.targetFraction, bounds: input.bounds ?? options.bounds, cardObstacles: [...(options.cardObstacles ?? []), ...cards.filter(c => c.key !== (input.cardKey ?? input.key)).map(c => c.box)] });
+  const search = (...args: Parameters<typeof connectorRoute>) => {
+    options.onRouteSearch?.();
+    return connectorRoute(...args);
+  };
   let routes: RoutedConnector[] = [];
   for (const input of inputs) {
     // A newly measured neighbourhood need not change an existing route. Its
@@ -256,13 +263,13 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
     // follow that exact translation, then prove it safe against current geometry.
     const originY = input.fragments[0]?.top ?? input.card.y;
     const fragments = input.fragments.map(box => ({ ...box, top: box.top - originY, bottom: box.bottom - originY }));
-    const fingerprint = JSON.stringify([style, fragments, { ...input.card, y: input.card.y - originY }, options.lineWidth, options.clearance,
+    const fingerprint = JSON.stringify([style, input.targetFraction, fragments, { ...input.card, y: input.card.y - originY }, options.lineWidth, options.clearance,
       options.minimumClearance, options.body, options.corridorX, options.preferCorridor]);
     const old = previous?.relations.get(input.key) ?? cache?.get(input.key), own = perInput(input);
     const candidate = old?.fingerprint === fingerprint && Number.isFinite(originY) && Number.isFinite(old.originY)
       ? translateConnector(old.connector, originY - old.originY) : undefined;
     const connector = candidate && clearConnectorSegments(candidate.segments, input.fragments, input.card, { ...own, clearance: candidate.clearance ?? own.clearance })
-      ? candidate : connectorRoute(input.fragments, input.card, style, input.previous ?? old?.connector.choice, own);
+      ? candidate : search(input.fragments, input.card, style, input.previous ?? old?.connector.choice, own);
     if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint, originY });
   }
   const optimize = options.optimizeShared !== false;
@@ -287,7 +294,7 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
       const proposed = members.map(route => {
         if (route.connector.segments.some(part => !part.control && Math.abs(part.from.x - corridorX) < EPSILON &&
           Math.abs(part.to.x - corridorX) < EPSILON && Math.abs(part.to.y - part.from.y) >= minimum)) return route;
-        const connector = connectorRoute(route.input.fragments, route.input.card, style, route.connector.choice,
+        const connector = search(route.input.fragments, route.input.card, style, route.connector.choice,
           { ...perInput(route.input), clearance: route.connector.clearance ?? options.clearance, corridorX, preferCorridor: true });
         if (!connector || routeTurns(connector) > routeTurns(route.connector) ||
             routeLength(connector) > routeLength(route.connector) * (options.maxDetourRatio ?? 1.35) + minimum) return route;

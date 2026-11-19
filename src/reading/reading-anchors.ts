@@ -53,6 +53,13 @@ export class ReadingAnchors {
     ctx.addChild(child);
     this.changed();
   }
+  elementFor(view: MarkdownView, occurrence: WikilinkOccurrence): HTMLElement | undefined {
+    for (const entry of this.entries.values()) {
+      if (entry.text !== view.data || entry.sourcePath !== view.file?.path || !view.previewMode.containerEl.contains(entry.element)) continue;
+      const link = entry.links.find(l => l.occurrence.start === occurrence.start && l.occurrence.raw === occurrence.raw);
+      if (link?.element.isConnected) return link.element;
+    }
+  }
   sourceText(view: MarkdownView, occurrence: WikilinkOccurrence): string | undefined {
     for (const entry of this.entries.values()) {
       if (entry.text === view.data && entry.sourcePath === view.file?.path && view.previewMode.containerEl.contains(entry.element) &&

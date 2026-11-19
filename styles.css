@@ -100,3 +100,16 @@
 .margin-link-anchor-active { text-decoration: underline !important; }
 .margin-link-anchor-ink { position: absolute; pointer-events: none; box-shadow: inset 0 -2px var(--interactive-accent); background: var(--text-selection); border-radius: 2px; }
 .margin-link-card-shell:focus-within { z-index: 2; }
+
+.margin-link-reference-count {
+  position: absolute; inset-inline-end: 0; top: 0; z-index: 1;
+  pointer-events: auto; font-size: var(--font-smallest); padding: 0 4px; height: auto;
+}
+.margin-link-reference-list {
+  position: absolute; z-index: 8; width: max-content; box-sizing: border-box;
+  overflow: auto; overflow-wrap: anywhere; pointer-events: auto;
+  padding: 8px; border-radius: var(--radius-s); background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border); box-shadow: var(--shadow-s);
+}
+.margin-link-reference-list > div + div { margin-top: 8px; border-top: 1px solid var(--background-modifier-border); }
+.margin-link-reference-list button { margin: 3px 3px 0 0; }

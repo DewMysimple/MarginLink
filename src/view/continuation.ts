@@ -16,7 +16,7 @@ export function continuationPair(source: Box, target: Box, viewport: Box, body: 
  * gutter beside the same line and badge the target's own corner; never silently
  * drop a normal relationship because a decorative slot search failed. */
 export function relationNumberPair(source: Box, target: Box, region: Box, body: Box,
-  obstacles: readonly Box[], occupied: readonly Box[] = [], labelWidth = 16): [Box, Box] {
+  obstacles: readonly Box[], occupied: readonly Box[] = [], labelWidth = 16, sharedTarget = false): [Box, Box] {
   const width = Math.min(labelWidth, Math.max(1, region.right - region.left));
   const cy = (source.top + source.bottom) / 2, sourceRight = (source.left + source.right) / 2 > (body.left + body.right) / 2;
   const bands = sourceRight ? ['right', 'left'] : ['left', 'right'];
@@ -43,6 +43,16 @@ export function relationNumberPair(source: Box, target: Box, region: Box, body: 
   const b = candidates.find(box => containsBox(region, box) && (box.right <= body.left || box.left >= body.right)
     && ![...obstacles, source, a, ...occupied].some(o => intersects(box, o)));
   if (b) return [a, b];
+  if (sharedTarget) {
+    // Stack paired numbers beside a shared card before using its face.
+    for (let row = 1; row <= occupied.length + 1; row++) {
+      for (const dy of [-18 * row, 18 * row]) for (const candidate of candidates) {
+        const box = { ...candidate, top: candidate.top + dy, bottom: candidate.bottom + dy };
+        if (containsBox(region, box) && (box.right <= body.left || box.left >= body.right) &&
+          ![...obstacles, source, a, ...occupied].some(o => intersects(box, o, 0))) return [a, box];
+      }
+    }
+  }
   // Intentional overlapping cards still get distinct badge slots whenever their
   // own faces have room, without moving either card or covering body text.
   for (let top = target.top + 2; top + 16 <= target.bottom - 2; top += 18) {

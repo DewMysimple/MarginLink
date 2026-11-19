@@ -33,6 +33,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   const toggle = (key: keyof Preferences, name: string) => {
     const setting = new Setting(container).setName(name); setting.settingEl.dataset.marginKey = key;
     setting.addToggle(t => { t.setValue(plugin.preferences[key] as boolean).onChange(v => update(key, v)); sync.push(() => t.setValue(plugin.preferences[key] as boolean)); });
+    return setting;
   };
   const slider = (key: keyof Preferences, name: string, min: number, max: number, step: number, disabled?: () => boolean) => {
     const setting = new Setting(container).setName(name); setting.settingEl.dataset.marginKey = key;
@@ -103,6 +104,7 @@ export function renderSettings(container: HTMLElement, plugin: MarginLinkPlugin)
   });
   new Setting(container).setName('清除所有卡片位置').setDesc('清除全部已保存位置，保留布局模式、外观偏好和全部双链。').addButton(b => b.setButtonText('清除全部位置').onClick(() => plugin.confirmReset()));
   heading('卡片'); dropdown('cardShape', '卡片形状', { horizontal: '横向卡片', square: '正方形卡片', icon: '极简图标' });
+  toggle('mergeReferences', '合并同一文件的重复引用').setDesc('在当前笔记中共用一张文件卡片。点击计数可查看或定位每处引用。合并期间卡位为临时只读位置。');
   dropdown('groupMode', '分组方式', GROUP_OPTIONS)
     .setDesc('通过笔记标题栏的分组按钮或命令折叠、展开当前分栏的卡片。手动位置保留。');
   dropdown('cardSize', '卡片尺寸', { small: '小', medium: '中', large: '大' });

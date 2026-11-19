@@ -81,6 +81,8 @@ artifacts/*
 !artifacts/route-aesthetics-before.png
 !artifacts/route-aesthetics-after.png
 !artifacts/release-0.2.27.json
+!artifacts/reference-aggregation-1.10.6.json
+!artifacts/reference-aggregation-1.15.1.json
 !artifacts/navigation-0.3.0.json
 !artifacts/navigation-preview-0.3.0.png
 test-vault/.obsidian/workspace*.json

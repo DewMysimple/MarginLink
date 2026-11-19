@@ -16,6 +16,7 @@ interface ActionContext {
   layouts(): LayoutStore;
 }
 interface LinkOperation {
+  listAction?: boolean;
   sourcePath: string; text: string; from: number; to: number; label: string;
   selection?: SelectionSnapshot; occurrence?: WikilinkOccurrence;
 }
@@ -52,26 +53,29 @@ export class SelectionAction {
   open(view: MarkdownView, bridge: EditorBridge, snapshot: SelectionSnapshot, side?: Side): void {
     this.openOperation(view, { ...snapshot, label: snapshot.selected, selection: snapshot }, bridge, side);
   }
-  relink(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge): void {
+  relink(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge, listSource?: string): void {
     try {
-      this.openOperation(view, this.cardOperation(view, occurrence, bridge), bridge);
+      this.openOperation(view, this.cardOperation(view, occurrence, bridge, listSource), bridge);
     } catch (error) { new Notice(error instanceof Error ? error.message : '无法重新链接该文件。'); }
   }
-  async unlink(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge): Promise<void> {
+  async unlink(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge, listSource?: string): Promise<void> {
     try {
-      const operation = this.cardOperation(view, occurrence, bridge);
+      const operation = this.cardOperation(view, occurrence, bridge, listSource);
       const { replace } = this.prepareEdit(view, operation, bridge);
       await replace(operation.occurrence.alias || operation.occurrence.target);
       this.changed();
     } catch (error) { new Notice(error instanceof Error ? error.message : '无法取消链接文件。'); }
   }
-  private cardOperation(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge) {
-    const source = view.getMode() === 'source' ? bridge?.text : this.context?.readingSource(view, occurrence);
+  private cardOperation(view: MarkdownView, occurrence: WikilinkOccurrence, bridge?: EditorBridge, listSource?: string) {
+    const source = view.getMode() === 'source' ? bridge?.text : listSource ?? this.context?.readingSource(view, occurrence);
+    if (listSource !== undefined && (source !== listSource || (view.getMode() === 'preview' && view.data !== listSource))) {
+      throw new Error('引用列表对应的源文本已改变，请重新选择。');
+    }
     if (!view.file || source === undefined) throw new Error('无法确认该卡片的源文本，请刷新笔记后重试。');
     if (source.slice(occurrence.start, occurrence.end) !== occurrence.raw) throw new Error('原链接已改变，请重新右键选择卡片。');
     const text = normalized(source), from = normalized(source.slice(0, occurrence.start)).length;
     const current = checkedOccurrence(text, { ...occurrence, start: from, end: from + occurrence.raw.length });
-    return { sourcePath: view.file.path, text, from, to: current.end, label: current.label, occurrence: current };
+    return { listAction: listSource !== undefined, sourcePath: view.file.path, text, from, to: current.end, label: current.label, occurrence: current };
   }
   private editors(sourcePath: string): { view: MarkdownView; bridge?: EditorBridge }[] {
     const editors: { view: MarkdownView; bridge?: EditorBridge }[] = [];
@@ -92,6 +96,7 @@ export class SelectionAction {
     if (mode === 'source' && bridge) revisions.set(bridge, bridge.revision);
     let borrowed = false;
     const validate = () => {
+      if (operation.listAction && this.app.workspace.activeLeaf !== view.leaf) throw new Error('活动分栏已改变，请重新选择引用。');
       if (generation !== this.generation || view.file?.path !== operation.sourcePath || (!borrowed && view.getMode() !== mode)) throw new Error('源笔记或本次操作已改变，请重新选择。');
       for (const [editor, revision] of revisions) if (!editor.alive || editor.revision !== revision) throw new Error('选择文件期间笔记内容发生变化，请重新选择。');
       for (const editor of this.editors(operation.sourcePath)) if (normalized(editor.view.editor.getValue()) !== operation.text) throw new Error('同一笔记在其他分栏中已改变，请刷新后重新选择。');
