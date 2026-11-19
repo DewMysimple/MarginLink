@@ -1,11 +1,12 @@
 param(
   [string]$PluginDir = 'dist/margin-link',
   [string]$ObsidianExe = 'D:\SoftWare\Obsidian\Obsidian.exe',
+  [int]$Port = 9238,
   [string]$HostAsar = 'test-profile/obsidian-1.15.1.asar'
 )
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-if (Get-NetTCPConnection -LocalPort 9238 -State Listen -ErrorAction SilentlyContinue) { throw 'Close the previous isolated navigation window before launching another.' }
+if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) { throw 'Close the previous isolated navigation window before launching another.' }
 $runId = [guid]::NewGuid().ToString('N')
 $vaultDir = New-Item -ItemType Directory -Path "test-vault/.v03-desktop/$runId"
 $profileDir = New-Item -ItemType Directory -Path "test-profile/v03/$runId"
@@ -28,5 +29,5 @@ Write-Utf8 "$vaultDir/Target.md" "# Another target"
 Write-Utf8 "$vaultDir/example.html" '<p>Attachment</p>'
 $sourceText = "# Navigation`n`nFirst [[Docs/Target|first]].`n`nSecond [[Docs/Target|second]].`n`nOther [[Target|other]].`n`nAttachment [[example.html]].`n`nMissing [[Missing]].`n`n"
 Write-Utf8 "$vaultDir/Navigation.md" ($sourceText + ("Paragraph for scrolling.`n`n" * 120))
-Start-Process -FilePath $ObsidianExe -ArgumentList @("--user-data-dir=`"$profileDir`"", '--remote-debugging-port=9238','--remote-debugging-address=127.0.0.1','--no-first-run') -WindowStyle Hidden
+Start-Process -FilePath $ObsidianExe -ArgumentList @("--user-data-dir=`"$profileDir`"", "--remote-debugging-port=$Port",'--remote-debugging-address=127.0.0.1','--no-first-run') -WindowStyle Hidden
 Write-Output "Isolated navigation vault $vaultDir"

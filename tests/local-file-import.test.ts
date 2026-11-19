@@ -47,6 +47,155 @@ describe('explicit local paths and attachment names', () => {
   });
 });
 
+describe('explicitly approved same-path replacement', () => {
+  async function conflict(name = 'Report.HTML', bytes: Buffer | string = 'source', overrides: Partial<typeof fs> = {}) {
+    const f = await fixture(bytes, name, overrides);
+    const targetPath = '资料/' + name, destination = path.join(f.root, targetPath);
+    await fs.writeFile(destination, 'original');
+    const approval = (await f.importer.inspectTarget(f.inspection, f.root, targetPath))!;
+    const move = (signal?: AbortSignal) => f.importer.move(f.inspection, targetPath, f.host, signal, approval);
+    const entries = () => fs.readdir(path.dirname(destination));
+    return { ...f, bytes, targetPath, destination, approval, move, entries };
+  }
+
+  it.each(['HTML', 'htm', 'xmind', 'pdf', 'png', 'JPEG', 'mp3', 'md'])('publishes complete %s bytes only at the selected path', async ext => {
+    const bytes = /html?|md/i.test(ext) ? Buffer.from('内容\r\n🌐\r\n') : Buffer.alloc(3 * 1024 * 1024 + 259);
+    if (!/html?|md/i.test(ext)) for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
+    const name = 'Case.' + ext, f = await conflict(name, bytes);
+    const other = path.join(f.root, name); await fs.writeFile(other, 'other folder');
+    f.host.resolve = async (actual, published) => {
+      const stat = await fs.stat(f.destination, { bigint: true });
+      expect(actual).toBe(f.targetPath); expect(published).toEqual({ size: bytes.length, mtime: Number(stat.mtimeMs) });
+      expect(digest(await fs.readFile(f.source))).toBe(digest(bytes));
+      return actual;
+    };
+    const result = await f.move();
+    expect(result.sourceRemoved).toBe(true); expect(f.commit).toHaveBeenCalledExactlyOnceWith(f.targetPath);
+    expect(digest(await fs.readFile(f.destination))).toBe(digest(bytes)); expect(await f.entries()).toEqual([name]);
+    expect(await fs.readFile(other, 'utf8')).toBe('other folder'); await expect(fs.stat(f.source)).rejects.toThrow();
+  });
+
+  it.each(['source edit', 'source delete', 'target edit', 'target move', 'target delete', 'target swap'])('rejects %s after the confirmation snapshot', async variant => {
+    const f = await conflict();
+    const changed = variant.startsWith('source') ? f.source : f.destination;
+    if (variant.endsWith('edit')) await fs.writeFile(changed, 'modified');
+    else if (variant.endsWith('delete')) await fs.unlink(changed);
+    else { await fs.rename(changed, changed + '.moved'); if (variant.endsWith('swap')) await fs.writeFile(changed, 'original'); }
+    const before = await fs.readFile(f.destination).catch(() => undefined);
+    await expect(f.move()).rejects.toThrow(); expect(f.commit).not.toHaveBeenCalled();
+    expect(await fs.readFile(f.destination).catch(() => undefined)).toEqual(before);
+    if (variant !== 'source delete') expect(await fs.stat(f.source)).toBeTruthy();
+    expect((await f.entries()).filter(x => x.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('rejects self hardlinks, a directory, a junction outside the Vault and a different approved path', async () => {
+    const f = await conflict();
+    await fs.link(f.source, path.join(f.root, 'alias'));
+    await fs.symlink(f.directory, path.join(f.root, 'junction'), process.platform === 'win32' ? 'junction' : 'dir');
+    for (const target of ['alias', '资料', 'junction/Report.HTML']) {
+      await expect(f.importer.inspectTarget(f.inspection, f.root, target)).rejects.toThrow();
+    }
+    await expect(f.importer.move(f.inspection, 'other', f.host, undefined, f.approval)).rejects.toThrow('已改变');
+    expect(await fs.readFile(f.source, 'utf8')).toBe('source'); expect(await f.entries()).toEqual(['Report.HTML']);
+  });
+
+  it.each(['wx', 'write', 'space', 'digest', 'rename', 'cancel', 'late target edit', 'foreign staging'])('preserves both sides and respects staging ownership on %s', async failure => {
+    const controller = new AbortController();
+    let stage = '';
+    const f = await conflict('Report.HTML', Buffer.alloc(2 * 1024 * 1024 + 33, 0xff), {
+      open: async (...args) => {
+        const name = String(args[0]);
+        if (name.endsWith('.tmp') && args[1] === 'wx' && failure === 'wx') throw Object.assign(new Error(), { code: 'EACCES' });
+        const handle = await fs.open(...args);
+        if (name.endsWith('.tmp') && args[1] === 'wx') {
+          stage = name;
+          const write = handle.write.bind(handle);
+          Object.assign(handle, { write: async (...values: Parameters<typeof handle.write>) => {
+            const written = await write(...values);
+            if (failure === 'write' || failure === 'space') throw Object.assign(new Error('写入中断'), { code: failure === 'space' ? 'ENOSPC' : 'EIO' });
+            if (failure === 'cancel') controller.abort();
+            return written;
+          } });
+        } else if (name.endsWith('.tmp') && args[1] === 'r' && failure === 'digest') {
+          const read = handle.read.bind(handle);
+          Object.assign(handle, { read: async (...values: Parameters<typeof handle.read>) => {
+            const result = await read(...values); if (result.bytesRead) (result.buffer as Buffer)[0] ^= 0xff; return result;
+          } });
+        }
+        return handle;
+      },
+      rename: async (...args) => {
+        if (failure === 'rename') throw Object.assign(new Error('locked'), { code: 'EBUSY' });
+        if (failure === 'foreign staging') {
+          await fs.rename(stage, stage + '.held'); await fs.writeFile(stage, 'another transaction');
+          throw new Error('stage exchanged');
+        }
+        return fs.rename(...args);
+      }
+    });
+    if (failure === 'late target edit') f.host.validate = vi.fn().mockResolvedValueOnce(undefined).mockImplementationOnce(() => fs.writeFile(f.destination, 'new independent edit'));
+    await expect(f.move(controller.signal)).rejects.toThrow();
+    expect(await fs.readFile(f.destination, 'utf8')).toBe(failure === 'late target edit' ? 'new independent edit' : 'original');
+    expect((await fs.stat(f.source)).size).toBe(2 * 1024 * 1024 + 33); expect(f.commit).not.toHaveBeenCalled();
+    if (failure === 'foreign staging') expect(await fs.readFile(stage, 'utf8')).toBe('another transaction');
+    else expect(await f.entries()).toEqual(['Report.HTML']);
+  });
+
+  it.each(['source', 'target'])('detects equal-length %s edits even if the filesystem reports an identical version stamp', async side => {
+    const f = await conflict();
+    const changed = side === 'source' ? f.source : f.destination;
+    const initial = await fs.lstat(changed, { bigint: true });
+    const fake = new LocalFileImporter({ ...runtime, fs: { ...fs,
+      lstat: vi.fn(async (...args: Parameters<typeof fs.lstat>) => String(args[0]) === changed ? initial : fs.lstat(...args)) as typeof fs.lstat,
+      open: async (...args) => {
+        const handle = await fs.open(...args);
+        if (String(args[0]) === changed) Object.assign(handle, { stat: async () => initial });
+        return handle;
+      }
+    } });
+    await fs.writeFile(changed, side === 'source' ? 'SOURCE' : 'ORIGINAL');
+    await expect(fake.move(f.inspection, f.targetPath, f.host, undefined, f.approval)).rejects.toThrow('已改变');
+    expect(await fs.readFile(f.destination, 'utf8')).toBe(side === 'target' ? 'ORIGINAL' : 'original');
+    expect(await fs.stat(f.source)).toBeTruthy(); expect(await f.entries()).toEqual(['Report.HTML']);
+  });
+
+  it('refuses a readonly target and never truncates it', async () => {
+    const f = await conflict(); await fs.chmod(f.destination, 0o444);
+    try {
+      const approval = await f.importer.inspectTarget(f.inspection, f.root, f.targetPath);
+      await expect(f.importer.move(f.inspection, f.targetPath, f.host, undefined, approval)).rejects.toThrow('只读');
+      expect(await fs.readFile(f.destination, 'utf8')).toBe('original');
+    } finally { await fs.chmod(f.destination, 0o666); }
+  });
+
+  it.each(['refresh', 'validation after publish', 'commit'])('reports the published target and retained source on %s failure', async phase => {
+    const f = await conflict();
+    if (phase === 'refresh') f.host.resolve = async () => { throw new Error('watcher timeout'); };
+    if (phase === 'validation after publish') f.validate.mockImplementationOnce(() => {}).mockImplementationOnce(() => {}).mockImplementationOnce(() => { throw new Error('文档已改变'); });
+    if (phase === 'commit') f.commit.mockRejectedValue(new Error('editor closed'));
+    await expect(f.move()).rejects.toThrow(/目标内容已替换.*来源已保留/);
+    expect(await fs.readFile(f.destination, 'utf8')).toBe('source'); expect(await fs.readFile(f.source, 'utf8')).toBe('source');
+    expect(await f.entries()).toEqual(['Report.HTML']); expect(f.commit).toHaveBeenCalledTimes(phase === 'commit' ? 1 : 0);
+  });
+
+  it('allows only one competing transaction even across importer instances', async () => {
+    const f = await conflict();
+    const other = new LocalFileImporter(runtime);
+    const results = await Promise.allSettled([f.move(), other.move(f.inspection, f.targetPath, f.host, undefined, f.approval)]);
+    expect(results.map(r => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(f.commit).toHaveBeenCalledOnce(); expect(await f.entries()).toEqual(['Report.HTML']);
+  });
+
+  it('preserves the actual casing of an existing NTFS name', async () => {
+    if (process.platform !== 'win32') return;
+    const f = await conflict();
+    const approval = (await f.importer.inspectTarget(f.inspection, f.root, f.targetPath.toLowerCase()))!;
+    expect(approval.targetPath).toBe(f.targetPath);
+    await f.importer.move(f.inspection, approval.targetPath, f.host, undefined, approval);
+    expect(await f.entries()).toEqual(['Report.HTML']);
+  });
+});
+
 describe('read-only inspection', () => {
   it('recognizes exact in-Vault paths and makes no copy', async () => {
     const f = await fixture();

@@ -10,7 +10,7 @@ import { layoutIdentities } from '../src/core/layout-identity';
 
 const ui = vi.hoisted(() => ({ pickers: [] as FakePicker[], modals: [] as { buttons: { text: string; onclick?: () => void }[] }[], notices: [] as string[] }));
 interface FakePicker {
-  actions: { validate(): void; existing(file: unknown): Promise<void>; create(folder: string, name: string, window: boolean): Promise<void>; closed(): void };
+  actions: { validate(): void; replaced(file: unknown): Promise<void>; validateReplacement(path: string): Promise<void>; existing(file: unknown): Promise<void>; create(folder: string, name: string, window: boolean): Promise<void>; closed(): void };
   options?: { currentTarget?: string }; closed: boolean;
 }
 vi.mock('../src/ui/file-picker', () => ({ FilePicker: class {
@@ -70,6 +70,26 @@ function note(initial: string, initialMode: 'source' | 'preview') {
   return { view, bridge, editor, scroller, mutate: (next: string) => { text = next; bridge.text = next; bridge.revision++; } };
 }
 beforeEach(() => { ui.pickers.length = 0; ui.modals.length = 0; ui.notices.length = 0; vi.mocked(resolveSubpath).mockReset(); });
+describe('content replacement from an existing card', () => {
+  it.each([false, true])('keeps short link, old subpath, alias and neighbor unchanged (reading %s)', async reading => {
+    const raw = 'before [[new/b.html#Old|原名]] and [[new/b.html]] after', s = fixture(raw, reading);
+    s.open(0); const picker = ui.pickers[0];
+    await picker.actions.validateReplacement(s.file.path); await picker.actions.replaced(s.file);
+    expect(s.origin.editor.transaction).not.toHaveBeenCalled(); expect(s.origin.view.setState).not.toHaveBeenCalled();
+    expect(s.origin.editor.getValue()).toBe(raw); expect(s.origin.scroller.scrollTop).toBe(123);
+    expect(ui.modals).toHaveLength(0); expect(picker.closed).toBe(true);
+  });
+  it('guards an unrelated card, the source note, and a stale reading snapshot before publication', async () => {
+    const s = fixture('before [[new/b.html|a]]', true); s.open(0);
+    const check = ui.pickers[0].actions.validateReplacement;
+    await expect(check('other/b.html')).rejects.toThrow('其他文件');
+    await expect(check('Source.md')).rejects.toThrow('源笔记');
+    s.app.vault.read.mockResolvedValue('disk changed');
+    await expect(check(s.file.path)).rejects.toThrow('已改变');
+    expect(s.origin.editor.transaction).not.toHaveBeenCalled();
+  });
+});
+
 describe('unlink from a card', () => {
   it('unwraps one duplicate while preserving the remaining manual layout records', async () => {
     const s = fixture(), before = s.origin.editor.getValue(), links = parseWikilinks(before), oldKeys = layoutIdentities(before, links);

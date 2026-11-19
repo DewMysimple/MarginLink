@@ -1,5 +1,22 @@
 # MarginLink 验证记录
 
+## 0.3.3 同名附件直接替换 · 2026-11-19
+
+起点为 `codex/test01` 的 4546bb6。修改前在本工作树实跑 54 文件、535 项测试及 lint、build。最终 0.3.3 在 Windows 本地 NTFS 上通过 54 文件、574 项测试，`npm run lint`、`npm run build`、`npm run package` 全部退出 0。最低版本 1.10.6 和布局 schema 2 保持原值。
+
+| 检查 | 本轮证据 |
+| --- | --- |
+| 真实宿主 | Windows Obsidian 1.10.6、1.15.1 的独立 Vault/profile 各通过完整专项，均为 0.3.3 最终包，页面异常数为 0。四种取消方式分别为取消按钮、默认焦点按 Enter、Escape 和关闭遮罩；逐次核对两端字节及源文。 |
+| 已有关联与预览 | 同名但异目录的同路径末段、另一篇笔记、同篇两次引用、原始路径拼写、别名及旧标题片段均逐项核对。从已有卡片替换等长度 Markdown 后，源笔记磁盘字节、光标、滚动位置和两张卡片保留，真实预览从 OLD CONTENT 变为 NEW CONTENT，metadataCache 标题由 Old 变为 New。外部文件与目标内容完全相同时也能完成。 |
+| 真实交互与回归 | 普通 HTM 导入、HTML 和 PNG 替换、库内绝对路径关联、选目录新建 Markdown、非法文件名、单次重链、原生撤销和重做通过。阅读模式可在同笔记编辑分栏打开时更新附件；确认期间从另一分栏修改正文会中止，保留独立编辑与来源。 |
+| 失败与关闭 | 确认期间改动目标，宿主中拒绝覆盖；发布后在 Vault modify 回调改变选区，提示目标已替换、来源保留，导入面板关闭，正文未建链。禁用插件取消待确认操作。通过在第一块真实 staging 写入后暂缓下一块，关闭实际窗口，再从磁盘核实旧目标完整、来源完整、临时文件已清理。 |
+| 二进制与故障注入 | 单测覆盖 HTML/HTM 的 UTF-8、CRLF，XMind、PDF、PNG、JPEG、MP3 的多个 1 MiB 分块和尾块，比对全文件 SHA-256。模拟空间不足、权限拒绝、写入中断、校验失败、rename 失败、版本戳重复、来源/目标删除或更换、另一事务占用 staging 路径、刷新失败及提交失败。另以真实 NTFS 独占句柄验证 rename 返回 EPERM、旧目标可读。 |
+| 发布包 | ZIP 内五个文件与 dist 安装目录及两次完整宿主验收载荷逐字节相等，CRC 通过；manifest、package、锁文件根条目、versions 对齐。ZIP SHA-256 为 `0321d0a54e6121f1b7705e5a11ab9215c8a167d04b17b9a51eac28dda9f59d6b`。 |
+
+复验时运行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch-navigation-test.ps1 -Port 9244`，将输出路径末尾的 GUID 传给 `node scripts/desktop-replacement.mjs <GUID>`。最低宿主在启动命令后加 `-HostAsar bundled`。脚本核对 GUID、库路径及插件字节再创建夹具。早期测试发现相同大小且时间戳相同的目标改写可能只靠 stat 漏检，最终在确认快照中加入两端内容摘要，并以固定版本戳进行回归。
+
+实测范围为本地 Windows NTFS。macOS、Linux、网络盘、云同步冲突和系统断电未验证。发布使用单次同目录 rename；标准 Node 文件接口没有跨进程的条件式 rename，其他进程在最后一次身份校验与系统调用之间仍存在竞态。正常关闭及抛错执行身份核验清理，强杀进程或断电可能留下仅含新内容的临时文件。宿主有五秒确认窗口，超时按部分成功处理，保留来源。审计与事务边界见[同名替换审计](docs/same-name-replacement-audit.md)和[实施方案](docs/same-name-replacement-plan.md)。
+
 ## 0.3.2 取消链接与 300 px 留白 · 2026-11-18
 
 基线 `main/10a92fc`。Windows 隔离桌面通过真实右键菜单依次解除第二个相同引用和一个失效的标题链接。实时预览、源码和阅读模式均核对源文本、卡片数量、其他引用和目标文件内容。另用 CRLF 笔记从阅读模式操作。在编辑器按两次 Ctrl+Z 和一次 Ctrl+Y，逐步核对文本与卡片恢复结果。

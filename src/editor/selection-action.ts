@@ -1,7 +1,7 @@
 import { MarkdownView, Modal, Notice, parseLinktext, resolveSubpath, type App, type TFile } from 'obsidian';
 import { FilePicker } from '../ui/file-picker';
 import { formatWikilink } from '../core/link-formatter';
-import { exactTarget } from '../core/link-resolver';
+import { exactTarget, resolveLink } from '../core/link-resolver';
 import { validateSelection, validateSnapshot, type SelectionSnapshot } from './selection-validation';
 import type { EditorBridge } from './editor-extension';
 import type { Side, WikilinkOccurrence } from '../types';
@@ -186,9 +186,30 @@ export class SelectionAction {
       picker.close();
       this.changed();
     };
+    const validateReplacement = async (path: string) => {
+      validate();
+      if (path === operation.sourcePath) throw new Error('目标是本次操作的源笔记，请从另一篇笔记更新它。');
+      if (!operation.occurrence) return;
+      if (resolveLink(this.app, operation.occurrence.target, operation.sourcePath).file?.path !== path) {
+        throw new Error('这张卡片指向其他文件。请从对应目标的卡片或新选区更新附件。');
+      }
+      if (mode === 'preview' && (!view.file || normalized(await this.app.vault.read(view.file)) !== operation.text)) {
+        throw new Error('阅读视图的源文件已改变，请重新选择。');
+      }
+      validate();
+    };
     try { validate(); } catch (error) { new Notice(error instanceof Error ? error.message : '源链接已失效。'); return; }
     const picker = new FilePicker(this.app, operation.label, this.preferences(), {
-      validate,
+      validate, validateReplacement,
+      replaced: async file => {
+        await validateReplacement(file.path);
+        if (this.app.vault.getFileByPath(file.path) !== file) throw new Error('目标已改变，请重新检查关联。');
+        if (operation.occurrence) {
+          // The native occurrence already resolves here, including its original spelling and subpath.
+          picker.close();
+        } else await write(file, exactTarget(this.app, file, operation.sourcePath));
+        if (mode === 'source') view.editor.focus();
+      },
       existing: async file => {
         await write(file, exactTarget(this.app, file, operation.sourcePath));
         if (mode === 'source') view.editor.focus();

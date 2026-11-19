@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { App, TFile } from 'obsidian';
 import { FilePicker, type PickerActions } from '../src/ui/file-picker';
 import { readPreferences } from '../src/types';
-import type { ImportHost, LocalFileInspection } from '../src/core/local-file-import';
+import { PublishedImportError, type ImportHost, type LocalFileInspection } from '../src/core/local-file-import';
 
 const focusDocument: { activeElement?: Element; defaultView: { addEventListener(): void; removeEventListener(): void }; createDocumentFragment(): Element } = {
   defaultView: { addEventListener() {}, removeEventListener() {} }, createDocumentFragment: () => new Element()
@@ -40,7 +40,7 @@ class Element {
   all(): Element[] { return [this, ...this.children.flatMap(child => child.all())]; }
   text(): string { return this.all().map(child => child.textContent).join('\n'); }
 }
-const state = vi.hoisted(() => ({ inspect: vi.fn(), move: vi.fn(), notices: [] as unknown[] }));
+const state = vi.hoisted(() => ({ inspect: vi.fn(), inspectTarget: vi.fn(), move: vi.fn(), notices: [] as unknown[], dialogs: [] as { contentEl: Element; close(): void }[] }));
 vi.mock('obsidian', () => ({
   Modal: class {
     contentEl = new Element(); modalEl = new Element(); containerEl = new Element();
@@ -49,7 +49,7 @@ vi.mock('obsidian', () => ({
     setTitle() {}
     open() {
       if (this.mockOpen) return;
-      this.mockOpen = true; this.containerEl.isConnected = true;
+      state.dialogs.push(this); this.mockOpen = true; this.containerEl.isConnected = true;
       (this as unknown as FilePicker).onOpen();
       // The real host chooses its initial focus after onOpen, overriding a
       // synchronous focus inside FilePicker.onOpen with the first tab button.
@@ -64,15 +64,15 @@ vi.mock('obsidian', () => ({
 vi.mock('../src/core/local-file-import', async importOriginal => ({
   ...await importOriginal<typeof import('../src/core/local-file-import')>(),
   desktopFileRuntime: () => ({}),
-  LocalFileImporter: class { inspect = state.inspect; move = state.move; }
+  LocalFileImporter: class { inspect = state.inspect; inspectTarget = state.inspectTarget; move = state.move; }
 }));
 const settle = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 const nativePath = 'C:\\Downloads\\中文 streams.html';
 const inspection = (source = nativePath): LocalFileInspection => ({ source, canonical: source, name: '中文 streams.html', size: 5 } as LocalFileInspection);
 function fixture(files: string[] = []) {
   const indexed = new Map(files.map(path => [path, { path } as TFile]));
-  const actions: PickerActions = { existing: vi.fn(), create: vi.fn(async () => {}), closed: vi.fn(), validate: vi.fn() };
-  const app = { vault: { adapter: { getBasePath: () => 'C:\\Vault' }, getFiles: () => [...indexed.values()], getFileByPath: (p: string) => indexed.get(p) ?? null,
+  const actions: PickerActions = { existing: vi.fn(), validateReplacement: vi.fn(), replaced: vi.fn(), create: vi.fn(async () => {}), closed: vi.fn(), validate: vi.fn() };
+  const app = { vault: { on: vi.fn(), offref: vi.fn(), adapter: { getBasePath: () => 'C:\\Vault' }, getFiles: () => [...indexed.values()], getFileByPath: (p: string) => indexed.get(p) ?? null,
     getFolderByPath: (p: string) => p === '资料' ? { path: p } : null, getAbstractFileByPath: (p: string) => indexed.get(p) ?? null } } as unknown as App;
   const picker = new FilePicker(app, 'streams', readPreferences({ newNoteFolders: ['资料'] }), actions, { currentTarget: 'old.html' });
   picker.open();
@@ -82,7 +82,7 @@ function fixture(files: string[] = []) {
   const query = (text: string) => { input.value = text; input.oninput!(); };
   return { picker, actions, content, input, button, query, indexed };
 }
-beforeEach(() => { state.inspect.mockReset(); state.move.mockReset(); state.notices.length = 0; focusDocument.activeElement = undefined; });
+beforeEach(() => { state.dialogs.length = 0; state.inspect.mockReset(); state.inspectTarget.mockReset().mockResolvedValue(undefined); state.move.mockReset(); state.notices.length = 0; focusDocument.activeElement = undefined; });
 
 describe('picker input focus after the host opens the dialog', () => {
   it('overrides the host tab focus so direct typing immediately searches files without scrolling', () => {
@@ -176,14 +176,46 @@ describe('one file picker for name search and local import', () => {
     expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get('资料/exact.html'));
     expect(state.move).not.toHaveBeenCalled();
   });
-  it('offers an explicit existing-file branch for collisions and preserves the external source', async () => {
+  it.each(['取消', '关闭', '父窗口关闭', '替换文件'])('requires the exact two-action confirmation and handles %s once', async choice => {
+    const target = '资料/中文 streams.html', approved = { targetPath: target };
+    state.inspect.mockResolvedValue(inspection()); state.inspectTarget.mockResolvedValue(approved);
+    state.move.mockResolvedValue({ sourceRemoved: true, targetPath: target });
+    const f = fixture([target, 'other/中文 streams.html']); f.query(nativePath); await settle();
+    const dialog = state.dialogs[1], buttons = dialog.contentEl.all().filter(el => el.tagName === 'button');
+    expect(buttons.map(b => b.textContent)).toEqual(['取消', '替换文件']);
+    expect(focusDocument.activeElement).toBe(buttons[0]);
+    expect(dialog.contentEl.text()).toContain('现有文件：' + target);
+    expect(dialog.contentEl.text()).toContain('新文件：中文 streams.html');
+    expect(dialog.contentEl.text()).toContain('无法恢复');
+    expect(f.button('确认替换…').disabled).toBe(true); expect(state.move).not.toHaveBeenCalled();
+    if (choice === '关闭') dialog.close();
+    else if (choice === '父窗口关闭') f.picker.close();
+    else { const button = buttons.find(b => b.textContent === choice)!; button.onclick!(); button.onclick!(); }
+    await settle();
+    if (choice === '替换文件') {
+      expect(state.move).toHaveBeenCalledOnce(); expect(state.move.mock.calls[0][4]).toBe(approved);
+      expect(state.notices).toContain('已替换文件，已清理库外来源：' + target);
+    } else expect(state.move).not.toHaveBeenCalled();
+    expect(f.actions.existing).not.toHaveBeenCalled();
+  });
+  it('discards a late collision if the user has already replaced the local path with another search', async () => {
+    let finish!: (found: { targetPath: string }) => void;
     state.inspect.mockResolvedValue(inspection());
-    const f = fixture(['资料/中文 streams.html']); f.query(nativePath); await settle();
-    expect(f.button('移动到仓库并关联').disabled).toBe(true);
-    const existing = f.button('使用已有文件（保留原件）');
-    expect(existing.hidden).toBe(false); existing.onclick!(); await settle();
-    expect(state.move).not.toHaveBeenCalled();
-    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get('资料/中文 streams.html'));
+    state.inspectTarget.mockImplementation(() => new Promise(done => { finish = done; }));
+    const f = fixture(['Other.md']); f.query(nativePath); await settle();
+    f.query('Other'); finish({ targetPath: '资料/中文 streams.html' }); await settle();
+    expect(state.dialogs).toHaveLength(1); expect(f.actions.validateReplacement).not.toHaveBeenCalled();
+    expect(f.content.text()).toContain('Other.md'); expect(state.move).not.toHaveBeenCalled();
+  });
+  it('dismisses the import action after publication fails to finish and reports recovery without replay', async () => {
+    const target = '资料/中文 streams.html';
+    state.inspect.mockResolvedValue(inspection()); state.inspectTarget.mockResolvedValue({ targetPath: target });
+    const message = '目标内容已替换，关联尚未确认，库外来源已保留。';
+    state.move.mockRejectedValue(new PublishedImportError(message));
+    const f = fixture([target]); f.query(nativePath); await settle();
+    state.dialogs[1].contentEl.all().find(e => e.textContent === '替换文件')!.onclick!(); await settle();
+    expect(f.actions.closed).toHaveBeenCalledOnce(); expect(state.notices).toContain(message);
+    expect(f.actions.replaced).not.toHaveBeenCalled(); expect(state.move).toHaveBeenCalledOnce();
   });
   it('deduplicates rapid confirms and awaits source commit before completing import', async () => {
     state.inspect.mockResolvedValue(inspection());

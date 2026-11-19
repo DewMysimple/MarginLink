@@ -83,11 +83,14 @@ try {
       await assert.rejects(access(source)); assert.equal(hash(await readFile(path.join('test-vault', filename))), hash(bytes));
       assert.equal(await text(), base.replace('streams', `[[${filename}|streams]]`));
     });
-    await check('same-name conflict can use existing file and keeps external original', async () => {
+    await check('canceling a same-name replacement preserves the attachment, source and selection', async () => {
       const source = path.join(sources, 'Note A.md'); await writeFile(source, 'external original');
       await reset(); await handle.click(); await pathInput().fill(source);
-      await picker.getByRole('button', { name: '使用已有文件（保留原件）', exact: true }).click(); await picker.waitFor({ state: 'hidden' });
-      assert.equal(await readFile(source, 'utf8'), 'external original'); assert.equal(await text(), base.replace('streams', '[[Note A.md|streams]]'));
+      const before = await readFile(path.resolve('test-vault/Note A.md'));
+      await page.locator('.margin-link-confirm').getByRole('button', { name: '取消', exact: true }).click();
+      await page.keyboard.press('Escape'); await picker.waitFor({ state: 'hidden' });
+      assert.equal(await readFile(source, 'utf8'), 'external original'); assert.equal(await text(), base);
+      assert.deepEqual(await readFile(path.resolve('test-vault/Note A.md')), before);
     });
     await check('exact vault path resolves to existing TFile with no move operation', async () => {
       await reset(); await handle.click(); await pathInput().fill('"' + path.resolve('test-vault/References/stages.html') + '"');
