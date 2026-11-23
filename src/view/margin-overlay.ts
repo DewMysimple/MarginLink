@@ -11,6 +11,7 @@ import type { LayoutStore } from '../core/layout-store';
 import { DragController } from '../editor/drag-controller';
 import { CardDragController, type CardDragContext } from './card-drag-controller';
 import { resolveLink } from '../core/link-resolver';
+import { originalLinkText } from '../core/relink';
 import type { FileRecognition } from '../core/file-recognition';
 import { canOpenInObsidian } from '../core/file-capabilities';
 import { lane, positionFromDrop, positionRelative, type Box, type LayoutInput, type Placement } from './layout-engine';
@@ -547,8 +548,17 @@ export class MarginOverlay {
       this.measurementsDirty = true; this.schedule();
       this.locateTimer = this.win.setTimeout(() => { this.clearLocated(); this.refreshFocus(true); }, 1500);
     }, occurrence => this.host.selection.relink(this.view, occurrence, bridge, source),
-    occurrence => void this.host.selection.unlink(this.view, occurrence, bridge, source));
+    occurrence => void this.host.selection.unlink(this.view, occurrence, bridge, source),
+    occurrence => void this.copyOriginal(occurrence));
     this.referenceList.position(this.hostRect, this.layoutInput?.viewport);
+  }
+  private async copyOriginal(occurrence: WikilinkOccurrence): Promise<void> {
+    try {
+      await this.win.navigator.clipboard.writeText(originalLinkText(occurrence));
+      new Notice('已复制原文');
+    } catch {
+      new Notice('无法写入剪贴板，请重试。');
+    }
   }
   private bindCard(key: string, card: Card): void {
     const { shell, button } = card;
@@ -580,19 +590,22 @@ export class MarginOverlay {
       if (card.group && card.group.members.length > 1) { this.showReferences(card); return; }
       const menu = new Menu();
       this.menus.add(menu); menu.onHide(() => this.menus.delete(menu));
-      const raw = card.anchor.occurrence.raw, source = this.layoutSource;
-      const valid = () => this.cards.get(key) === card && card.anchor.occurrence.raw === raw &&
+      const occurrence = card.anchor.occurrence, source = this.layoutSource;
+      const valid = () => this.cards.get(key) === card && card.anchor.occurrence.raw === occurrence.raw &&
         this.path === this.view.file?.path && this.layoutSource === source;
+      const validSource = () => valid() && source === (this.view.getMode() === 'source' ? this.bridge()?.text : this.view.data);
       menu.addItem(item => item.setTitle(this.pinned === key ? '取消固定高亮' : '固定此处关联高亮').setIcon('pin').onClick(() => {
         if (valid()) this.togglePin(key);
       }));
       menu.addItem(item => item.setTitle('重新链接文件…').setIcon('link-2').onClick(() => {
         if (valid()) this.host.selection.relink(this.view, card.anchor.occurrence, this.bridge());
       }));
+      menu.addItem(item => item.setTitle('复制原文').setIcon('copy').onClick(() => {
+        if (validSource()) void this.copyOriginal(occurrence);
+        else new Notice('引用已改变，请重新右键选择卡片。');
+      }));
       menu.addItem(item => item.setTitle('取消链接文件').setIcon('unlink').onClick(() => {
-        if (valid() && source === (this.view.getMode() === 'source' ? this.bridge()?.text : this.view.data)) {
-          void this.host.selection.unlink(this.view, card.anchor.occurrence, this.bridge());
-        }
+        if (validSource()) void this.host.selection.unlink(this.view, card.anchor.occurrence, this.bridge());
       }));
       if (!card.group) menu.addItem(item => item.setTitle(this.host.preferences.placementMode === 'manual' ? '重置此卡片初始位置' : '恢复此卡片初始位置').setIcon('rotate-ccw').onClick(() => {
         const layoutKey = card.anchor.layoutKey;

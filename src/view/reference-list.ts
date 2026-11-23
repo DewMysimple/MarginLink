@@ -33,7 +33,7 @@ export class ReferenceList {
   }
   open(owner: HTMLButtonElement, group: ReferenceGroup, source: string, headings: HeadingCache[] | undefined,
     valid: () => boolean, locate: (o: WikilinkOccurrence, line: number) => void,
-    relink: (o: WikilinkOccurrence) => void, unlink: (o: WikilinkOccurrence) => void): void {
+    relink: (o: WikilinkOccurrence) => void, unlink: (o: WikilinkOccurrence) => void, copy: (o: WikilinkOccurrence) => void): void {
     const panel = this.panel = this.root.createDiv({ cls: 'margin-link-reference-list', attr: { role: 'group', 'aria-label': '源笔记引用列表' } });
     this.owner = owner; owner.setAttribute('aria-expanded', 'true');
     panel.addEventListener('mousedown', event => { if ((event.target as HTMLElement).closest('button')) event.preventDefault(); });
@@ -47,6 +47,9 @@ export class ReferenceList {
       };
       row.createEl('button', { text: '重新链接此处引用' }).onclick = () => {
         if (valid()) { this.close(); relink(occurrence); }
+      };
+      row.createEl('button', { text: '复制原文' }).onclick = () => {
+        if (valid()) copy(occurrence);
       };
       row.createEl('button', { text: '取消此处链接' }).onclick = () => {
         if (valid()) { this.close(); unlink(occurrence); }

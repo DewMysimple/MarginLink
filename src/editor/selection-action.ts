@@ -7,7 +7,7 @@ import type { EditorBridge } from './editor-extension';
 import type { Side, WikilinkOccurrence } from '../types';
 import { newNotePath, type NewNotePreferences } from '../core/new-note';
 import type { LayoutStore } from '../core/layout-store';
-import { checkedOccurrence, relinkLayoutAliases, relinkText } from '../core/relink';
+import { checkedOccurrence, originalLinkText, relinkLayoutAliases, relinkText } from '../core/relink';
 import { preserveRelinkViewport } from './relink-viewport';
 
 interface ActionContext {
@@ -62,7 +62,7 @@ export class SelectionAction {
     try {
       const operation = this.cardOperation(view, occurrence, bridge, listSource);
       const { replace } = this.prepareEdit(view, operation, bridge);
-      await replace(operation.occurrence.alias || operation.occurrence.target);
+      await replace(originalLinkText(operation.occurrence));
       this.changed();
     } catch (error) { new Notice(error instanceof Error ? error.message : '无法取消链接文件。'); }
   }

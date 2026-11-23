@@ -1,8 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { checkedOccurrence, relinkLayoutAliases, relinkText } from '../src/core/relink';
+import { checkedOccurrence, originalLinkText, relinkLayoutAliases, relinkText } from '../src/core/relink';
 import { parseWikilinks } from '../src/core/wikilink-parser';
 import { layoutIdentities } from '../src/core/layout-identity';
 import { LayoutStore } from '../src/core/layout-store';
+
+describe('original text of one Wikilink occurrence', () => {
+  it.each([
+    ['[[详细分析/Vocabulary/imperative_languages.html|imperative languages]]', 'imperative languages'],
+    ['[[same| 原文  text ]]', ' 原文  text '],
+    ['[[Folder/Note#标题]]', 'Folder/Note#标题'],
+    ['[[Folder/Note#^block|]]', 'Folder/Note#^block']
+  ])('extracts only the original text from %s', (raw, expected) => {
+    expect(originalLinkText(parseWikilinks(raw)[0])).toBe(expected);
+  });
+});
 
 describe('one occurrence relinking and layout continuity', () => {
   it('changes only the second identical occurrence and preserves its exact alias and its neighbor placement across undo/redo', () => {

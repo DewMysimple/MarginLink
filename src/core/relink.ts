@@ -9,6 +9,10 @@ export function checkedOccurrence(text: string, occurrence: WikilinkOccurrence):
   return current;
 }
 
+export function originalLinkText(occurrence: WikilinkOccurrence): string {
+  return occurrence.alias || occurrence.target;
+}
+
 export function relinkText(occurrence: WikilinkOccurrence, path: string, subpath = ''): string {
   // Validate the new filename independently of an existing alias, whose exact
   // bytes (including an explicit empty alias) belong to the source document.
