@@ -143,7 +143,7 @@ describe('shared corridor batch rendering', () => {
 
 function routed(key: string, points: Point[], side: 'left' | 'right' = 'right'): RoutedConnector {
   const segments: Segment[] = points.slice(1).map((to, index) => ({ from: points[index], to }));
-  return { input: { key, fragments: [], card: { x: 0, y: 0, width: 84, height: 84 } }, side, fingerprint: key, originY: 0,
+  return { input: { key, fragments: [], card: { x: 0, y: 0, width: 84, height: 84 } }, side, fingerprint: key, originX: 0, originY: 0,
     connector: { choice: { source: 'bottom', target: 'left', fragment: 0 }, path: `M ${points[0].x} ${points[0].y}` + points.slice(1).map(p => ` L ${p.x} ${p.y}`).join(''), segments, points } };
 }
 describe('continuous overlap partitioning', () => {

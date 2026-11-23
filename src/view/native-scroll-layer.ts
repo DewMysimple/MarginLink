@@ -16,7 +16,8 @@ export class NativeScrollLayer {
     this.canvas.className = 'margin-link-decoration-canvas';
     this.element.appendChild(this.canvas);
   }
-  mount(scroller: HTMLElement, body: HTMLElement, host: DOMRect, scrollTop: number): void {
+  mount(body: HTMLElement, bodyRect: DOMRect, host: DOMRect, scrollTop: number,
+    viewport: { left: number; top: number; width: number }): number {
     const parent = body.closest<HTMLElement>('.cm-sizer') ?? body;
     if (this.parent !== parent) {
       this.detach(); this.parent = parent;
@@ -28,22 +29,28 @@ export class NativeScrollLayer {
     // same element. Repair that host-owned removal without resetting position
     // ownership, the canvas, cards, or cached document coordinates.
     if (this.element.parentElement !== parent) parent.appendChild(this.element);
-    const origin = parent.getBoundingClientRect(), viewport = scroller.getBoundingClientRect();
-    const left = viewport.left + scroller.clientLeft;
+    const origin = parent === body ? bodyRect : parent.getBoundingClientRect();
+    const left = viewport.left;
     const sizerTop = origin.top + parent.clientTop + scrollTop;
-    const top = Math.min(0, viewport.top + scroller.clientTop - sizerTop);
+    const top = Math.min(0, viewport.top - sizerTop);
+    const sizerLeft = origin.left + parent.clientLeft, height = parent.clientHeight;
     const stable = (value: number) => Math.round(value * 10000) / 10000;
     this.style(this.element, 'top', `${stable(top)}px`);
-    this.style(this.element, 'left', `${stable(left - origin.left - parent.clientLeft)}px`);
-    this.style(this.element, 'width', `${scroller.clientWidth}px`);
+    this.style(this.element, 'left', `${stable(left - sizerLeft)}px`);
+    this.style(this.element, 'width', `${viewport.width}px`);
     this.style(this.canvas, 'transform', `translate(${stable(host.left - left)}px, ${stable(host.top - sizerTop - top)}px)`);
     this.style(this.canvas, 'width', `${host.width}px`);
-    this.style(this.canvas, 'height', `${parent.clientHeight}px`);
+    this.style(this.canvas, 'height', `${height}px`);
+    return height;
   }
   private style(element: HTMLElement, property: string, value: string): void {
     let styles = this.styles.get(element);
     if (!styles) { styles = new Map(); this.styles.set(element, styles); }
     if (styles.get(property) !== value) { element.style.setProperty(property, value); styles.set(property, value); }
+  }
+  reattachAfterRemoval(target: Node): void {
+    const parent = this.parent;
+    if (parent === target && parent.isConnected && this.element.parentElement !== parent) parent.appendChild(this.element);
   }
   contains(node: Node): boolean { return node === this.element || this.element.contains(node); }
   detach(): void {

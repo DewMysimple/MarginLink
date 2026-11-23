@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EditorView, ViewUpdate } from '@codemirror/view';
 import { MarkdownView, type App, type PluginManifest } from 'obsidian';
 import MarginLinkPlugin from '../src/main';
 import { SETTINGS_VIEW_TYPE } from '../src/ui/settings-view';
 import { layoutIdentities } from '../src/core/layout-identity';
 import { parseWikilinks } from '../src/core/wikilink-parser';
+import { EditorBridge } from '../src/editor/editor-extension';
 import { MarginOverlay } from '../src/view/margin-overlay';
 
 const confirmations = vi.hoisted(() => ({ actions: [] as (() => void)[] }));
@@ -28,7 +30,6 @@ vi.mock('obsidian', () => ({
 vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} resetLayout() {} freezeLayout() { return true; } destroy() {} } }));
 vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { clear() {} } }));
 vi.mock('../src/editor/selection-action', () => ({ SelectionAction: class { cancel() {} } }));
-vi.mock('../src/editor/editor-extension', () => ({ editorExtension: () => undefined }));
 
 function deferred() {
   let resolve!: () => void;
@@ -37,7 +38,7 @@ function deferred() {
 }
 function note(path: string): MarkdownView {
   return Object.assign(Object.create(MarkdownView.prototype) as MarkdownView, {
-    file: { path }, containerEl: new EventTarget(), getMode: () => 'source', editor: { getValue: () => '' }
+    file: { path }, containerEl: new EventTarget(), contentEl: { contains: () => false }, getMode: () => 'source', editor: { getValue: () => '' }
   });
 }
 function leaf() {
@@ -158,6 +159,43 @@ it('keeps the new active note’s pointer gesture when native focus reports leaf
   handlers.get('file-open')?.();
   expect(cancel.mock.contexts.map(overlay => (overlay as MarginOverlay).view)).toEqual([a, b]);
   plugin.onunload();
+});
+
+it('redraws only the emitting source pane for local CodeMirror changes', async () => {
+  const a = note('A.md'), aSplit = note('A.md'), b = note('B.md');
+  const { plugin } = fixture([a, aSplit, b]); await plugin.onload();
+  const schedule = vi.spyOn(MarginOverlay.prototype, 'schedule');
+  const cm = { dom: {}, state: { doc: '[[target]]' } } as unknown as EditorView;
+  vi.spyOn(a.contentEl, 'contains').mockImplementation(node => node === cm.dom);
+  const scheduledViews = () => schedule.mock.contexts.map(overlay => (overlay as MarginOverlay).view);
+  const bridge = new EditorBridge(cm, plugin);
+  expect(scheduledViews()).toEqual([a, aSplit, b]);
+  for (const flag of ['geometryChanged', 'viewportChanged', 'selectionSet', 'focusChanged'] as const) {
+    schedule.mockClear();
+    bridge.update({ [flag]: true } as unknown as ViewUpdate);
+    expect(scheduledViews()).toEqual([a]);
+  }
+  schedule.mockClear();
+  bridge.update({ docChanged: true, state: { doc: '[[new target]]' } } as unknown as ViewUpdate);
+  expect(scheduledViews()).toEqual([a, aSplit, b]);
+  schedule.mockClear();
+  bridge.destroy();
+  expect(scheduledViews()).toEqual([a, aSplit, b]);
+  plugin.onunload();
+});
+
+it('measures links once in document order across disjoint visible ranges', () => {
+  const doc = '[[Before]] [[Long target|visible alias]] [[Folded]] [[Visible]] [[After]]';
+  const [before, split, , visible, after] = parseWikilinks(doc);
+  const domAtPos = vi.fn((_pos: number) => { throw new Error('Test has no mounted CodeMirror DOM'); });
+  const cm = { state: { doc }, domAtPos, visibleRanges: [
+    { from: before.end, to: split.start + 3 },
+    { from: split.end - 3, to: split.end },
+    { from: visible.start, to: after.start }
+  ] } as unknown as EditorView;
+  const bridge = new EditorBridge(cm, { bridges: new Set(), refresh() {} });
+  bridge.anchors();
+  expect(domAtPos.mock.calls).toEqual([[split.start + split.raw.indexOf('|') + 1], [visible.start + 2]]);
 });
 
 it('reconciles a matching CRLF cache document against its LF editor while ignoring an older unsaved snapshot', async () => {

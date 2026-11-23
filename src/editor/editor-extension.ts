@@ -6,7 +6,7 @@ import { layoutIdentities } from '../core/layout-identity';
 
 export interface EditorHost {
   bridges: Set<EditorBridge>;
-  refresh(): void;
+  refresh(bridge?: EditorBridge): void;
   documentChanged?(bridge: EditorBridge): void;
 }
 export class EditorBridge {
@@ -31,8 +31,10 @@ export class EditorBridge {
       this.identities = layoutIdentities(this.text, this.parsed.links);
       this.hint = undefined;
       this.host.documentChanged?.(this);
+      this.host.refresh();
+    } else if (update.selectionSet || update.viewportChanged || update.geometryChanged || update.focusChanged) {
+      this.host.refresh(this);
     }
-    if (update.docChanged || update.selectionSet || update.viewportChanged || update.geometryChanged || update.focusChanged) this.host.refresh();
   }
   prefer(from: number, target: string, side: 'left' | 'right'): void {
     this.hint = { from, target, side, revision: this.revision };
@@ -63,16 +65,29 @@ export class EditorBridge {
   }
   anchors(): Anchor[] {
     const result: Anchor[] = [];
-    for (const occurrence of this.parsed.links) {
-      if (!this.cm.visibleRanges.some(r => occurrence.start < r.to && occurrence.end > r.from)) continue;
-      const aliasAt = occurrence.raw.indexOf('|');
-      const from = occurrence.start + (aliasAt >= 0 ? aliasAt + 1 : 2);
-      const range = this.range(from, occurrence.end - 2);
-      if (!range) continue;
-      const fragments = textFragments(range);
-      // Preserve the original layout reference independently of the chosen port.
-      const rect = Array.from(range.getClientRects()).filter(r => r.width > 0.5 && r.height > 0).at(-1);
-      if (rect && fragments.length) result.push({ key: String(occurrence.start), occurrence, rect, fragments, layoutKey: this.identities.get(occurrence.start) });
+    const links = this.parsed.links;
+    let next = 0;
+    for (const { from, to } of this.cm.visibleRanges) {
+      // Both links and visible spans are in document order. Keep the cursor
+      // past measured links so a link crossing a folded gap is visited once.
+      let low = next, high = links.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (links[middle].end <= from) low = middle + 1;
+        else high = middle;
+      }
+      next = low;
+      while (next < links.length && links[next].start < to) {
+        const occurrence = links[next++];
+        const aliasAt = occurrence.raw.indexOf('|');
+        const start = occurrence.start + (aliasAt >= 0 ? aliasAt + 1 : 2);
+        const range = this.range(start, occurrence.end - 2);
+        if (!range) continue;
+        const fragments = textFragments(range);
+        // Preserve the original layout reference independently of the chosen port.
+        const rect = Array.from(range.getClientRects()).filter(r => r.width > 0.5 && r.height > 0).at(-1);
+        if (rect && fragments.length) result.push({ key: String(occurrence.start), occurrence, rect, fragments, layoutKey: this.identities.get(occurrence.start) });
+      }
     }
     return result;
   }

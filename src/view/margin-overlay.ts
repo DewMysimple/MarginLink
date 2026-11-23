@@ -99,9 +99,17 @@ export class MarginOverlay {
   private scroller?: HTMLElement;
   private scrolling = false;
   private scrollIdleTimer?: number;
+  private resizing = false;
+  private resizeHoverRoutes = false;
+  private resizeIdleTimer?: number;
+  private resizePointer?: number;
+  private paneWidth?: number;
   private returning?: { visit: CardVisit; shift: number; applied: boolean; until: number };
   private cancelReturn = (): void => { this.returning = undefined; };
   private geometrySignature = '';
+  private textGeometry = '';
+  private bodyTop?: number;
+  private bodyHeight?: number;
   private hostRect?: DOMRect;
   private preview?: TargetPreview;
   private groups?: GroupControls;
@@ -137,33 +145,38 @@ export class MarginOverlay {
         this.routePlacements = this.routePlacements.map(c => c.key === key ? p : c);
         this.place(card, p);
         for (const [id, other] of this.cards) if (id !== key) this.place(other, other.placement);
-        this.paintConnectors();
-        this.updateContinuations();
+        const scope = this.resizeRouteScope(this.highlighted);
+        this.paintConnectors(scope);
+        this.updateContinuations(scope);
       }
       else this.schedule();
     }, (key, relative) => this.savePosition(key, relative));
     this.mutation = new MutationObserver(records => {
-      if (records.some(r => {
+      const removedLayer = !this.decorations.element.isConnected && records.find(r =>
+        r.type === 'childList' && [...r.removedNodes].includes(this.decorations.element));
+      // A reading section refresh can remove the layer after the frame already
+      // ran. Restore the same live parent before paint; still refresh geometry.
+      if (removedLayer && this.mode === 'preview' && this.view.getMode() === 'preview' &&
+        this.path === this.view.file?.path && this.confirmedSource === this.path && !this.root.hidden &&
+        this.host.preferences.enabled && container.contains(removedLayer.target)) this.decorations.reattachAfterRemoval(removedLayer.target);
+      const measurementsChanged = records.some(r => {
         // Style records for transient ink or a dismissed panel can be delivered
         // after removal. Detached targets cannot change this pane's geometry.
         if (!container.contains(r.target) || this.root.contains(r.target) || this.decorations.contains(r.target)) return false;
-        if (r.type === 'childList' && [...r.removedNodes].includes(this.decorations.element) && !this.decorations.element.isConnected) {
-          this.schedule();
-          return false;
-        }
         if (r.type === 'childList' && [...r.addedNodes, ...r.removedNodes].every(node => this.decorations.contains(node))) return false;
         if (r.type === 'attributes' && r.attributeName === 'class') {
           const strip = (v: string) => v.replace(/\bmargin-link-[\w-]+\b/g, '').trim();
           if (strip(r.oldValue ?? '') === strip((r.target as Element).getAttribute('class') ?? '')) return false;
         }
         return true;
-      })) { this.measurementsDirty = true; this.textObstacles.invalidate(); this.schedule(); }
+      });
+      if (measurementsChanged) { this.measurementsDirty = true; this.textObstacles.invalidate(); }
+      if (removedLayer || measurementsChanged) this.schedule();
     });
     this.mutation.observe(container, { childList: true, subtree: true, characterData: true, attributes: true, attributeOldValue: true, attributeFilter: ['style', 'class'] });
-    // RO is delivered after layout, before paint. Flush this view's queued frame
-    // here so a shrinking lane cannot paint yesterday's larger card for a frame.
-    // The overlay is absolute and never changes the observed container/body size.
-    this.resize = new ResizeObserver(() => { this.measurementsDirty = true; this.textObstacles.invalidate(); this.flushFrame(); }); this.resize.observe(container);
+    // A shrinking lane must be corrected before paint. Skip an observer pass
+    // when rAF already rendered its geometry, but still draw actual changes here.
+    this.resize = new ResizeObserver(() => this.flushFrame(true)); this.resize.observe(container);
     container.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
     container.addEventListener('pointermove', this.onPointerMove); container.addEventListener('pointerleave', this.onLeave);
     container.addEventListener('focusin', this.onAnchorFocus);
@@ -171,12 +184,51 @@ export class MarginOverlay {
     container.addEventListener('keydown', this.onEscape);
     for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.addEventListener(event, this.cancelReturn, { capture: true, passive: true });
     this.win.addEventListener('resize', this.schedule);
+    this.win.addEventListener('pointerdown', this.onResizePointerDown, true);
+    this.win.addEventListener('pointerup', this.onResizePointerEnd, true);
+    this.win.addEventListener('pointercancel', this.onResizePointerEnd, true);
+    this.win.addEventListener('blur', this.releaseResizePointer);
     container.ownerDocument.fonts?.addEventListener('loadingdone', this.onFontsLoaded); this.schedule();
   }
   bridge(): EditorBridge | undefined { return [...this.host.bridges].find(b => b.alive && this.view.contentEl.contains(b.cm.dom)); }
   schedule = (): void => {
-    if (!this.stopped && !this.frame) this.frame = this.win.requestAnimationFrame(this.flushFrame);
+    if (!this.stopped && !this.frame) this.frame = this.win.requestAnimationFrame(() => { this.frame = 0; this.flushFrame(); });
   };
+  private trackPaneWidth(width: number): void {
+    if (this.paneWidth !== undefined && this.paneWidth !== width) {
+      if (this.host.preferences.lines === 'hover') this.resizeHoverRoutes = true;
+      this.resizing = true; this.scheduleResizeSettlement();
+    }
+    this.paneWidth = width;
+  }
+  private scheduleResizeSettlement(): void {
+    this.win.clearTimeout(this.resizeIdleTimer); this.resizeIdleTimer = undefined;
+    // Real divider holds can pause for much longer than the quiet interval.
+    // Programmatic resizes and unidentified handles fall back to width activity.
+    if (this.resizePointer !== undefined) return;
+    this.resizeIdleTimer = this.win.setTimeout(() => {
+      this.resizeIdleTimer = undefined; this.resizing = false; this.schedule();
+    }, 160);
+  }
+  private onResizePointerDown = (event: PointerEvent): void => {
+    if (event.button !== 0 || this.resizePointer !== undefined) return;
+    const target = event.target as Element | null;
+    if (!target?.closest?.('.workspace-leaf-resize-handle, .workspace-resize-handle')) return;
+    this.resizePointer = event.pointerId;
+    if (this.resizing) this.scheduleResizeSettlement();
+  };
+  private onResizePointerEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.resizePointer) this.releaseResizePointer();
+  };
+  private releaseResizePointer = (): void => {
+    if (this.resizePointer === undefined) return;
+    this.resizePointer = undefined;
+    if (this.resizing) this.scheduleResizeSettlement();
+  };
+  private resetResize(): void {
+    this.win.clearTimeout(this.resizeIdleTimer); this.resizeIdleTimer = undefined;
+    this.resizing = false; this.resizeHoverRoutes = false; this.resizePointer = undefined; this.paneWidth = undefined;
+  }
   private onScroll = (event: Event): void => {
     if (event.target === this.scroller) {
       this.preview?.close();
@@ -192,12 +244,11 @@ export class MarginOverlay {
   private onFontsLoaded = (): void => {
     this.layoutGeometry = ''; this.measurementsDirty = true; this.textObstacles.invalidate(); this.schedule();
   };
-  private flushFrame = (): void => {
+  private flushFrame = (fromResize = false): void => {
     if (this.stopped) return;
-    this.win.cancelAnimationFrame(this.frame); this.frame = 0;
     const start = this.diagnostics ? performance.now() : 0;
-    this.render();
-    if (this.diagnostics) { this.diagnostics.renders++; this.diagnostics.work.push(performance.now() - start); }
+    const rendered = this.render(fromResize);
+    if (rendered !== false && this.diagnostics) { this.diagnostics.renders++; this.diagnostics.work.push(performance.now() - start); }
   };
   invalidatePreview(path: string): void { this.preview?.invalidate(path); }
   invalidateGroups(): void { this.groups?.invalidate(); this.referenceIndex = undefined; this.referenceList?.close(); }
@@ -230,7 +281,7 @@ export class MarginOverlay {
     for (const position of positions) claimed?.add(position.key);
     return true;
   }
-  private render(): void {
+  private render(fromResize = false): false | void {
     const container = this.view.contentEl;
     const mode = this.view.getMode();
     if (this.path !== this.view.file?.path || this.mode !== mode) {
@@ -247,6 +298,7 @@ export class MarginOverlay {
     this.root.hidden = !prefs.enabled || !this.path || hostRect.width < 1 || hostRect.height < 1;
     this.decorations.element.hidden = this.root.hidden;
     if (this.root.hidden) {
+      this.resetResize();
       this.cancelInteractions();
       if (!prefs.enabled || !this.path) this.clearCards();
       return;
@@ -272,38 +324,51 @@ export class MarginOverlay {
     }
     const bodyEl = bridge?.cm.contentDOM ?? this.view.previewMode.containerEl.querySelector<HTMLElement>('.markdown-preview-sizer');
     if (!bodyEl) { this.cancelInteractions(); this.clearCards(); return; }
-    if (this.observedBody !== bodyEl) {
+    const replacedBody = this.observedBody !== bodyEl;
+    if (replacedBody) {
       if (this.observedBody) this.resize.unobserve(this.observedBody);
       this.observedBody = bodyEl; this.resize.observe(bodyEl);
     }
     const rect = bodyEl.getBoundingClientRect(), scroll = scroller.getBoundingClientRect(), style = this.win.getComputedStyle(bodyEl);
+    const scrollTop = scroller.scrollTop, scrollLeft = scroller.scrollLeft;
+    const client = { left: scroll.left + scroller.clientLeft, top: scroll.top + scroller.clientTop, width: scroller.clientWidth };
+    const paddingLeft = parseFloat(style.paddingLeft) || 0, paddingRight = parseFloat(style.paddingRight) || 0;
     const body: Box = {
-      left: Math.max(0, rect.left - hostRect.left + (parseFloat(style.paddingLeft) || 0)),
-      right: Math.min(hostRect.width, rect.right - hostRect.left - (parseFloat(style.paddingRight) || 0)), top: 0, bottom: hostRect.height
+      left: Math.max(0, rect.left - hostRect.left + paddingLeft),
+      right: Math.min(hostRect.width, rect.right - hostRect.left - paddingRight), top: 0, bottom: hostRect.height
     };
     // The client area excludes native scrollbar gutters and borders. Overlay
     // buttons must never cover a scrollbar, even at xNormalized=1.
     const viewport: Box = {
-      left: Math.max(0, scroll.left + scroller.clientLeft - hostRect.left),
-      right: Math.min(hostRect.width, scroll.left + scroller.clientLeft + scroller.clientWidth - hostRect.left),
-      top: Math.max(0, scroll.top + scroller.clientTop - hostRect.top),
-      bottom: Math.min(hostRect.height, scroll.top + scroller.clientTop + scroller.clientHeight - hostRect.top)
+      left: Math.max(0, client.left - hostRect.left),
+      right: Math.min(hostRect.width, client.left + client.width - hostRect.left),
+      top: Math.max(0, client.top - hostRect.top),
+      bottom: Math.min(hostRect.height, client.top + scroller.clientHeight - hostRect.top)
     };
-    // Read one view's geometry together, then paint its cards and connectors in
-    // the same frame. Keep following native sidebar animation until it settles.
-    const geometry = [hostRect.left, hostRect.top, hostRect.width, hostRect.height, body.left, body.right, ...Object.values(viewport)].map(v => v.toFixed(1)).join(':');
+    const geometry = [hostRect.left, hostRect.top, hostRect.width, hostRect.height, body.left, body.right, ...Object.values(viewport)].join(':');
+    const livePreview = bridge?.cm.dom.closest('.markdown-source-view')?.classList.contains('is-live-preview');
+    // Pane bounds can move without changing a single text fragment. Reuse only
+    // within the same body's width, content origin, typography and DOM revision.
+    const bodyTop = Math.round((rect.top - hostRect.top + scrollTop) * 10000) / 10000;
+    const textGeometry = [rect.left - hostRect.left, rect.width, scrollLeft, style.padding, style.font, style.lineHeight,
+      style.letterSpacing, style.wordSpacing, style.whiteSpace, style.wordBreak,
+      style.overflowWrap, style.textIndent, style.writingMode, style.direction, style.transform, livePreview].join(':');
+    if (fromResize && !replacedBody && geometry === this.geometrySignature && textGeometry === this.textGeometry &&
+      bodyTop === this.bodyTop && rect.height === this.bodyHeight && scrollTop === this.scrollTop && !this.measurementsDirty) return false;
+    if (fromResize && this.frame) { this.win.cancelAnimationFrame(this.frame); this.frame = 0; }
+    this.trackPaneWidth(hostRect.width);
     if (geometry !== this.geometrySignature) {
-      this.geometrySignature = geometry; this.preview?.close(); cardTooltip.hideWithin(this.root); this.schedule();
+      this.geometrySignature = geometry; this.preview?.close(); cardTooltip.hideWithin(this.root);
     }
     // Keep the historical last-line/bottom+2 reference, independent of which
     // fragment currently intersects the viewport or is used by a connector.
     const lineHeight = Math.max(12, Math.min(72, parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.6 || 24));
-    const geometryKey = [hostRect.width, body.left, body.right, viewport.left, viewport.right, viewport.top, scroller.scrollLeft,
+    const geometryKey = [hostRect.width, body.left, body.right, viewport.left, viewport.right, viewport.top, scrollLeft,
       prefs.density, prefs.layout, prefs.placementMode, prefs.cardShape, prefs.cardSize, prefs.edgePadding,
-      style.font, style.lineHeight, style.letterSpacing,
-      bridge?.cm.dom.closest('.markdown-source-view')?.classList.contains('is-live-preview')].join(':');
+      style.font, style.lineHeight, style.letterSpacing, livePreview].join(':');
     const source = bridge?.text ?? this.view.data;
-    if (this.layoutSource !== source) {
+    const sourceChanged = this.layoutSource !== source;
+    if (sourceChanged) {
       this.clearFocus(); this.preview?.close();
       const occurrences = bridge?.parsed.links ?? parseWikilinks(source);
       this.referenceList?.close(); this.clearLocated(); this.referenceIndex = undefined;
@@ -311,12 +376,19 @@ export class MarginOverlay {
       this.validOccurrences = new Map(occurrences.map(a => [String(a.start), a.raw]));
       this.continuationNumbers = new Map(occurrences.map((a, index) => [String(a.start), index + 1]));
     }
-    if (this.layoutGeometry !== geometryKey || this.layoutSource !== source) {
-      this.preview?.close();
-      this.stableLayout.clear(); this.contentAnchors.clear(); this.textObstacles.invalidate();
-      this.routeCache?.clear();
-      this.measurementsDirty = true;
-      this.layoutGeometry = geometryKey; this.layoutSource = source;
+    const textChanged = replacedBody || this.textGeometry !== textGeometry || sourceChanged;
+    if (this.layoutGeometry !== geometryKey || textChanged) {
+      this.stableLayout.clear(); this.geometryRevision++;
+      this.layoutGeometry = geometryKey;
+    }
+    if (textChanged) {
+      this.contentAnchors.clear(); this.textObstacles.invalidate(); this.measurementsDirty = true;
+      this.layoutSource = source; this.textGeometry = textGeometry;
+      if (sourceChanged || replacedBody) this.routeCache?.clear();
+    }
+    if (bodyTop !== this.bodyTop || rect.height !== this.bodyHeight) {
+      this.bodyTop = bodyTop; this.bodyHeight = rect.height;
+      this.textObstacles.invalidate(); this.measurementsDirty = true;
     }
     const visit = this.host.cardNavigation.take(this.view);
     if (visit && (visit.mode !== mode || (mode === 'source' && visit.sourceMode !== !!this.view.getState().source))) {
@@ -342,8 +414,6 @@ export class MarginOverlay {
         this.schedule(); return;
       }
     }
-    const scrollTop = scroller.scrollTop;
-    this.decorations.mount(scroller, bodyEl, hostRect, scrollTop);
     if (this.pendingReadingLocate && mode === 'preview') {
       const element = this.host.reading.elementFor(this.view, this.pendingReadingLocate);
       if (element) {
@@ -401,7 +471,8 @@ export class MarginOverlay {
     const screenBox = (r: Box): Box => ({ left: r.left + hostRect.left, right: r.right + hostRect.left,
       top: r.top + hostRect.top - scrollTop, bottom: r.bottom + hostRect.top - scrollTop });
     this.anchors = [...this.contentAnchors.values()].map(a => ({ ...a, rect: screenBox(a.rect), fragments: a.fragments.map(screenBox) }));
-    this.svg.setAttribute('width', String(hostRect.width)); this.svg.setAttribute('height', String(bodyEl.closest<HTMLElement>('.cm-sizer')?.clientHeight ?? bodyEl.clientHeight));
+    const sizerHeight = this.decorations.mount(bodyEl, rect, hostRect, scrollTop, client);
+    this.svg.setAttribute('width', String(hostRect.width)); this.svg.setAttribute('height', String(sizerHeight));
     // Clip the complete overlay (including pointer hit testing) to this note's
     // scroll region. Offscreen text and cards have independent intersection.
     this.root.style.clipPath = `inset(${viewport.top}px ${hostRect.width - viewport.right}px ${hostRect.height - viewport.bottom}px ${viewport.left}px)`;
@@ -512,13 +583,14 @@ export class MarginOverlay {
     }
     if (this.referenceList?.owner && !this.referenceList?.owner.isConnected) this.referenceList?.close();
     this.referenceList?.position(this.hostRect, viewport);
-    this.paintConnectors();
-    this.updateContinuations();
-    this.refreshFocus(true);
+    const focus = this.focusKey(), scope = this.resizeRouteScope(focus);
+    this.paintConnectors(scope);
+    this.updateContinuations(scope);
+    this.highlight(focus, true);
     this.drag.update(this.cardDrag.dragging ? undefined : bridge, hostRect, viewport, body);
     // First stable display is the initial UI placement, not an invitation to
     // rebalance on the next visit. A gesture only writes on its final commit.
-    if (prefs.placementMode !== 'auto') this.freezeLayout(false);
+    if (prefs.placementMode !== 'auto' && !this.resizing) this.freezeLayout(false);
   }
   private clearLocated(): void {
     if (this.locateTimer !== undefined) this.win.clearTimeout(this.locateTimer);
@@ -655,7 +727,13 @@ export class MarginOverlay {
       this.geometryRevision++;
     }
   }
-  private paintConnectors(): void {
+  private resizeRouteScope(focus?: string): ReadonlySet<string> | undefined {
+    if (!this.resizeHoverRoutes || this.host.preferences.lines !== 'hover') return undefined;
+    if (focus === undefined) return new Set();
+    if (!this.visibleRelations || !this.cards.has(focus)) return new Set([focus]);
+    return new Set([...this.visibleRelations].filter(([, relation]) => relation.placement.key === focus).map(([key]) => key));
+  }
+  private paintConnectors(scope?: ReadonlySet<string>): void {
     const rect = this.hostRect, input = this.layoutInput;
     if (!rect || !input) return;
     const prefs = this.host.preferences, view = input.viewport;
@@ -664,17 +742,23 @@ export class MarginOverlay {
       for (const card of (this.visibleRelations ?? this.cards).values()) (card.routeData ?? card.shell.dataset).routeState = prefs.lines === 'numbers' ? 'numbered' : 'hidden';
       return;
     }
+    if (scope?.size === 0) { this.svg.style.display = 'none'; return; }
     this.svg.style.display = '';
     // Native scrolling already carries the ink with the note. Validate changed
     // geometry immediately, but explore optional shared corridors only once the
     // scroll becomes quiet. Existing coincident strokes remain shared throughout.
-    const optimizeShared = !this.cardDrag.dragging && !this.scrolling;
-    const signature = [this.geometryRevision, (this.visibleRelations ?? this.cards).size, prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision, optimizeShared].join(':');
+    const all = this.visibleRelations ?? this.cards;
+    const optimizeShared = scope === undefined && !this.cardDrag.dragging && !this.scrolling && !this.resizing;
+    const signature = [this.geometryRevision, all.size, prefs.lineStyle, prefs.lineWidth, this.textObstacles.revision, optimizeShared, scope && [...scope]].join(':');
     if (signature === this.batchSignature) return;
     const coverage = this.textObstacles.bounds;
     const bounds = { ...view, top: coverage?.top ?? view.top + this.scrollTop, bottom: coverage?.bottom ?? view.bottom + this.scrollTop };
     const visible = new Map<string, boolean>();
-    const relations: BatchRelationInput[] = [...(this.visibleRelations ?? this.cards)].map(([key, card]) => {
+    const included = scope ? [...scope].flatMap(key => {
+      const relation = all.get(key);
+      return relation ? [[key, relation] as const] : [];
+    }) : [...all];
+    const relations: BatchRelationInput[] = included.map(([key, card]) => {
       const p = card.placement;
       const fragments = card.anchor.fragments.map(f => ({ left: f.left - rect.left, right: f.right - rect.left,
         top: f.top - rect.top + this.scrollTop, bottom: f.bottom - rect.top + this.scrollTop }));
@@ -728,7 +812,7 @@ export class MarginOverlay {
       this.writePath(path, stroke.path);
       path.classList.toggle('margin-link-active', stroke.members.includes(this.highlighted ?? ''));
     }
-    for (const [key, card] of (this.visibleRelations ?? this.cards)) {
+    for (const [key, card] of included) {
       const relation = this.batch!.relations.get(key);
       card.ports = relation?.choice; this.writePath(card.path, relation?.path ?? '');
       (card.routeData ?? card.shell.dataset).routeSegments = JSON.stringify(relation?.segments ?? []);
@@ -741,11 +825,11 @@ export class MarginOverlay {
     if (path.getAttribute('d') === value) return;
     path.setAttribute('d', value); if (this.diagnostics) this.diagnostics.svgWrites++;
   }
-  private updateContinuations(): void {
+  private updateContinuations(scope?: ReadonlySet<string>): void {
     const input = this.layoutInput, rect = this.hostRect;
-    if (!input || !rect) return;
+    if (!input || !rect || scope?.size === 0) return;
     const mode = this.host.preferences.lines;
-    const signature = [this.geometryRevision, (this.visibleRelations ?? this.cards).size, mode === 'none' ? 'none' : 'markers'].join(':');
+    const signature = [this.geometryRevision, (this.visibleRelations ?? this.cards).size, mode === 'none' ? 'none' : 'markers', scope && [...scope]].join(':');
     const layout = this.markerSignature !== signature;
     this.markerSignature = signature;
     const used: Box[] = [];
@@ -755,7 +839,8 @@ export class MarginOverlay {
       top: Number.isFinite(this.measuredTop) ? this.measuredTop : input.viewport.top + this.scrollTop,
       bottom: Number.isFinite(this.measuredBottom) ? this.measuredBottom : input.viewport.bottom + this.scrollTop };
     const viewport = { ...input.viewport, top: input.viewport.top + this.scrollTop, bottom: input.viewport.bottom + this.scrollTop };
-    const ordered = [...(this.visibleRelations ?? this.cards)].sort(([a], [b]) => (this.continuationNumbers.get(a) ?? 0) - (this.continuationNumbers.get(b) ?? 0));
+    const ordered = [...(this.visibleRelations ?? this.cards)].filter(([key]) => !scope || scope.has(key))
+      .sort(([a], [b]) => (this.continuationNumbers.get(a) ?? 0) - (this.continuationNumbers.get(b) ?? 0));
     for (const [key, card] of ordered) {
       const source = card.anchor.fragments.map(b => ({ left: b.left - rect.left, right: b.right - rect.left,
         top: b.top - rect.top + this.scrollTop, bottom: b.bottom - rect.top + this.scrollTop })).at(-1);
@@ -907,7 +992,7 @@ export class MarginOverlay {
     }
   };
   private onPointerMove = (event: PointerEvent): void => {
-    if (this.root.contains(event.target as Node) || this.decorations?.contains(event.target as Node) || this.cardDrag.dragging) return;
+    if (this.resizePointer !== undefined || this.root.contains(event.target as Node) || this.decorations?.contains(event.target as Node) || this.cardDrag.dragging) return;
     const bridge = this.view.getMode() === 'source' ? this.bridge() : undefined;
     const pos = bridge?.cm.posAtCoords({ x: event.clientX, y: event.clientY });
     this.hover(bridge && pos !== null && pos !== undefined ? this.anchors.find(a => pos >= a.occurrence.start && pos < a.occurrence.end)?.key : this.anchors.find(a => a.element?.contains(event.target as Node))?.key);
@@ -931,11 +1016,19 @@ export class MarginOverlay {
     this.pinned = this.hovered = this.focused = undefined;
     this.highlight(undefined);
   }
-  private refreshFocus(redraw = false): void {
+  private focusKey(): string | undefined {
     const selected = this.layoutInput && this.mode === 'source' ? this.bridge()?.cm.state.selection.main : undefined;
     const key = this.located ?? this.pinned ?? this.hovered ?? this.focused ?? (selected && (selected.from !== selected.to || this.visibleRelations)
       ? this.anchors.find(a => selected.from < a.occurrence.end && (selected.to > a.occurrence.start || (selected.empty && selected.to === a.occurrence.start)))?.key : undefined);
-    this.highlight(key !== undefined && (this.cards.has(key) || this.visibleRelations?.has(key)) ? key : undefined, redraw);
+    return key !== undefined && (this.cards.has(key) || this.visibleRelations?.has(key)) ? key : undefined;
+  }
+  private refreshFocus(redraw = false): void {
+    const key = this.focusKey();
+    const scope = key === this.highlighted ? undefined : this.resizeRouteScope(key);
+    if (scope) {
+      this.paintConnectors(scope); this.updateContinuations(scope);
+    }
+    this.highlight(key, redraw);
   }
   private highlight(key?: string, redraw = false): void {
     const previous = this.highlighted;
@@ -977,6 +1070,7 @@ export class MarginOverlay {
   }
   private clearCards(): void {
     this.returning = undefined;
+    this.resetResize();
     this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
     this.referenceList?.close(); this.clearLocated(); this.referenceIndex = undefined;
     for (const relation of this.visibleRelations?.values() ?? []) { relation.path.remove(); relation.continuation?.forEach(el => el.remove()); }
@@ -987,7 +1081,8 @@ export class MarginOverlay {
     this.routeCache?.clear();
     this.cards.clear(); this.continuationNumbers?.clear(); this.routePlacements = []; this.anchors = []; this.layoutInput = undefined;
     this.measurementsDirty = true; this.measuredTop = Infinity; this.measuredBottom = -Infinity; this.markerSignature = ''; this.geometryRevision++;
-    this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.validOccurrences?.clear(); this.textObstacles?.invalidate();
+    this.stableLayout?.clear(); this.contentAnchors?.clear(); this.layoutGeometry = ''; this.layoutSource = ''; this.textGeometry = '';
+    this.bodyTop = undefined; this.bodyHeight = undefined; this.validOccurrences?.clear(); this.textObstacles?.invalidate();
   }
   destroy(): void {
     this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
@@ -999,7 +1094,12 @@ export class MarginOverlay {
     container.removeEventListener('keydown', this.onEscape);
     container.removeEventListener('scroll', this.onScroll, true);
     container.removeEventListener('pointermove', this.onPointerMove); container.removeEventListener('pointerleave', this.onLeave);
-    this.win.removeEventListener('resize', this.schedule); container.ownerDocument.fonts?.removeEventListener('loadingdone', this.onFontsLoaded);
+    this.win.removeEventListener('resize', this.schedule);
+    this.win.removeEventListener('pointerdown', this.onResizePointerDown, true);
+    this.win.removeEventListener('pointerup', this.onResizePointerEnd, true);
+    this.win.removeEventListener('pointercancel', this.onResizePointerEnd, true);
+    this.win.removeEventListener('blur', this.releaseResizePointer);
+    container.ownerDocument.fonts?.removeEventListener('loadingdone', this.onFontsLoaded);
     this.cardDrag.destroy(); this.drag.destroy(); this.clearCards(); this.decorations.detach(); this.root.remove(); container.classList.remove('margin-link-host');
   }
 }

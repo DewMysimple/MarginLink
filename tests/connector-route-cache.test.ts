@@ -102,7 +102,7 @@ describe('bounded per-view offscreen route hints', () => {
     expect(cache.size).toBe(100); expect(cache.get('0')).toBeUndefined();
     cache.remember(batch('1')); cache.remember(batch('101'));
     expect(cache.size).toBe(100); expect(cache.get('1')).toBeDefined(); expect(cache.get('2')).toBeUndefined();
-    expect(Object.keys(cache.get('1')!).sort()).toEqual(['connector', 'fingerprint', 'originY']);
+    expect(Object.keys(cache.get('1')!).sort()).toEqual(['connector', 'fingerprint', 'originX', 'originY']);
     cache.clear(); expect(cache.size).toBe(0); expect(cache.get('1')).toBeUndefined();
   });
 

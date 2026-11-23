@@ -131,7 +131,12 @@ export default class MarginLinkPlugin extends Plugin {
     }
     this.refresh();
   }
-  refresh(): void { if (!this.unloaded) for (const overlay of this.overlays.values()) overlay.schedule(); }
+  refresh(bridge?: EditorBridge): void {
+    if (this.unloaded) return;
+    for (const [view, overlay] of this.overlays) {
+      if (!bridge || view.contentEl.contains(bridge.cm.dom)) overlay.schedule();
+    }
+  }
   documentChanged(bridge: EditorBridge): void {
     // Native Undo/Redo must canonicalize known relink UI aliases before a close
     // can flush preferences. This never prunes records during loading/navigation.

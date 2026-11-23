@@ -20,7 +20,7 @@ const inside = (point: { x: number; y: number }, box: Box, padding = 0) =>
 afterEach(() => vi.restoreAllMocks());
 
 describe('scroll neighbourhood changes revalidate existing routes independently', () => {
-  it.each(styles)('%s follows repeated exact subpixel section translations without a new route search', style => {
+  it.each(styles.flatMap(style => [0, 1].map(xFactor => [style, xFactor] as const)))('%s follows exact subpixel translations (x multiplier %s) without a new route search', (style, xFactor) => {
     const initial = connectorBatch(inputs, style, options);
     let previous = initial;
     const original = new Map([...previous.relations].map(([key, relation]) => [key, relation.connector]));
@@ -29,18 +29,21 @@ describe('scroll neighbourhood changes revalidate existing routes independently'
     let offset = 0;
     for (const dy of [.3125, -.1875, -.3125, .1875, .3125]) {
       offset += dy;
-      const shifted = inputs.map(input => ({ ...input, fragments: input.fragments.map(box => ({ ...box, top: box.top + offset, bottom: box.bottom + offset })),
-        card: { ...input.card, y: input.card.y + offset } }));
-      const next = connectorBatch(shifted, style, { ...options,
-        obstacles: obstacles.map(box => ({ ...box, top: box.top + offset, bottom: box.bottom + offset })) }, previous);
+      const dx = offset * xFactor;
+      const shift = (box: Box) => ({ left: box.left + dx, right: box.right + dx, top: box.top + offset, bottom: box.bottom + offset });
+      const shifted = inputs.map(input => ({ ...input, fragments: input.fragments.map(shift),
+        card: { ...input.card, x: input.card.x + dx, y: input.card.y + offset } }));
+      const next = connectorBatch(shifted, style, { ...options, body: { ...body, left: body.left + dx, right: body.right + dx },
+        obstacles: obstacles.map(shift) }, previous);
       expect(next.relations.size).toBe(2);
       for (const [key, relation] of next.relations) {
         const before = original.get(key)!;
-        expect(relation.connector.points).toEqual(before.points.map(point => ({ x: point.x, y: point.y + offset })));
+        const move = (point: { x: number; y: number }) => ({ x: point.x + dx, y: point.y + offset });
+        expect(relation.connector.points).toEqual(before.points.map(move));
         expect(relation.connector.segments).toEqual(before.segments.map(part => ({ ...part,
-          from: { x: part.from.x, y: part.from.y + offset }, to: { x: part.to.x, y: part.to.y + offset },
-          ...(part.control ? { control: { x: part.control.x, y: part.control.y + offset } } : {}),
-          ...(part.control2 ? { control2: { x: part.control2.x, y: part.control2.y + offset } } : {}) })));
+          from: move(part.from), to: move(part.to),
+          ...(part.control ? { control: move(part.control) } : {}),
+          ...(part.control2 ? { control2: move(part.control2) } : {}) })));
         expect(relation.connector.clearance).toBe(before.clearance);
         expect(relation.choice).toEqual(before.choice);
       }
@@ -61,15 +64,15 @@ describe('scroll neighbourhood changes revalidate existing routes independently'
   });
 
   it('rejects a translated curve when a newly measured obstacle intersects it', () => {
-    const before = connectorBatch(inputs, 'curve', options), dy = .3125;
+    const before = connectorBatch(inputs, 'curve', options), dx = 7.25, dy = .3125;
     const point = svgSamples(before.relations.get('ship')!.path).find(point => point.x > 760 && point.x < 800 && point.y > 285 && point.y < 335)!;
-    const blocker = { left: point.x - 2, right: point.x + 2, top: point.y + dy - 2, bottom: point.y + dy + 2 };
-    const next = inputs.map(input => ({ ...input, fragments: input.fragments.map(box => ({ ...box, top: box.top + dy, bottom: box.bottom + dy })),
-      card: { ...input.card, y: input.card.y + dy } }));
+    const blocker = { left: point.x + dx - 2, right: point.x + dx + 2, top: point.y + dy - 2, bottom: point.y + dy + 2 };
+    const shift = (box: Box) => ({ left: box.left + dx, right: box.right + dx, top: box.top + dy, bottom: box.bottom + dy });
+    const next = inputs.map(input => ({ ...input, fragments: input.fragments.map(shift),
+      card: { ...input.card, x: input.card.x + dx, y: input.card.y + dy } }));
     const solve = vi.spyOn(renderer, 'connectorRoute');
-    const after = connectorBatch(next, 'curve', { ...options, obstacles: [
-      ...obstacles.map(box => ({ ...box, top: box.top + dy, bottom: box.bottom + dy })), blocker
-    ] }, before);
+    const after = connectorBatch(next, 'curve', { ...options, body: { ...body, left: body.left + dx, right: body.right + dx },
+      obstacles: [...obstacles.map(shift), blocker] }, before);
     expect(solve).toHaveBeenCalledTimes(1); expect(after.relations.size).toBe(2);
     expect(svgSamples(after.relations.get('ship')!.path).some(point => inside(point, blocker, 2.5))).toBe(false);
   });

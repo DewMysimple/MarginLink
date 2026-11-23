@@ -38,6 +38,7 @@ interface CardStub {
 }
 interface OverlayProbe {
   paintConnectors(): void;
+  updateContinuations(scope?: ReadonlySet<string>): void;
   highlight(key?: string): void;
   togglePin(key: string): void;
   hover(key?: string): void;
@@ -99,6 +100,27 @@ describe('actual overlay shared-path drawing', () => {
     for (const key of f.cards.keys()) assertOrderedGeometry(f, key);
     const settled = f.overlay.batch;
     f.overlay.paintConnectors(); expect(f.overlay.batch).toBe(settled);
+  });
+  it('draws only the current hover or pin after a pane resize', () => {
+    const f = fixture(); f.host.preferences.lines = 'hover';
+    Object.assign(f.overlay, { resizeHoverRoutes: true });
+    const markers = vi.spyOn(f.overlay, 'updateContinuations').mockImplementation(() => {});
+    f.overlay.hover('ship');
+    expect([...f.overlay.batch!.relations.keys()]).toEqual(['ship']);
+    expect(markers).toHaveBeenLastCalledWith(new Set(['ship']));
+    assertOrderedGeometry(f, 'ship');
+
+    f.overlay.togglePin('ship'); f.overlay.hover('dives');
+    expect([...f.overlay.batch!.relations.keys()]).toEqual(['ship']);
+    f.overlay.togglePin('ship');
+    expect([...f.overlay.batch!.relations.keys()]).toEqual(['dives']);
+    expect(markers).toHaveBeenLastCalledWith(new Set(['dives']));
+    assertOrderedGeometry(f, 'dives');
+    expect([...f.overlay.sharedPaths.values()].every(active)).toBe(true);
+
+    f.overlay.hover();
+    expect(f.svg.style.display).toBe('none');
+    expect([...f.overlay.sharedPaths.values()].some(active)).toBe(false);
   });
   it('skips an unmeasured source while retaining its card as a real route obstacle', () => {
     const f = fixture(); f.overlay.paintConnectors();

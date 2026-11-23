@@ -30,6 +30,7 @@ export interface BatchRelation {
   segments: SegmentReference[];
   shared: boolean;
   fingerprint: string;
+  originX: number;
   originY: number;
 }
 export interface ConnectorBatch {
@@ -40,7 +41,7 @@ export interface ConnectorBatch {
   /** Last completed optional search, in coordinates relative to its routes. */
   optimization?: string;
 }
-type CachedRoute = Pick<BatchRelation, 'connector' | 'fingerprint' | 'originY'>;
+type CachedRoute = Pick<BatchRelation, 'connector' | 'fingerprint' | 'originX' | 'originY'>;
 /** A view's bounded drawing hints survive leaving measured coverage. They are
  * never emitted as current relations; every candidate must pass current safety. */
 export class ConnectorRouteCache {
@@ -52,7 +53,7 @@ export class ConnectorRouteCache {
   remember(batch: ConnectorBatch): void {
     for (const [key, relation] of batch.relations) {
       this.entries.delete(key);
-      this.entries.set(key, { connector: relation.connector, fingerprint: relation.fingerprint, originY: relation.originY });
+      this.entries.set(key, { connector: relation.connector, fingerprint: relation.fingerprint, originX: relation.originX, originY: relation.originY });
     }
     while (this.entries.size > this.limit) this.entries.delete(this.entries.keys().next().value!);
   }
@@ -66,7 +67,7 @@ export interface BatchOptions extends ConnectorOptions {
    * routes are still checked against every card and coincident ink is shared. */
   optimizeShared?: boolean;
 }
-export interface RoutedConnector { input: BatchRelationInput; connector: Connector; side: Side; fingerprint: string; originY: number }
+export interface RoutedConnector { input: BatchRelationInput; connector: Connector; side: Side; fingerprint: string; originX: number; originY: number }
 interface LineRecord { route: RoutedConnector; index: number; part: Segment; u: Point; offset: number; low: number; high: number }
 const EPSILON = 0.0001;
 const distance = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
@@ -74,9 +75,9 @@ const dot = (a: Point, b: Point) => a.x * b.x + a.y * b.y;
 const number = (n: number) => Math.round(n * 10000) / 10000;
 const pointKey = (p: Point) => `${number(p.x)},${number(p.y)}`;
 const samePoint = (a: Point, b: Point) => distance(a, b) < EPSILON;
-function translateConnector(connector: Connector, dy: number): Connector {
-  if (dy === 0) return connector;
-  const move = (point: Point): Point => ({ x: point.x, y: point.y + dy });
+function translateConnector(connector: Connector, dx: number, dy: number): Connector {
+  if (dx === 0 && dy === 0) return connector;
+  const move = (point: Point): Point => ({ x: point.x + dx, y: point.y + dy });
   const segments = connector.segments.map(part => ({ ...part, from: move(part.from), to: move(part.to),
     ...(part.control ? { control: move(part.control) } : {}), ...(part.control2 ? { control2: move(part.control2) } : {}) }));
   return { ...connector, segments, points: connector.points.map(move), path: connectorPath(segments) };
@@ -241,7 +242,8 @@ export function partitionConnectorRoutes(routes: RoutedConnector[], minimum: num
       } else combined.push(ref);
     }
     relations.set(route.input.key, { key: route.input.key, path: route.connector.path, choice: route.connector.choice, connector: route.connector,
-      segments: combined, shared: combined.some(r => strokes.get(r.id)!.shared), fingerprint: route.fingerprint, originY: route.originY });
+      segments: combined, shared: combined.some(r => strokes.get(r.id)!.shared), fingerprint: route.fingerprint,
+      originX: route.originX, originY: route.originY });
   }
   return { segments: [...strokes.values()], relations, corridors, sharedCount: [...strokes.values()].filter(s => s.shared).length };
 }
@@ -259,18 +261,22 @@ export function connectorBatch(inputs: BatchRelationInput[], style: LineStyle, o
   for (const input of inputs) {
     // A newly measured neighbourhood need not change an existing route. Its
     // own relative endpoints and routing policy establish reuse eligibility.
-    // Host virtualization can translate an entire section by a subpixel amount;
-    // follow that exact translation, then prove it safe against current geometry.
+    // Scrolling can shift a virtual section vertically, and resizing can shift
+    // centered text and edge-aligned cards together. Verify the translated path
+    // against the current viewport and obstacles before using it.
+    const originX = input.fragments[0]?.left ?? input.card.x;
     const originY = input.fragments[0]?.top ?? input.card.y;
-    const fragments = input.fragments.map(box => ({ ...box, top: box.top - originY, bottom: box.bottom - originY }));
-    const fingerprint = JSON.stringify([style, input.targetFraction, fragments, { ...input.card, y: input.card.y - originY }, options.lineWidth, options.clearance,
-      options.minimumClearance, options.body, options.corridorX, options.preferCorridor]);
+    const fragments = input.fragments.map(box => ({ left: box.left - originX, right: box.right - originX, top: box.top - originY, bottom: box.bottom - originY }));
+    const body = options.body && { ...options.body, left: options.body.left - originX, right: options.body.right - originX };
+    const corridorX = options.corridorX === undefined ? undefined : options.corridorX - originX;
+    const fingerprint = JSON.stringify([style, input.targetFraction, fragments, { ...input.card, x: input.card.x - originX, y: input.card.y - originY },
+      options.lineWidth, options.clearance, options.minimumClearance, body, corridorX, options.preferCorridor]);
     const old = previous?.relations.get(input.key) ?? cache?.get(input.key), own = perInput(input);
-    const candidate = old?.fingerprint === fingerprint && Number.isFinite(originY) && Number.isFinite(old.originY)
-      ? translateConnector(old.connector, originY - old.originY) : undefined;
+    const candidate = old?.fingerprint === fingerprint && [originX, originY, old.originX, old.originY].every(Number.isFinite)
+      ? translateConnector(old.connector, originX - old.originX, originY - old.originY) : undefined;
     const connector = candidate && clearConnectorSegments(candidate.segments, input.fragments, input.card, { ...own, clearance: candidate.clearance ?? own.clearance })
       ? candidate : search(input.fragments, input.card, style, input.previous ?? old?.connector.choice, own);
-    if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint, originY });
+    if (connector) routes.push({ input, connector, side: sideOf(input, options.body), fingerprint, originX, originY });
   }
   const optimize = options.optimizeShared !== false;
   const cardBoxes = cards.map(card => card.box);
