@@ -76,6 +76,7 @@
 .margin-link-file-picker .prompt-input { width: 100%; }
 .margin-link-file-results { max-height: 45vh; overflow-y: auto; }
 .margin-link-file-results button { display: block; width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; text-align: start; }
+.margin-link-file-results button[hidden] { display: none; }
 .margin-link-file-picker .margin-link-new-path { overflow-wrap: anywhere; font-family: var(--font-monospace); }
 
 .margin-link-continuation { position: absolute; box-sizing: border-box; padding: 0; margin: 0; border: 1px solid var(--margin-link-color, var(--interactive-accent)); border-radius: 4px; color: var(--text-normal); background: var(--background-primary); font-size: 10px; line-height: 14px; opacity: 0; pointer-events: none; }

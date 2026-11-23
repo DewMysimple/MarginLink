@@ -23,7 +23,16 @@ export interface ImportHost<T> {
   root: string;
   resolve(path: string): Promise<T>;
   validate?(): void;
+  validateReplacement?(path: string): void;
   commit(file: T): void | Promise<void>;
+}
+export interface ImportReplacement {
+  path: string;
+  identity: BigIntStats;
+}
+export interface ImportConflict {
+  replacement?: ImportReplacement;
+  safePath: string;
 }
 export interface ImportedFile<T> {
   file: T;
@@ -31,6 +40,7 @@ export interface ImportedFile<T> {
   source: string;
   sourceRemoved: boolean;
   removalError?: string;
+  retainedBackup?: string;
   retryRemoval(): Promise<void>;
 }
 
@@ -78,11 +88,20 @@ function readableError(error: unknown): string {
   const code = (error as NodeJS.ErrnoException)?.code;
   if (code === 'ENOENT') return '源文件或目标目录已不存在。';
   if (code === 'EACCES' || code === 'EPERM') return '没有读取、写入或删除所需的权限，原文件已保留。';
-  if (code === 'EEXIST') return '目标已有同名文件，请改名或选择“使用已有文件”。';
+  if (code === 'EEXIST') return '目标已有同名文件或文件夹，请重新选择处理方式。';
   if (code === 'EBUSY') return '文件正被占用，原文件已保留。';
   if (code === 'ENOSPC') return '目标磁盘空间不足，原文件已保留。';
   return error instanceof Error ? error.message : '文件操作失败，原文件已保留。';
 }
+
+async function statIfPresent(fs: typeof FileSystem, path: string): Promise<BigIntStats | undefined> {
+  try { return await fs.lstat(path, { bigint: true }); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error;
+  }
+}
+
+const activeReplacements = new Set<string>();
 
 /** Owns every filesystem mutation. The picker only previews and invokes this transaction. */
 export class LocalFileImporter {
@@ -94,6 +113,39 @@ export class LocalFileImporter {
   private relative(root: string, file: string): string | undefined {
     const rel = this.runtime.path.relative(root, file);
     return rel && rel !== '..' && !rel.startsWith('..' + this.runtime.path.sep) && !this.runtime.path.isAbsolute(rel) ? rel.split(this.runtime.path.sep).join('/') : undefined;
+  }
+  private async verifiedParent(parent: string): Promise<void> {
+    if (!this.samePath(await this.runtime.fs.realpath(parent), parent)) {
+      throw new Error('目标目录经过符号链接或重解析点，请重新选择存放位置。');
+    }
+  }
+  private async destination(root: string, target: string): Promise<{ vaultRoot: string; file: string }> {
+    const { fs, path } = this.runtime;
+    const vaultRoot = await fs.realpath(root);
+    const file = path.resolve(vaultRoot, ...target.split('/'));
+    if (this.relative(vaultRoot, file) !== target) throw new Error('目标必须位于当前仓库中。');
+    await this.verifiedParent(path.dirname(file));
+    return { vaultRoot, file };
+  }
+  async conflict(root: string, target: string): Promise<ImportConflict | undefined> {
+    const { fs, path } = this.runtime;
+    const { vaultRoot, file } = await this.destination(root, target);
+    const identity = await statIfPresent(fs, file);
+    if (!identity) return;
+    let replacement: ImportReplacement | undefined;
+    if (identity.isFile()) {
+      const canonical = await fs.realpath(file);
+      const actualPath = this.relative(vaultRoot, canonical);
+      if (actualPath && this.samePath(path.dirname(canonical), path.dirname(file))) replacement = { path: actualPath, identity };
+    }
+    const extension = path.extname(file);
+    const stem = target.slice(0, target.length - extension.length);
+    for (let number = 1; ; number++) {
+      const suffix = ` (${number})${extension}`;
+      if (!await statIfPresent(fs, file.slice(0, file.length - extension.length) + suffix)) {
+        return { replacement, safePath: stem + suffix };
+      }
+    }
   }
   async inspect(input: string, root: string): Promise<LocalFileInspection | null> {
     const source = absoluteLocalPath(input, this.runtime.platform);
@@ -137,28 +189,51 @@ export class LocalFileImporter {
       return hash.digest('hex');
     } finally { await handle.close(); }
   }
-  async move<T>(source: LocalFileInspection, targetPath: string, host: ImportHost<T>, signal?: AbortSignal): Promise<ImportedFile<T>> {
+  async move<T>(source: LocalFileInspection, targetPath: string, host: ImportHost<T>, signal?: AbortSignal, replacement?: ImportReplacement): Promise<ImportedFile<T>> {
     const { fs, path } = this.runtime;
     let destination: string | undefined;
+    let staging: string | undefined;
+    let stagedCopy: string | undefined;
+    let backup: string | undefined;
+    let backupIdentity: BigIntStats | undefined;
+    let backupDigest: string | undefined;
+    let replacementKey: string | undefined;
+    let published: BigIntStats | undefined;
     let targetIdentity: BigIntStats | undefined;
     let cleanupIdentity: BigIntStats | undefined;
     let complete = false;
     let committed = false;
     const canceled = () => { if (signal?.aborted) throw new Error('操作已取消，原文件已保留。'); };
+    const verifyReplacement = async () => {
+      if (!replacement || !destination) return;
+      host.validateReplacement?.(targetPath);
+      await this.verifiedParent(path.dirname(destination));
+      const current = await statIfPresent(fs, destination);
+      if (!current?.isFile() || !sameIdentity(replacement.identity, current)) throw new Error('待覆盖的文件已改变，请重新确认。');
+      if (sameFile(source.identity, current)) throw new Error('源文件与目标文件相同。');
+    };
     try {
       canceled(); host.validate?.();
       if (source.vaultPath) throw new Error('该文件已在仓库中，请直接关联。');
       await this.sourceIdentity(source);
-      const root = await fs.realpath(host.root);
-      destination = path.resolve(root, ...targetPath.split('/'));
-      if (this.relative(root, destination) !== targetPath) throw new Error('目标必须位于当前仓库中。');
+      destination = (await this.destination(host.root, targetPath)).file;
       const parent = path.dirname(destination);
-      if (!this.samePath(await fs.realpath(parent), parent)) throw new Error('目标目录经过符号链接或重解析点，请重新选择存放位置。');
       if (this.samePath(destination, source.canonical)) throw new Error('源文件与目标文件相同。');
+      if (replacement) {
+        if (replacement.path !== targetPath) throw new Error('待覆盖的路径已改变，请重新确认。');
+        const key = this.runtime.platform === 'win32' ? destination.toLowerCase() : destination;
+        if (activeReplacements.has(key)) throw new Error('该文件正在被另一项导入替换，请稍后重试。');
+        activeReplacements.add(key);
+        replacementKey = key;
+        await verifyReplacement();
+        staging = await fs.mkdtemp(path.join(parent, '.margin-link-replace-'));
+        stagedCopy = path.join(staging, 'incoming');
+      }
+      const copyPath = stagedCopy ?? destination;
       const sourceHandle = await fs.open(source.canonical, 'r');
       try {
         if (!sameIdentity(source.identity, await sourceHandle.stat({ bigint: true }))) throw new Error('源文件已改变，原件已保留。');
-        const targetHandle = await fs.open(destination, 'wx');
+        const targetHandle = await fs.open(copyPath, 'wx');
         const writtenHash = this.runtime.createHash('sha256');
         let writtenLength = 0;
         try {
@@ -185,8 +260,8 @@ export class LocalFileImporter {
           await targetHandle.sync();
           targetIdentity = await targetHandle.stat({ bigint: true });
           const expectedDigest = hash.digest('hex');
-          if (await this.digest(destination, targetIdentity) !== expectedDigest) throw new Error('目标副本内容校验失败，原文件已保留。');
-          complete = true;
+          if (await this.digest(copyPath, targetIdentity) !== expectedDigest) throw new Error('目标副本内容校验失败，原文件已保留。');
+          complete = !replacement;
           const verifyCopies = async () => {
             await this.sourceIdentity(source);
             if (!this.samePath(await fs.realpath(destination!), destination!) || !sameIdentity(targetIdentity!, await fs.lstat(destination!, { bigint: true }))) throw new Error('目标副本已改变，原文件已保留。');
@@ -195,6 +270,28 @@ export class LocalFileImporter {
           canceled();
           const file = await host.resolve(targetPath);
           canceled(); host.validate?.();
+          if (replacement && staging && stagedCopy) {
+            await verifyReplacement();
+            const backupPath = path.join(staging, 'previous');
+            await fs.copyFile(destination, backupPath, fs.constants.COPYFILE_EXCL);
+            backup = backupPath;
+            backupIdentity = await fs.lstat(backup, { bigint: true });
+            backupDigest = await this.digest(destination, replacement.identity);
+            if (await this.digest(backup, backupIdentity) !== backupDigest) throw new Error('旧文件备份校验失败。');
+            await this.sourceIdentity(source);
+            await verifyReplacement();
+            canceled(); host.validate?.();
+            host.validateReplacement?.(targetPath);
+            await fs.rename(stagedCopy, destination);
+            stagedCopy = undefined;
+            published = targetIdentity;
+            const current = await fs.lstat(destination, { bigint: true });
+            if (!sameFile(published, current) || current.size !== published.size || current.mtimeNs !== published.mtimeNs) {
+              throw new Error('替换后的文件已改变，原件已保留。');
+            }
+            published = targetIdentity = current;
+            complete = true;
+          }
           await verifyCopies();
           canceled();
           await host.commit(file);
@@ -208,21 +305,39 @@ export class LocalFileImporter {
           const result: ImportedFile<T> = { file, targetPath, source: source.source, sourceRemoved: false, retryRemoval: remove };
           try { await remove(); result.sourceRemoved = true; }
           catch (error) { result.removalError = readableError(error); }
+          if (backup) {
+            try { await fs.unlink(backup); backup = undefined; }
+            catch { result.retainedBackup = backup; }
+          }
           return result;
         } catch (error) {
           // Exclusive creation alone does not prove nobody modified the output.
           // Clean up only when its entire current content is exactly our writes.
-          if (!complete && targetIdentity) {
+          if (!replacement && !complete && targetIdentity) {
             try {
               const current = await targetHandle.stat({ bigint: true });
               if (sameFile(targetIdentity, current) && current.size === BigInt(writtenLength)
-                && await this.digest(destination, current) === writtenHash.digest('hex')) cleanupIdentity = current;
+                && await this.digest(copyPath, current) === writtenHash.digest('hex')) cleanupIdentity = current;
             } catch { /* Identity/content cannot be proved: keep this output. */ }
           }
           throw error;
         } finally { await targetHandle.close(); }
       } finally { await sourceHandle.close(); }
     } catch (error) {
+      if (replacement) {
+        let recovery = '';
+        if (published && destination && backup && backupIdentity && backupDigest && !committed) {
+          try {
+            await this.verifiedParent(path.dirname(destination));
+            if (await this.digest(backup, backupIdentity) !== backupDigest
+              || !sameIdentity(published, await fs.lstat(destination, { bigint: true }))) throw new Error('备份或替换后的文件已改变。');
+            await fs.rename(backup, destination);
+            backup = undefined;
+            recovery = ' 仓库中的旧文件已恢复。';
+          } catch { recovery = ` 仓库旧文件的备份位于：${backup}。`; }
+        }
+        throw new Error(`未完成覆盖关联，库外原件已保留。${recovery} ${readableError(error)}`);
+      }
       // Remove only our incomplete, exclusively-created output; preserve full copies.
       let retainedOutput = !!targetIdentity;
       if (!complete && destination && cleanupIdentity) {
@@ -235,6 +350,11 @@ export class LocalFileImporter {
       }
       const retained = complete ? ` 完整副本保留在仓库：${targetPath}。` : retainedOutput ? ` 未确认完整的副本保留在仓库：${targetPath}。` : '';
       throw new Error(`${committed ? '已关联，原文件仍保留。' : '未完成关联，原文件已保留。'}${retained} ${readableError(error)}`);
+    } finally {
+      if (replacementKey) activeReplacements.delete(replacementKey);
+      if (stagedCopy) await fs.unlink(stagedCopy).catch(() => {});
+      if (backup && !published) await fs.unlink(backup).catch(() => {});
+      if (staging) await fs.rmdir(staging).catch(() => {});
     }
   }
 }

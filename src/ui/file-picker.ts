@@ -1,12 +1,13 @@
 import { Modal, Notice, prepareFuzzySearch, sortSearchResults, type App, type TFile } from 'obsidian';
 import { defaultNoteFolder, newNotePath, type NewNotePreferences } from '../core/new-note';
-import { attachmentPath, desktopFileRuntime, LocalFileImporter, type LocalFileInspection, type ImportedFile } from '../core/local-file-import';
+import { attachmentPath, desktopFileRuntime, LocalFileImporter, type LocalFileInspection, type ImportReplacement, type ImportedFile } from '../core/local-file-import';
 
 export interface PickerActions {
   /** Return only after the single source transaction has been confirmed. */
-  existing(file: TFile): void | Promise<void>;
+  existing(file: TFile, replacedContents?: boolean): void | Promise<void>;
   create(folder: string, name: string, openInWindow: boolean): Promise<void>;
   validate?(): void;
+  validateReplacement?(path: string): void;
   closed(): void;
 }
 export interface PickerOptions { currentTarget?: string }
@@ -170,35 +171,71 @@ export class FilePicker extends Modal {
     const status = parent.createEl('p', { attr: { role: 'status' } });
     const buttons = parent.createDiv({ cls: 'margin-link-file-actions' });
     const move = buttons.createEl('button', { text: '移动到仓库并关联', cls: 'mod-cta', attr: { type: 'button' } });
+    const safeRename = buttons.createEl('button', { text: '安全重命名并关联', cls: 'mod-cta', attr: { type: 'button' } });
+    const overwrite = buttons.createEl('button', { text: '覆盖替换并关联', cls: 'mod-warning', attr: { type: 'button' } });
     const useExisting = buttons.createEl('button', { text: '使用已有文件（保留原件）', attr: { type: 'button' } });
     parent.createEl('small', { text: '确认后先复制并校验内容，成功写入双链后才删除来源。撤销双链会保留已导入文件。' });
-    let target = '';
-    const refresh = () => {
-      this.folder = folder.value; target = ''; move.disabled = true; useExisting.hidden = true;
+    const choices = [move, safeRename, overwrite, useExisting];
+    let revision = 0;
+    const refresh = async (failure?: string) => {
+      const current = ++revision;
+      this.folder = folder.value;
+      for (const button of choices) { button.hidden = true; button.disabled = true; button.onclick = null; }
+      overwrite.setText('覆盖替换并关联');
       preview.setText(''); status.setText('');
       try {
-        target = attachmentPath(this.folder, name.value);
+        const target = attachmentPath(this.folder, name.value);
         preview.setText(`最终库内路径：${target}`);
         if (this.folder !== '/' && !this.app.vault.getFolderByPath(this.folder)) throw new Error('目标文件夹已失效，请重新选择存放位置。');
-        const existing = this.app.vault.getFileByPath(target);
-        if (existing) {
-          status.setText('目标已有同名文件，请改名或使用已有文件；来源将保留。');
-          useExisting.hidden = false;
-          useExisting.onclick = () => { void this.choose(existing); };
-        } else if (this.app.vault.getAbstractFileByPath(target)) status.setText('目标位置已被同名文件夹占用。');
-        else move.disabled = this.busy;
-      } catch (error) { status.setText(error instanceof Error ? error.message : '请检查文件名和目标目录。'); }
+        const conflict = await importer.conflict(root, target);
+        if (current !== revision || !this.opened || !this.panel.contains(parent)) return;
+        const offer = (button: HTMLButtonElement, select: () => void) => {
+          button.hidden = false;
+          button.disabled = this.busy;
+          button.onclick = select;
+        };
+        if (!conflict) {
+          offer(move, () => { void submit(target); });
+          status.setText(failure ?? '');
+          return;
+        }
+        const { safePath, replacement } = conflict;
+        const existing = replacement && this.app.vault.getFileByPath(replacement.path);
+        const collision = `目标路径已被占用。安全重命名为：${safePath}`;
+        status.setText(failure ? `${collision}。 ${failure}` : collision);
+        offer(safeRename, () => { void submit(safePath); });
+        if (existing && replacement) {
+          offer(useExisting, () => { void this.choose(existing); });
+          try { this.actions.validateReplacement?.(replacement.path); }
+          catch (error) {
+            status.setText(`${status.textContent}。 ${error instanceof Error ? error.message : '无法覆盖此文件。'}`);
+            return;
+          }
+          offer(overwrite, () => {
+            status.setText(`将用库外文件替换 ${replacement.path} 的内容。已有链接也会打开替换后的文件。`);
+            overwrite.setText('确认覆盖');
+            overwrite.onclick = event => {
+              if (event.detail <= 1) void submit(replacement.path, replacement);
+            };
+          });
+        }
+      } catch (error) {
+        if (current === revision && this.opened && this.panel.contains(parent)) {
+          status.setText(failure ?? (error instanceof Error ? error.message : '请检查文件名和目标目录。'));
+        }
+      }
     };
-    const submit = async () => {
-      if (this.busy || move.disabled) return;
+    const submit = async (target: string, replacement?: ImportReplacement) => {
+      if (this.busy) return;
       this.busy = true;
       const operation = new AbortController(); this.operation = operation;
-      const controls = [input, name, folder, move, useExisting, this.newTab, this.existingTab];
+      const controls = [input, name, folder, ...choices, this.newTab, this.existingTab];
       for (const control of controls) control.disabled = true;
       status.setText('正在复制、校验并关联…');
+      let failure: string | undefined;
       try {
         const result = await importer.move(source, target, {
-          root, validate: this.actions.validate,
+          root, validate: this.actions.validate, validateReplacement: this.actions.validateReplacement,
           resolve: async path => {
             // Let the host watcher index this one new path; never scan the disk.
             for (let attempts = 0; attempts < 100; attempts++) {
@@ -209,29 +246,24 @@ export class FilePicker extends Modal {
             }
             throw new Error('完整副本已写入，但 Obsidian 尚未识别它；请稍后从仓库中关联此文件。');
           },
-          commit: file => this.actions.existing(file)
-        }, operation.signal);
-        if (result.sourceRemoved) new Notice(`已移动到仓库并关联：${result.targetPath}`);
+          commit: file => replacement ? this.actions.existing(file, true) : this.actions.existing(file)
+        }, operation.signal, replacement);
+        if (result.sourceRemoved) new Notice(`${replacement ? '已覆盖替换并关联' : '已移动到仓库并关联'}：${result.targetPath}`);
         else this.showRemovalRetry(result);
+        if (result.retainedBackup) new Notice(`覆盖前的文件备份仍位于：${result.retainedBackup}`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : '移动失败，原文件已保留。';
-        if (this.containerEl.isConnected) { refresh(); status.setText(message); }
-        else new Notice(message);
+        failure = error instanceof Error ? error.message : '移动失败，原文件已保留。';
+        if (!this.containerEl.isConnected) new Notice(failure);
       } finally {
         this.busy = false;
         if (this.operation === operation) this.operation = undefined;
         for (const control of controls) control.disabled = false;
-        // Re-read collision state after a failed copy; never submit a second copy.
-        if (this.containerEl.isConnected) {
-          const message = status.textContent;
-          refresh(); if (message) status.setText(message);
-        }
+        if (this.containerEl.isConnected) void refresh(failure);
       }
     };
-    name.oninput = refresh; folder.onchange = refresh;
-    move.onclick = () => { void submit(); };
+    name.oninput = folder.onchange = () => { void refresh(); };
     input.onkeydown = event => { if (event.key === 'Enter') event.preventDefault(); };
-    refresh();
+    void refresh();
   }
   private showRemovalRetry(result: ImportedFile<TFile>): void {
     const fragment = this.modalEl.ownerDocument.createDocumentFragment();

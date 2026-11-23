@@ -40,7 +40,7 @@ class Element {
   all(): Element[] { return [this, ...this.children.flatMap(child => child.all())]; }
   text(): string { return this.all().map(child => child.textContent).join('\n'); }
 }
-const state = vi.hoisted(() => ({ inspect: vi.fn(), move: vi.fn(), notices: [] as unknown[] }));
+const state = vi.hoisted(() => ({ inspect: vi.fn(), conflict: vi.fn(), move: vi.fn(), notices: [] as unknown[] }));
 vi.mock('obsidian', () => ({
   Modal: class {
     contentEl = new Element(); modalEl = new Element(); containerEl = new Element();
@@ -64,7 +64,7 @@ vi.mock('obsidian', () => ({
 vi.mock('../src/core/local-file-import', async importOriginal => ({
   ...await importOriginal<typeof import('../src/core/local-file-import')>(),
   desktopFileRuntime: () => ({}),
-  LocalFileImporter: class { inspect = state.inspect; move = state.move; }
+  LocalFileImporter: class { inspect = state.inspect; conflict = state.conflict; move = state.move; }
 }));
 const settle = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 const nativePath = 'C:\\Downloads\\中文 streams.html';
@@ -82,7 +82,10 @@ function fixture(files: string[] = []) {
   const query = (text: string) => { input.value = text; input.oninput!(); };
   return { picker, actions, content, input, button, query, indexed };
 }
-beforeEach(() => { state.inspect.mockReset(); state.move.mockReset(); state.notices.length = 0; focusDocument.activeElement = undefined; });
+beforeEach(() => {
+  state.inspect.mockReset(); state.conflict.mockReset(); state.move.mockReset();
+  state.notices.length = 0; focusDocument.activeElement = undefined;
+});
 
 describe('picker input focus after the host opens the dialog', () => {
   it('overrides the host tab focus so direct typing immediately searches files without scrolling', () => {
@@ -178,12 +181,42 @@ describe('one file picker for name search and local import', () => {
   });
   it('offers an explicit existing-file branch for collisions and preserves the external source', async () => {
     state.inspect.mockResolvedValue(inspection());
-    const f = fixture(['资料/中文 streams.html']); f.query(nativePath); await settle();
-    expect(f.button('移动到仓库并关联').disabled).toBe(true);
+    const path = '资料/中文 streams.html';
+    state.conflict.mockResolvedValue({ replacement: { path }, safePath: '资料/中文 streams (1).html' });
+    const f = fixture([path]); f.query(nativePath); await settle();
+    expect(f.button('移动到仓库并关联').hidden).toBe(true);
     const existing = f.button('使用已有文件（保留原件）');
     expect(existing.hidden).toBe(false); existing.onclick!(); await settle();
     expect(state.move).not.toHaveBeenCalled();
-    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get('资料/中文 streams.html'));
+    expect(f.actions.existing).toHaveBeenCalledExactlyOnceWith(f.indexed.get(path));
+  });
+  it('requires a second deliberate click before replacing the exact previewed file', async () => {
+    state.inspect.mockResolvedValue(inspection());
+    const path = '资料/中文 streams.html';
+    const replacement = { path, identity: {} };
+    state.conflict.mockResolvedValue({ replacement, safePath: '资料/中文 streams (1).html' });
+    state.move.mockResolvedValue({ sourceRemoved: true, targetPath: path });
+    const f = fixture([path]); f.query(nativePath); await settle();
+    f.button('覆盖替换并关联').onclick!();
+    expect(f.content.text()).toContain('已有链接也会打开替换后的文件');
+    f.button('确认覆盖').onclick!({ detail: 2 });
+    expect(state.move).not.toHaveBeenCalled();
+    f.button('确认覆盖').onclick!({ detail: 1 }); await settle();
+    expect(state.move).toHaveBeenCalledExactlyOnceWith(inspection(), path, expect.any(Object), expect.any(AbortSignal), replacement);
+  });
+  it('previews a new number if exclusive creation loses a race and asks before trying again', async () => {
+    state.inspect.mockResolvedValue(inspection());
+    const first = '资料/中文 streams (1).html';
+    const second = '资料/中文 streams (2).html';
+    state.conflict.mockResolvedValueOnce({ safePath: first }).mockResolvedValue({ safePath: second });
+    state.move.mockRejectedValue(new Error('路径已被占用'));
+    const f = fixture(); f.query(nativePath); await settle();
+    expect(f.content.text()).toContain(first);
+    expect(f.button('覆盖替换并关联').hidden).toBe(true);
+    f.button('安全重命名并关联').onclick!(); await settle();
+    expect(state.move).toHaveBeenCalledExactlyOnceWith(inspection(), first, expect.any(Object), expect.any(AbortSignal), undefined);
+    expect(f.content.text()).toContain(second);
+    expect(f.content.text()).toContain('路径已被占用');
   });
   it('deduplicates rapid confirms and awaits source commit before completing import', async () => {
     state.inspect.mockResolvedValue(inspection());

@@ -246,3 +246,102 @@ describe('copy, confirm one source transaction, then remove', () => {
     expect(await fs.readFile(f.source, 'utf8')).toContain('changed after commit');
   });
 });
+
+describe('external import filename conflicts', () => {
+  const targetPath = '资料/场景.graph.HTML';
+  const original = '<html>original in vault</html>';
+  const incoming = Buffer.from('<html>替换内容\r\n</html>');
+  async function conflictFixture() {
+    const f = await fixture(incoming, '场景.graph.HTML');
+    const folder = path.join(f.root, '资料');
+    const destination = path.join(f.root, targetPath);
+    await fs.writeFile(destination, original);
+    const conflict = await f.importer.conflict(f.root, targetPath);
+    expect(conflict?.replacement?.path).toBe(targetPath);
+    return { ...f, folder, destination, replacement: conflict!.replacement! };
+  }
+
+  it('publishes verified replacement bytes at the same path and deletes the source only after commit', async () => {
+    const f = await conflictFixture();
+    f.commit.mockImplementation(async () => {
+      expect(await fs.readFile(f.destination)).toEqual(incoming);
+      expect(await fs.readFile(f.source)).toEqual(incoming);
+    });
+    const result = await f.importer.move(f.inspection, targetPath, f.host, undefined, f.replacement);
+    expect(result).toMatchObject({ targetPath, sourceRemoved: true });
+    expect(f.commit).toHaveBeenCalledExactlyOnceWith(targetPath);
+    await expect(fs.access(f.source)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await fs.readFile(f.destination)).toEqual(incoming);
+    expect(await fs.readdir(f.folder)).toEqual(['场景.graph.HTML']);
+  });
+
+  it('restores the former bytes and keeps the outside source when linking fails', async () => {
+    const f = await conflictFixture();
+    f.commit.mockImplementation(async () => {
+      expect(await fs.readFile(f.destination)).toEqual(incoming);
+      throw new Error('正文写入失败');
+    });
+    await expect(f.importer.move(f.inspection, targetPath, f.host, undefined, f.replacement)).rejects.toThrow('仓库中的旧文件已恢复');
+    expect(f.commit).toHaveBeenCalledExactlyOnceWith(targetPath);
+    expect(await fs.readFile(f.destination, 'utf8')).toBe(original);
+    expect(await fs.readFile(f.source)).toEqual(incoming);
+    expect(await fs.readdir(f.folder)).toEqual(['场景.graph.HTML']);
+  });
+
+  it('rejects replacement if another edit changes the confirmed destination during staging', async () => {
+    const f = await conflictFixture();
+    f.host.resolve = async candidate => {
+      await fs.writeFile(f.destination, 'concurrent edit before replacement');
+      return candidate;
+    };
+    await expect(f.importer.move(f.inspection, targetPath, f.host, undefined, f.replacement)).rejects.toThrow('待覆盖的文件已改变');
+    expect(f.commit).not.toHaveBeenCalled();
+    expect(await fs.readFile(f.destination, 'utf8')).toBe('concurrent edit before replacement');
+    expect(await fs.readFile(f.source)).toEqual(incoming);
+    expect(await fs.readdir(f.folder)).toEqual(['场景.graph.HTML']);
+  });
+
+  it('keeps a concurrent edit and the old file backup when the source transaction fails', async () => {
+    const f = await conflictFixture();
+    f.commit.mockImplementation(async () => {
+      await fs.writeFile(f.destination, 'new concurrent edit after replacement');
+      throw new Error('正文写入失败');
+    });
+    await expect(f.importer.move(f.inspection, targetPath, f.host, undefined, f.replacement)).rejects.toThrow('仓库旧文件的备份位于');
+    expect(await fs.readFile(f.destination, 'utf8')).toBe('new concurrent edit after replacement');
+    expect(await fs.readFile(f.source)).toEqual(incoming);
+    const entries = await fs.readdir(f.folder, { withFileTypes: true });
+    const staging = entries.filter(entry => entry.isDirectory());
+    expect(staging).toHaveLength(1);
+    const recovery = path.join(f.folder, staging[0].name);
+    const backup = await fs.readdir(recovery);
+    expect(backup).toHaveLength(1);
+    expect(await fs.readFile(path.join(recovery, backup[0]), 'utf8')).toBe(original);
+  });
+
+  it('skips existing numbered files and folders while preserving the final extension', async () => {
+    const f = await conflictFixture();
+    const first = path.join(f.folder, '场景.graph (1).HTML');
+    const second = path.join(f.folder, '场景.graph (2).HTML');
+    await fs.writeFile(first, 'keep numbered file');
+    await fs.mkdir(second);
+    const conflict = await f.importer.conflict(f.root, targetPath);
+    expect(conflict?.safePath).toBe('资料/场景.graph (3).HTML');
+    const result = await f.importer.move(f.inspection, conflict!.safePath, f.host);
+    expect(result).toMatchObject({ targetPath: '资料/场景.graph (3).HTML', sourceRemoved: true });
+    expect(f.commit).toHaveBeenCalledExactlyOnceWith(result.targetPath);
+    expect(await fs.readFile(path.join(f.root, result.targetPath))).toEqual(incoming);
+    expect(await fs.readFile(f.destination, 'utf8')).toBe(original);
+    expect(await fs.readFile(first, 'utf8')).toBe('keep numbered file');
+    expect((await fs.stat(second)).isDirectory()).toBe(true);
+  });
+
+  it('does not allow replacement of a directory and offers a numbered path instead', async () => {
+    const f = await fixture(incoming);
+    const destination = path.join(f.root, targetPath);
+    await fs.mkdir(destination);
+    expect(await f.importer.conflict(f.root, targetPath)).toEqual({ safePath: '资料/场景.graph (1).HTML' });
+    expect((await fs.stat(destination)).isDirectory()).toBe(true);
+    expect(await fs.readFile(f.source)).toEqual(incoming);
+  });
+});

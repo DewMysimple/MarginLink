@@ -170,12 +170,12 @@ export class SelectionAction {
   private openOperation(view: MarkdownView, operation: LinkOperation, bridge?: EditorBridge, side?: Side): void {
     const mode = view.getMode();
     const { validate, replace } = this.prepareEdit(view, operation, bridge);
-    const write = async (file: TFile, target: string) => {
+    const write = async (file: TFile, target: string, replacedContents = false) => {
       validate();
       if (this.app.vault.getFileByPath(file.path) !== file) throw new Error('目标文件已删除或改变，请重新选择。');
       let subpath = operation.occurrence ? parseLinktext(operation.occurrence.target).subpath : '';
       if (subpath) {
-        const cache = this.app.metadataCache.getFileCache(file);
+        const cache = replacedContents ? null : this.app.metadataCache.getFileCache(file);
         if (!cache || !resolveSubpath(cache, subpath)) {
           const preserve = await new Promise<boolean | undefined>(done => { this.subpathChoice = new SubpathChoice(this.app, subpath, done); this.subpathChoice.open(); });
           this.subpathChoice = undefined;
@@ -194,8 +194,12 @@ export class SelectionAction {
     try { validate(); } catch (error) { new Notice(error instanceof Error ? error.message : '源链接已失效。'); return; }
     const picker = new FilePicker(this.app, operation.label, this.preferences(), {
       validate,
-      existing: async file => {
-        await write(file, exactTarget(this.app, file, operation.sourcePath));
+      validateReplacement: path => {
+        if (path === operation.sourcePath) throw new Error('正在建立关联的笔记不能被覆盖。');
+        if (this.editors(path).length) throw new Error('请先关闭该目标笔记的编辑视图，再覆盖替换。');
+      },
+      existing: async (file, replacedContents) => {
+        await write(file, exactTarget(this.app, file, operation.sourcePath), replacedContents);
         if (mode === 'source') view.editor.focus();
       },
       create: async (folder, name, openInWindow) => {
