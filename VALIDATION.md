@@ -1,5 +1,11 @@
 # MarginLink 验证记录
 
+## 本地交付仅保留当前版本 · 2026-11-23
+
+基线 `5d19b9a`。Windows Node 24.18.0 / npm 12.2.2 执行 `npm run package` 与 `npm run lint` 通过，`npm test` 通过 57 个文件、569 项。打包专项使用隔离目录检查同版本重建、预发布版名称、旧版本清理、保留无关 ZIP、替换遗留安装文件，以及发现 manifest 与 package 版本不一致时保留旧产物。
+
+本地 `dist` 第一次运行移除了 6 个旧版本 ZIP，仅剩 `margin-link-0.3.2.zip`。用 Windows .NET ZIP API 独立读取五个归档条目，SHA-256 均与 `dist/margin-link/` 对应文件一致，`main.js`、manifest、CSS 和许可证也与工作区构建输入一致。
+
 ## 卡片复制原文 · 2026-11-23
 
 基线 `1aa105e`。本轮 `npm test` 通过 56 个文件、567 项测试，`npm run lint` 和 `npm run build` 通过。新增单测逐字比对用户给出的别名、带空格的中英文别名、无别名标题路径和空别名块路径。

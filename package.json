@@ -23,6 +23,7 @@
     "@types/node": "^24.0.0",
     "esbuild": "^0.25.5",
     "eslint": "^9.39.4",
+    "fflate": "0.8.3",
     "globals": "^16.0.0",
     "obsidian": "latest",
     "playwright-core": "^1.56.0",

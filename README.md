@@ -25,7 +25,7 @@
 
 升级时只替换发布文件，保留原 `data.json`。旧平铺配置与当前嵌套配置中的合法选择逐项保留，包括“悬停”“自动排列”“横向卡片”；只有缺失或无效的字段采用新默认。新安装仍为 `lines=always`、`placementMode=free`、`cardShape=square`。恢复默认外观会保留当前布局模式、位置、左右偏好和栅格值。`layout` 仅影响自动排列及自动初排，完全手动不使用它。
 
-Git 仓库跟踪源码。克隆后可双击 Windows 的 `buildStart.cmd` 生成 ZIP，或运行 `npm ci`、`npm run package` 生成安装目录。
+Git 仓库跟踪源码。克隆后可双击 Windows 的 `buildStart.cmd`，或运行 `npm ci`、`npm run package`，同时生成安装目录和 ZIP。
 
 ## 创建和打开原生双链
 
@@ -177,7 +177,9 @@ CRLF/LF 使用一致的布局身份，并兼容旧 CRLF 阅读位置。Obsidian 
 | `src/ui/settings-tab.ts`, `settings-view.ts`, `quick-controls.ts` | 共享原生表单、右侧 ItemView、实时预览、快捷 Modal 与确认 |
 | `scripts/desktop-test.mjs`, `desktop-v2.mjs`, `desktop-remediation.mjs`, `desktop-stability.mjs` | 隔离库客户端回归、即时切页、逐帧分隔线/抓点和长悬停场景 |
 
-Windows 一键构建：安装 Git、Node 24（含 npm）后，双击项目根目录的 [buildStart.cmd](buildStart.cmd)。脚本通过 [build-latest.ps1](scripts/build-latest.ps1) 依次拉取 `origin/main`（仅快进）、按锁文件安装依赖、编译打包，并自动读取版本号生成 `dist/margin-link-<版本号>.zip`。随后会实际解压刷新 `dist/margin-link/`，对五个发布文件逐一校验 SHA-256，并更新文件夹日期。成功窗口同时显示 ZIP、可直接复制安装的目录、版本、生成时间与源码提交；失败时显示原因。项目路径可以包含空格和中文，从其他工作目录启动也可用。
+安装 Git、Node 24（含 npm）后，可双击项目根目录的 [buildStart.cmd](buildStart.cmd) 在 Windows 一键构建。脚本通过 [build-latest.ps1](scripts/build-latest.ps1) 快进拉取 `origin/main`，按锁文件安装依赖，再执行 `npm run package`。成功窗口显示 ZIP、可直接复制安装的目录、版本、生成时间与源码提交。项目路径可以包含空格和中文，也可从其他工作目录启动脚本。
+
+`npm run package` 将当前工作区编译为插件，按 `manifest.json` 的版本生成 ZIP。它解压并逐字节校验五个发布文件后，刷新 `dist/margin-link/` 和 `dist/margin-link-<版本号>.zip`，再清理 `dist/` 内其他版本的 MarginLink ZIP。每次有项目改动的交付都会更新这两份本地产物。
 
 运行前需处于 `main` 分支，已跟踪文件没有待提交修改。本地历史分叉、存在未推送提交或任一步骤失败都会停止，不自动切换分支或处理本地修改。构建失败时，已有 ZIP 可能仍是旧包，以窗口中的成功结果为准。终端自动运行可使用 `buildStart.cmd --no-pause`。
 
@@ -187,9 +189,7 @@ Node 24 / npm 12，手动安装与常规检查：
 npm ci
 npm test
 npm run lint
-npm run build
 npm run package
-Compress-Archive -LiteralPath dist/margin-link -DestinationPath dist/margin-link-0.3.2.zip -Force
 ```
 
 构建含严格 TypeScript 检查，esbuild 输出 CJS；Obsidian/CM6 由宿主提供。打包附带实际 bundled 依赖许可证。`npm run dev` 用于监听构建。
