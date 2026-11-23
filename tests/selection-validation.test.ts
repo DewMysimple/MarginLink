@@ -12,6 +12,7 @@ describe('selection protection', () => {
     ['![[image.png]]', 3, 8], ['[alias](target)', 1, 6], ['%%comment%%', 2, 9],
     ['$math$', 1, 5], ['x | y', 0, 5], ['😀', 0, 1],
     ['# heading', 0, 9], ['- list item', 0, 11], ['**bold** plain', 2, 13], ['---\nkey: value', 9, 14],
+    ['!portable', 1, 9], ['\\+portable', 1, 10],
     ['| Early Access |\n| --- |\n| Other text |', 2, 14]
   ] as const)('rejects unsafe source %s', (text, start, end) => expect(validateSelection(text, start, end)).toBeTruthy());
   const snapshot: SelectionSnapshot = { sourcePath: 'A.md', text: 'Early Access', from: 0, to: 12, selected: 'Early Access', revision: 3 };

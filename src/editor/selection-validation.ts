@@ -13,6 +13,10 @@ export function validateSelection(text: string, from: number, to: number, count 
   if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to > text.length || from >= to) return '请先选择一段普通行内文字。';
   const aliasError = validateAlias(text.slice(from, to));
   if (aliasError) return aliasError;
+  if (text[from - 1] === '!') return '请将紧邻的叹号纳入选区，避免生成嵌入。';
+  let escapeAt = from;
+  while (text[escapeAt - 1] === '\\') escapeAt--;
+  if ((from - escapeAt) % 2) return '选区前的 Markdown 转义字符会使双链失效。';
   const parsed = document ?? parseDocument(text);
   if (parsed.tableRanges.some(r => overlaps(r, { start: from, end: to }))) return '首版暂不支持表格内创建双链，避免别名分隔符破坏表格；请在普通段落中选择文字。';
   if (parsed.protected.some(r => overlaps(r, { start: from, end: to }))) {
@@ -26,9 +30,9 @@ export function validateSelection(text: string, from: number, to: number, count 
   }
   return null;
 }
-export function validateSnapshot(snapshot: SelectionSnapshot, current: { sourcePath: string; text: string; revision: number; active: boolean }): string | null {
+export function validateSnapshot(snapshot: SelectionSnapshot, current: { sourcePath: string; text: string; revision: number; active: boolean }, document?: ParsedDocument): string | null {
   if (!current.active || current.sourcePath !== snapshot.sourcePath) return '活动笔记或编辑器已改变，本次操作已取消。';
   if (current.revision !== snapshot.revision || current.text !== snapshot.text) return '选择文件期间笔记内容发生变化，请重新选择文字。';
   if (current.text.slice(snapshot.from, snapshot.to) !== snapshot.selected) return '原选区已失效，请重新选择。';
-  return validateSelection(current.text, snapshot.from, snapshot.to);
+  return validateSelection(current.text, snapshot.from, snapshot.to, 1, document);
 }

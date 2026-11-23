@@ -78,6 +78,17 @@
 .margin-link-file-results button { display: block; width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; text-align: start; }
 .margin-link-file-results button[hidden] { display: none; }
 .margin-link-file-picker .margin-link-new-path { overflow-wrap: anywhere; font-family: var(--font-monospace); }
+.margin-link-file-actions[hidden] { display: none; }
+.margin-link-selection-scope, .margin-link-selection-pages { align-items: center; }
+.margin-link-selection-options { display: flex; flex-wrap: wrap; gap: var(--size-4-4); margin-bottom: var(--size-4-3); }
+.margin-link-file-picker .margin-link-selection-options label,
+.margin-link-file-picker .margin-link-selection-match { display: flex; align-items: start; gap: var(--size-4-2); margin: 0; }
+.margin-link-selection-results { max-height: min(36vh, 340px); overflow-y: auto; border-block: 1px solid var(--background-modifier-border); }
+.margin-link-selection-match { padding: var(--size-4-2); }
+.margin-link-selection-match + .margin-link-selection-match { border-top: 1px solid var(--background-modifier-border); }
+.margin-link-selection-match small { display: block; color: var(--text-muted); }
+.margin-link-selection-context { white-space: pre-wrap; overflow-wrap: anywhere; }
+.margin-link-selection-context mark { background: var(--text-selection); color: var(--text-normal); font-weight: var(--font-semibold, 600); }
 
 .margin-link-continuation { position: absolute; box-sizing: border-box; padding: 0; margin: 0; border: 1px solid var(--margin-link-color, var(--interactive-accent)); border-radius: 4px; color: var(--text-normal); background: var(--background-primary); font-size: 10px; line-height: 14px; opacity: 0; pointer-events: none; }
 .margin-link-continuation[hidden] { display: none; }

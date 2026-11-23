@@ -7,11 +7,12 @@ import { DEFAULT_PREFERENCES } from '../src/types';
 import { parseDocument, parseWikilinks } from '../src/core/wikilink-parser';
 import { LayoutStore } from '../src/core/layout-store';
 import { layoutIdentities } from '../src/core/layout-identity';
+import type { PickerOptions } from '../src/ui/file-picker';
 
 const ui = vi.hoisted(() => ({ pickers: [] as FakePicker[], modals: [] as { buttons: { text: string; onclick?: () => void }[] }[], notices: [] as string[] }));
 interface FakePicker {
   actions: { validate(): void; existing(file: unknown): Promise<void>; create(folder: string, name: string, window: boolean): Promise<void>; closed(): void };
-  options?: { currentTarget?: string }; closed: boolean;
+  options?: PickerOptions; closed: boolean;
 }
 vi.mock('../src/ui/file-picker', () => ({ FilePicker: class {
   shouldRestoreSelection = true; closed = false;
@@ -46,7 +47,14 @@ function fixture(initial = 'first [[old/a.html|streams]] then [[old/a.html|strea
     bridges: () => notes.map(note => note.bridge as unknown as EditorBridge), readingSource: () => initial, layouts: () => layouts
   });
   const open = (index = 1) => action.relink(origin.view, parseWikilinks(initial)[index], reading ? undefined : origin.bridge as unknown as EditorBridge);
-  return { action, origin, notes, file, source, app, changed, layouts, open };
+  const selectText = (selected: string, from = initial.indexOf(selected)) => {
+    const bridge = origin.bridge as unknown as EditorBridge;
+    origin.bridge.cm.state.selection.main = { from, to: from + selected.length };
+    const snapshot = action.capture(origin.view, bridge)!;
+    action.open(origin.view, bridge, snapshot, 'right');
+    return ui.pickers.at(-1)!;
+  };
+  return { action, origin, notes, file, source, app, changed, layouts, open, selectText };
 }
 function note(initial: string, initialMode: 'source' | 'preview') {
   let text = initial, mode = initialMode;
@@ -57,7 +65,8 @@ function note(initial: string, initialMode: 'source' | 'preview') {
   const editor = { getValue: () => text, offsetToPos, focus: vi.fn(), listSelections: () => [{}],
     getScrollInfo: () => ({ top: scroller.scrollTop, left: 19 }), scrollTo: vi.fn((_left: number, top: number) => { scroller.scrollTop = top; }),
     transaction: vi.fn((tx: { changes: { from: { line: number; ch: number }; to: { line: number; ch: number }; text: string }[] }) => {
-      for (const change of tx.changes) { const from = posToOffset(change.from), to = posToOffset(change.to); text = text.slice(0, from) + change.text + text.slice(to); }
+      const edits = tx.changes.map(change => ({ from: posToOffset(change.from), to: posToOffset(change.to), text: change.text }));
+      for (const edit of edits.reverse()) text = text.slice(0, edit.from) + edit.text + text.slice(edit.to);
       bridge.text = text; bridge.parsed = parseDocument(text); bridge.revision++;
     }) };
   const scroller = { scrollTop: 123 };
@@ -70,6 +79,41 @@ function note(initial: string, initialMode: 'source' | 'preview') {
   return { view, bridge, editor, scroller, mutate: (next: string) => { text = next; bridge.text = next; bridge.revision++; } };
 }
 beforeEach(() => { ui.pickers.length = 0; ui.modals.length = 0; ui.notices.length = 0; vi.mocked(resolveSubpath).mockReset(); });
+describe('linking reviewed matches in the current note', () => {
+  it('writes only reviewed matches in one original-coordinate transaction and maps the original cursor and placement', async () => {
+    const text = '# Portable content\n\nportable, portable, portable. `portable`';
+    const s = fixture(text), picker = s.selectText('portable', text.indexOf('portable, portable') + 'portable, '.length);
+    const search = picker.options!.search!;
+    const found = search.find({ caseSensitive: false, wholeWord: true });
+    expect(found.map(match => match.text)).toEqual(['Portable', 'portable', 'portable', 'portable']);
+    expect(s.origin.editor.getValue()).toBe(text);
+    search.apply(found.slice(0, 3));
+    expect(s.origin.editor.transaction).not.toHaveBeenCalled();
+    await picker.actions.existing(s.file);
+    const link = '[[new/b.html|portable]]';
+    const expected = `# [[new/b.html|Portable]] content\n\n${link}, ${link}, portable. \`portable\``;
+    expect(s.origin.editor.getValue()).toBe(expected);
+    expect(s.origin.editor.transaction).toHaveBeenCalledExactlyOnceWith({
+      changes: [
+        { from: { line: 0, ch: 2 }, to: { line: 0, ch: 10 }, text: '[[new/b.html|Portable]]' },
+        { from: { line: 2, ch: 0 }, to: { line: 2, ch: 8 }, text: link },
+        { from: { line: 2, ch: 10 }, to: { line: 2, ch: 18 }, text: link }
+      ], selection: { from: { line: 2, ch: 2 * link.length + 2 } }
+    }, 'margin-link');
+    expect(s.origin.bridge.prefer).toHaveBeenCalledExactlyOnceWith(expected.lastIndexOf(link), s.file.path, 'right');
+  });
+
+  it('rejects the reviewed scope after a document revision even when the text has returned to its original value', async () => {
+    const text = 'Portable and portable.', s = fixture(text), picker = s.selectText('portable');
+    const search = picker.options!.search!;
+    search.apply(search.find({ caseSensitive: false, wholeWord: true }));
+    s.origin.mutate(text + ' edited');
+    s.origin.mutate(text);
+    await expect(picker.actions.existing(s.file)).rejects.toThrow('笔记内容发生变化');
+    expect(s.origin.editor.transaction).not.toHaveBeenCalled();
+    expect(s.origin.editor.getValue()).toBe(text);
+  });
+});
 describe('unlink from a card', () => {
   it('unwraps one duplicate while preserving the remaining manual layout records', async () => {
     const s = fixture(), before = s.origin.editor.getValue(), links = parseWikilinks(before), oldKeys = layoutIdentities(before, links);

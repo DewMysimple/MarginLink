@@ -1,6 +1,8 @@
 import { Modal, Notice, prepareFuzzySearch, sortSearchResults, type App, type TFile } from 'obsidian';
 import { defaultNoteFolder, newNotePath, type NewNotePreferences } from '../core/new-note';
 import { attachmentPath, desktopFileRuntime, LocalFileImporter, type LocalFileInspection, type ImportReplacement, type ImportedFile } from '../core/local-file-import';
+import type { SelectionMatch, SelectionSearchOptions } from '../editor/selection-search';
+import { showSelectionReview, type ReviewedSelection } from './selection-review';
 
 export interface PickerActions {
   /** Return only after the single source transaction has been confirmed. */
@@ -10,7 +12,13 @@ export interface PickerActions {
   validateReplacement?(path: string): void;
   closed(): void;
 }
-export interface PickerOptions { currentTarget?: string }
+export interface PickerOptions {
+  currentTarget?: string;
+  search?: {
+    find(options: SelectionSearchOptions): SelectionMatch[];
+    apply(matches: readonly SelectionMatch[] | undefined): void;
+  };
+}
 
 export class FilePicker extends Modal {
   private panel!: HTMLElement;
@@ -21,6 +29,8 @@ export class FilePicker extends Modal {
   private filename: string;
   private search = '';
   private opened = false;
+  private mode: 'existing' | 'new' = 'existing';
+  private reviewed?: ReviewedSelection;
   private focusTarget?: HTMLInputElement;
   private queryGeneration = 0;
   private operation?: AbortController;
@@ -50,11 +60,37 @@ export class FilePicker extends Modal {
     this.panel = this.contentEl.createDiv();
     this.existingTab.onclick = () => this.show('existing');
     this.newTab.onclick = () => this.show('new');
+    const search = this.options.search;
+    if (search) {
+      const scope = this.contentEl.createDiv({ cls: 'margin-link-file-actions margin-link-selection-scope' });
+      const summary = scope.createEl('span', { text: '链接范围：仅当前选区' });
+      const review = scope.createEl('button', { text: '全文检索并链接', attr: { type: 'button' } });
+      const restore = () => {
+        this.setTitle('关联文件');
+        tabs.hidden = scope.hidden = false;
+        this.show(this.mode);
+      };
+      review.onclick = () => {
+        if (this.busy) return;
+        this.queryGeneration++;
+        this.focusTarget = undefined;
+        tabs.hidden = scope.hidden = true;
+        this.panel.empty();
+        this.setTitle('全文检索并链接');
+        showSelectionReview(this.panel, search.find, this.reviewed, applied => {
+          this.reviewed = applied;
+          search.apply(applied?.matches);
+          summary.setText(applied ? `链接范围：已确认 ${applied.matches.length} 处` : '链接范围：仅当前选区');
+          restore();
+        }, restore);
+      };
+    }
     this.modalEl.ownerDocument.defaultView?.addEventListener('blur', this.onWindowBlur);
     this.show('existing');
   }
   private show(mode: 'existing' | 'new'): void {
     if (this.busy) return;
+    this.mode = mode;
     this.queryGeneration++;
     this.focusTarget = undefined;
     this.panel.empty();
