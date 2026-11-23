@@ -37,7 +37,7 @@ interface CardStub {
   routeBounds?: Box;
 }
 interface OverlayProbe {
-  paintConnectors(): void;
+  paintConnectors(scope?: ReadonlySet<string>): void;
   updateContinuations(scope?: ReadonlySet<string>): void;
   highlight(key?: string): void;
   togglePin(key: string): void;
@@ -121,6 +121,21 @@ describe('actual overlay shared-path drawing', () => {
     f.overlay.hover();
     expect(f.svg.style.display).toBe('none');
     expect([...f.overlay.sharedPaths.values()].some(active)).toBe(false);
+  });
+  it('refreshes invalidated text obstacles before the first hover route after a dormant resize', () => {
+    const f = fixture(); f.host.preferences.lines = 'hover';
+    const textObstacles = { revision: 0, covers: vi.fn(() => false), read: vi.fn(() => {
+      textObstacles.revision++;
+      return [{ left: 0, top: 0, right: 1000, bottom: 600 }];
+    }) };
+    Object.assign(f.overlay, { resizeHoverRoutes: true, textObstacles, observedBody: new ElementStub() });
+    vi.spyOn(f.overlay, 'updateContinuations').mockImplementation(() => {});
+
+    f.overlay.paintConnectors(new Set());
+    expect(textObstacles.read).not.toHaveBeenCalled();
+    f.overlay.hover('ship');
+    expect(textObstacles.read).toHaveBeenCalledOnce();
+    expect(f.overlay.batch?.relations.has('ship')).toBe(false);
   });
   it('skips an unmeasured source while retaining its card as a real route obstacle', () => {
     const f = fixture(); f.overlay.paintConnectors();

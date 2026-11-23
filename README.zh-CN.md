@@ -2,10 +2,10 @@
 
 从文件卡打开目标再后退，可回到原来的段落和卡位。四种布局均为相邻卡片保留 10 像素间距，拖动到已有卡片上时会选取最近的空位。
 
-v0.3.2 支持从卡片右键菜单取消单次文件链接，设置中的正文边缘留白可调至 300 px。卡片聚焦后按 **P** 固定、**V** 预览、**Escape** 取消。完整操作和安装步骤见 [README.md](README.md)。
+v0.3.3 改善阅读长笔记时分隔线拖动的响应。卡片聚焦后按 **P** 固定、**V** 预览、**Escape** 取消。完整操作和安装步骤见 [README.md](README.md)。
 
 在「设置 → MarginLink → 卡片」开启 **合并同一文件的重复引用**，每个已解析文件在当前笔记边缘显示一张卡片。数字是全文引用次数。点击数字可查看别名、原文行号与目标子路径，并定位、重链或取消其中一处。点击卡片主体打开文件，Ctrl/Cmd 点击在新标签打开。
 
 此选项默认关闭。开启后，文件卡跟随当前分栏首次测得的那处引用，与正文一起滚出、滚回。滚到同一文件的另一处引用时，原卡保留位置，远处的引用可通过正文端的配对编号辨认。四种布局的合并卡位都只在当前视图使用。关闭合并后恢复逐处卡片和已保存的位置。未解析的引用各自显示。
 
-Windows 双击 [buildStart.cmd](buildStart.cmd) 可生成 `dist/margin-link-0.3.2.zip`；`npm run package` 生成可安装目录 `dist/margin-link/`。升级时保留插件的 `data.json`。本版桌面验收与兼容范围见 [VALIDATION.md](VALIDATION.md)。
+Windows 双击 [buildStart.cmd](buildStart.cmd) 可生成 `dist/margin-link-0.3.3.zip`，`npm run package` 生成可安装目录 `dist/margin-link/`。升级时保留插件的 `data.json`。本版桌面验收与兼容范围见 [VALIDATION.md](VALIDATION.md)。

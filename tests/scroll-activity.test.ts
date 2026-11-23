@@ -3,16 +3,23 @@ import type { MarkdownView } from 'obsidian';
 import { MarginOverlay, type OverlayHost } from '../src/view/margin-overlay';
 import type { LayoutInput } from '../src/view/layout-engine';
 import type { StableLayout } from '../src/view/stable-layout';
-import { DEFAULT_PREFERENCES } from '../src/types';
+import { TextObstacles } from '../src/view/text-obstacles';
+import { DEFAULT_PREFERENCES, type Anchor, type LineMode } from '../src/types';
+import { parseWikilinks } from '../src/core/wikilink-parser';
 
-vi.mock('obsidian', () => ({ MarkdownView: class {}, FileView: class {}, Menu: class {}, Notice: class {}, setIcon: vi.fn(), parseLinktext: vi.fn() }));
+vi.mock('obsidian', () => ({ MarkdownView: class {}, FileView: class {}, Menu: class {}, Notice: class {}, setIcon: vi.fn(),
+  parseLinktext: (path: string) => ({ path, subpath: '' }) }));
 vi.mock('../src/editor/drag-controller', () => ({ DragController: class { cancel() {} destroy() {} update() {} } }));
-vi.mock('../src/view/card-drag-controller', () => ({ CardDragController: class { cancel() {} destroy() {} } }));
+vi.mock('../src/view/card-drag-controller', () => ({ CardDragController: class { cancel() {} destroy() {} placement() {} } }));
+vi.mock('../src/view/card-renderer', () => ({ renderCard: vi.fn() }));
 
 class ElementStub extends EventTarget {
   children: ElementStub[] = [];
   parent?: ElementStub;
   connectedRoot = false;
+  hidden = false;
+  attributes = new Map<string, string>();
+  dataset: Record<string, string> = {};
   style = { position: '', setProperty: vi.fn() };
   classList = { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() };
   box = { left: 0, top: 0, width: 1000, height: 800 };
@@ -31,7 +38,10 @@ class ElementStub extends EventTarget {
   }
   closest() { return undefined; }
   createDiv() { return this.appendChild(this.ownerDocument.createElement()); }
-  setAttribute() {}
+  createEl() { return this.createDiv(); }
+  replaceChildren() { for (const child of [...this.children]) child.remove(); }
+  setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+  getAttribute(name: string) { return this.attributes.get(name) ?? null; }
   appendChild(child: ElementStub) { child.parent = this; this.children.push(child); return child; }
   contains(node: ElementStub): boolean { return this === node || this.children.some(child => child.contains(node)); }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this); this.parent = undefined; }
@@ -57,11 +67,15 @@ interface ActivityProbe {
   stableLayout: StableLayout;
   layoutInput: LayoutInput;
   layoutGeometry: string;
+  cards: Map<string, { shell: ElementStub; generation: number }>;
+  collapsedCards: ActivityProbe['cards'];
+  hovered?: string;
+  focused?: string;
   onScroll(event: Event): void;
   clearCards(): void;
 }
 const live: MarginOverlay[] = [];
-function fixture() {
+function fixture(lines: LineMode = 'numbers') {
   const win = Object.assign(new EventTarget(), {
     setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout,
     requestAnimationFrame: vi.fn((_callback: FrameRequestCallback) => 1), cancelAnimationFrame: vi.fn(),
@@ -83,9 +97,10 @@ function fixture() {
     querySelector: (selector: string) => selector === '.markdown-preview-view' ? scroller : body
   });
   const view = { contentEl: container, getMode: () => 'preview', file: data, data: source, previewMode: { containerEl: preview } };
-  const anchors = vi.fn(() => []);
+  const anchors = vi.fn<() => Anchor[]>(() => []);
   const overlay = new MarginOverlay(view as unknown as MarkdownView, {
-    preferences: { ...DEFAULT_PREFERENCES, lines: 'numbers' }, reading: { anchors }, cardNavigation: { take: () => undefined }
+    preferences: { ...DEFAULT_PREFERENCES, lines }, reading: { anchors }, layouts: { get: () => undefined },
+    app: { metadataCache: { getFirstLinkpathDest: () => null } }, cardNavigation: { take: () => undefined }
   } as unknown as OverlayHost);
   Object.assign(overlay, { confirmedSource: data.path, path: data.path, mode: 'preview' });
   live.push(overlay);
@@ -185,13 +200,13 @@ describe('per-view native scroll activity lifecycle', () => {
 });
 
 describe('per-view resize activity', () => {
-  function prepare() {
+  function prepare(lines?: LineMode) {
     let notify!: () => void;
     vi.stubGlobal('ResizeObserver', class {
       constructor(callback: typeof notify) { notify = callback; }
       observe() {} unobserve() {} disconnect() {}
     });
-    const f = fixture(), freeze = vi.spyOn(f.overlay, 'freezeLayout');
+    const f = fixture(lines), freeze = vi.spyOn(f.overlay, 'freezeLayout');
     f.overlay.diagnostics = { renders: 0, measurements: 0, routes: 0, svgWrites: 0, markerWrites: 0, work: [] };
     const render = () => f.win.requestAnimationFrame.mock.calls[0][0](0);
     const changeWidth = (width: number) => { f.container.box.width = f.scroller.box.width = width; notify(); };
@@ -263,5 +278,58 @@ describe('per-view resize activity', () => {
     expect(() => f.notify()).not.toThrow();
     expect(f.anchors).toHaveBeenCalledTimes(2);
     expect(stableLayout.update(layoutInput, 0, layoutGeometry)).toEqual([]);
+  });
+
+  it('keeps collapsed cards out of the DOM and restores their presentation only during the same resize', () => {
+    const f = prepare('none');
+    const occurrence = parseWikilinks(f.view.data)[0], key = String(occurrence.start);
+    const rect = { left: 350, right: 460, top: 100, bottom: 124 };
+    f.anchors.mockReturnValue([{ key, occurrence, rect, fragments: [rect] }]);
+    f.overlay.invalidateReadingAnchors(); f.render();
+    const card = f.probe.cards.get(key)!;
+    expect(card.shell.isConnected).toBe(true);
+    f.probe.hovered = f.probe.focused = key;
+
+    // Move the same fixed-width body with the native divider, closing both lanes.
+    f.body.box.left = 25; f.changeWidth(650);
+    expect(f.probe.cards.size).toBe(0);
+    expect(f.probe.collapsedCards.get(key)).toBe(card);
+    expect(card.shell.isConnected).toBe(false);
+    expect(f.probe.hovered).toBeUndefined(); expect(f.probe.focused).toBeUndefined();
+    expect(f.anchors).toHaveBeenCalledTimes(2);
+    f.notify();
+    expect(f.overlay.diagnostics?.renders).toBe(3);
+
+    f.body.box.left = 100; f.changeWidth(800);
+    expect(f.anchors).toHaveBeenCalledTimes(3);
+    expect(f.probe.cards.get(key)).toBe(card);
+    expect(card.shell.isConnected).toBe(true);
+    expect(card.generation).toBe(1);
+    expect(f.probe.collapsedCards.size).toBe(0);
+
+    f.body.box.left = 25; f.changeWidth(650);
+    vi.advanceTimersByTime(160);
+    expect(f.probe.collapsedCards.size).toBe(0);
+    f.body.box.left = 100; f.changeWidth(800);
+    expect(f.probe.cards.get(key)).not.toBe(card);
+  });
+
+  it('skips text obstacle measurement when a resized hover pane has no interaction', () => {
+    const read = vi.spyOn(TextObstacles.prototype, 'read').mockReturnValue([]);
+    const f = prepare('hover');
+    expect(read).toHaveBeenCalledOnce();
+    f.body.box.left = 175; f.changeWidth(950);
+    expect(f.anchors).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledOnce();
+    f.render();
+    expect(read).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a reading invalidation triggered during the current anchor measurement', () => {
+    const f = prepare();
+    f.anchors.mockImplementationOnce(() => { f.overlay.invalidateReadingAnchors(); return []; });
+    f.overlay.invalidateReadingAnchors();
+    f.render(); f.render();
+    expect(f.anchors).toHaveBeenCalledTimes(3);
   });
 });

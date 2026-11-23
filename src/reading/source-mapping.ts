@@ -4,12 +4,20 @@ export interface RenderedLink<T> { element: T; target: string }
 export function mapReadingLinks<T>(events: SourceLink[], anchors: RenderedLink<T>[], normalize: (target: string) => string): { element: T; occurrence: WikilinkOccurrence }[] {
   const sources = new Map<string, SourceLink[]>();
   const rendered = new Map<string, RenderedLink<T>[]>();
+  const normalized = new Map<string, string>();
+  const targetFor = (raw: string) => {
+    const existing = normalized.get(raw);
+    if (existing !== undefined) return existing;
+    const target = normalize(raw);
+    normalized.set(raw, target);
+    return target;
+  };
   for (const source of [...events].sort((a, b) => a.start - b.start)) {
-    const target = normalize(source.target);
+    const target = targetFor(source.target);
     const group = sources.get(target) ?? []; group.push(source); sources.set(target, group);
   }
   for (const anchor of anchors) {
-    const target = normalize(anchor.target);
+    const target = targetFor(anchor.target);
     const group = rendered.get(target) ?? []; group.push(anchor); rendered.set(target, group);
   }
   const result: { element: T; occurrence: WikilinkOccurrence }[] = [];

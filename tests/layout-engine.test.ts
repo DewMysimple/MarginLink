@@ -27,6 +27,18 @@ describe('content-coordinate deterministic margin layout', () => {
     expect(compact[0].compact).toBe(true);
     expect(layoutCards({ ...base, anchors: one, body: { ...base.body, left: 24, right: 1176 } })).toEqual([]);
   });
+  it('uses both usable lanes above the icon threshold and neither below it', () => {
+    const frame = (width: number): LayoutInput => {
+      const viewportRight = width - 12;
+      const left = (viewportRight - 700) / 2;
+      return { ...base, width, body: { ...base.body, left, right: left + 700 }, viewport: { ...base.viewport, right: viewportRight },
+        anchors: [{ key: 'first', x: viewportRight / 2, y: 300 }, { key: 'second', x: viewportRight / 2, y: 300 }] };
+    };
+    const above = layoutCards(frame(834.5));
+    expect(above.map(card => [card.side, card.width])).toEqual([['left', 36], ['right', 36]]);
+    expect(layoutCards(frame(820.5))).toEqual([]);
+    expect(layoutCards(frame(834.5))).toEqual(above);
+  });
   it('handles non-finite, negative and offscreen inputs', () => {
     expect(layoutCards({ ...base, width: NaN })).toEqual([]);
     expect(layoutCards({ ...base, height: -1 })).toEqual([]);

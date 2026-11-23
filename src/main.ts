@@ -35,7 +35,12 @@ export default class MarginLinkPlugin extends Plugin {
     this.preferences = data.preferences;
     this.registerView(ATTACHMENT_VIEW_TYPE, leaf => new AttachmentView(leaf, this.fileRecognition));
     this.layouts = new LayoutStore(data.layouts, () => { this.refresh(); this.queueSave(); });
-    this.reading = new ReadingAnchors(this.app, () => this.refresh());
+    this.reading = new ReadingAnchors(this.app, sourcePath => {
+      if (this.unloaded) return;
+      for (const [view, overlay] of this.overlays) {
+        if (view.getMode() === 'preview' && view.file?.path === sourcePath) overlay.invalidateReadingAnchors();
+      }
+    });
     this.selection = new SelectionAction(this.app, () => this.refresh(), () => this.preferences, {
       bridges: () => this.bridges,
       readingSource: (view, occurrence) => this.reading.sourceText(view, occurrence),

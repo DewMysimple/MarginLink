@@ -56,7 +56,10 @@ export function lane(input: LayoutInput, side: Side): Box {
   };
 }
 export function dimensions(input: LayoutInput, side: Side): { width: number; height: number; shape: CardShape } | undefined {
-  const band = lane(input, side), space = band.right - band.left;
+  return dimensionsInLane(input, lane(input, side));
+}
+function dimensionsInLane(input: LayoutInput, band: Box): { width: number; height: number; shape: CardShape } | undefined {
+  const space = band.right - band.left;
   const p = input.preferences;
   const size = p?.cardSize ?? 'medium';
   const icon = { small: 32, medium: 36, large: 44 }[size];
@@ -140,7 +143,9 @@ export function positionRelative(input: LayoutInput, anchor: LayoutAnchor, place
 // Static display is unbounded vertically. Only a drop is constrained to the
 // viewport; scrolling must never push a card away from its text reference.
 export function displayPosition(candidate: Placement, input: LayoutInput, occupied: Placement[]): Placement {
-  const band = lane(input, candidate.side);
+  return fitInLane(candidate, lane(input, candidate.side), occupied);
+}
+function fitInLane(candidate: Placement, band: Box, occupied: Placement[]): Placement {
   const x = clamp(candidate.x, band.left, band.right - candidate.width);
   const exact = { ...candidate, x };
   exact.y = freeTop(exact, occupied)!; // With no vertical bounds there is always an outer slot.
@@ -148,6 +153,9 @@ export function displayPosition(candidate: Placement, input: LayoutInput, occupi
 }
 export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Placement[] {
   if (![input.width, input.height, ...Object.values(input.body), ...Object.values(input.viewport)].every(Number.isFinite) || input.width <= 0 || input.height < 36) return [];
+  const bands = { left: lane(input, 'left'), right: lane(input, 'right') };
+  const sizes = { left: dimensionsInLane(input, bands.left), right: dimensionsInLane(input, bands.right) };
+  if (!sizes.left && !sizes.right) return [];
   const p = input.preferences;
   if (p?.placementMode === 'manual') {
     // Each missing position has a local, repeatable starting point. Neither
@@ -157,9 +165,9 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
     return input.anchors.filter(a => Number.isFinite(a.x) && Number.isFinite(a.y)).flatMap(a => {
       const saved = a.manual;
       const side = saved?.side ?? a.preferred ?? (Math.abs(a.x - input.body.left) <= Math.abs(a.x - input.body.right) ? 'left' : 'right');
-      const dim = dimensions(input, side);
+      const dim = sizes[side];
       if (!dim) return []; // Keep this side; temporarily unavailable is not a move.
-      const band = lane(input, side);
+      const band = bands[side];
       return [{ key: a.key, side, ...dim,
         x: saved ? band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width) : side === 'left' ? band.right - dim.width : band.left,
         y: a.y + (saved?.yOffset ?? 0) * (input.lineHeight ?? 24) - dim.height / 2,
@@ -175,9 +183,9 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
     const restored = automatic.flatMap(card => {
       const anchor = anchors.get(card.key)!, saved = anchor.manual;
       if (!saved) return [card];
-      const dim = dimensions(input, saved.side);
+      const dim = sizes[saved.side];
       if (!dim) return []; // Retain the saved record while its lane is unavailable.
-      const band = lane(input, saved.side);
+      const band = bands[saved.side];
       return [{ ...card, ...dim, side: saved.side,
         x: band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width),
         y: anchor.y + saved.yOffset * (input.lineHeight ?? 24) - dim.height / 2,
@@ -192,25 +200,30 @@ export function layoutCards(input: LayoutInput, occupied: Placement[] = []): Pla
     });
   }
   const output: Placement[] = [];
-  const ordered = [...input.anchors].filter(a => Number.isFinite(a.x) && Number.isFinite(a.y))
+  const used = [...occupied];
+  const ordered = input.anchors.filter(a => Number.isFinite(a.x) && Number.isFinite(a.y))
     .sort((a, b) => Number(!!(manualMode && b.manual)) - Number(!!(manualMode && a.manual)) || a.y - b.y || a.key.localeCompare(b.key));
   const counts = { left: occupied.filter(c => c.side === 'left').length, right: occupied.filter(c => c.side === 'right').length };
+  const firstSide = sizes.left ? 'left' : 'right';
+  const balanceCost = Math.max(100, (input.body.right - input.body.left) * 0.45);
+  const score = (anchor: LayoutAnchor, side: Side) => Math.abs(anchor.x - (side === 'left' ? input.body.left : input.body.right))
+    + counts[side] * balanceCost - (anchor.preferred === side ? input.width * 2 : 0) - (input.layout === side ? input.width : 0);
   for (const a of ordered) {
     const saved = manualMode ? a.manual : undefined;
-    const sides = (['left', 'right'] as Side[]).filter(s => dimensions(input, s));
-    const score = (side: Side) => Math.abs(a.x - (side === 'left' ? input.body.left : input.body.right)) + counts[side] * Math.max(100, (input.body.right - input.body.left) * 0.45) - (a.preferred === side ? input.width * 2 : 0) - (input.layout === side ? input.width : 0);
-    const side = saved?.side ?? sides.sort((a, b) => score(a) - score(b))[0];
-    if (!side) continue;
-    const dim = dimensions(input, side);
+    let side = saved?.side ?? firstSide;
+    if (!saved && sizes.left && sizes.right && score(a, 'right') < score(a, 'left')) side = 'right';
+    const dim = sizes[side];
     if (!dim) continue; // Saved side temporarily unavailable: hide, never overwrite the record.
-    const band = lane(input, side);
+    const band = bands[side];
     const x = saved ? band.left + saved.xNormalized * Math.max(0, band.right - band.left - dim.width) : side === 'left' ? band.right - dim.width : band.left;
     const y = a.y + (saved?.yOffset ?? 0) * (input.lineHeight ?? 24) - dim.height / 2;
     const candidate = { key: a.key, side, x, y, ...dim, compact: dim.shape === 'icon', manual: !!saved };
     // Preserve the requested relative coordinates. StableLayout resolves
     // collisions between the final projected rectangles without rewriting them.
-    const card = saved ? candidate : displayPosition(candidate, input, [...occupied, ...output]);
-    if (card) { counts[side]++; output.push(card); }
+    const card = saved ? candidate : fitInLane(candidate, band, used);
+    counts[side]++;
+    output.push(card);
+    used.push(card);
   }
   return output;
 }

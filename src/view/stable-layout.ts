@@ -89,7 +89,7 @@ export class StableLayout {
       this.clear(); this.geometry = geometry; this.mode = input.preferences?.placementMode;
     }
     const manualMode = !!input.preferences && input.preferences.placementMode !== 'auto';
-    const manualKey = (a: LayoutInput['anchors'][number]) => JSON.stringify(manualMode ? a.manual ?? null : null);
+    const manualKey = (a: LayoutInput['anchors'][number]) => manualMode && a.manual ? JSON.stringify(a.manual) : 'null';
     // A drop/reset changes one occurrence, not the entire note. Keep every
     // other automatic and manual slot, side and text-relative offset intact.
     for (const a of input.anchors) {
@@ -112,10 +112,12 @@ export class StableLayout {
       // Fully manual placement has no invisible automatic base or neighbour
       // reservation. Only this occurrence's saved record changes its slot.
       const pending = anchors.filter(a => !this.entries.has(a.key));
-      const byKey = new Map(anchors.map(a => [a.key, a]));
-      for (const placement of layoutCards({ ...input, anchors: pending })) {
-        const anchor = byKey.get(placement.key)!;
-        this.entries.set(placement.key, { placement, offset: placement.y - anchor.y, manual: manualKey(anchor), fixed: true });
+      if (pending.length) {
+        const byKey = new Map(pending.map(a => [a.key, a]));
+        for (const placement of layoutCards({ ...input, anchors: pending })) {
+          const anchor = byKey.get(placement.key)!;
+          this.entries.set(placement.key, { placement, offset: placement.y - anchor.y, manual: manualKey(anchor), fixed: true });
+        }
       }
       return this.project(input, scrollTop);
     }

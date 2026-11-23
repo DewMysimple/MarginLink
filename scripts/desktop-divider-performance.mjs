@@ -17,8 +17,10 @@ const mode = option('mode') ?? 'live';
 const sidebar = option('sidebar') ?? 'settings';
 const timingOnly = process.argv.includes('--timing-only');
 const geometryOnly = process.argv.includes('--geometry-only');
+const thresholdTiming = process.argv.includes('--threshold-timing');
 const verifyRoutes = process.argv.includes('--verify-routes');
 const verifyReattach = process.argv.includes('--verify-reattach');
+const verifyReuse = process.argv.includes('--verify-reuse');
 const pin = process.argv.includes('--pin');
 const port = Number(option('port') ?? 9238);
 const runs = Number(option('runs') ?? 3);
@@ -29,6 +31,7 @@ assert(!(timingOnly && geometryOnly));
 assert(Number.isInteger(port) && port > 0 && port <= 65535);
 assert(!pin || (geometryOnly && verifyRoutes));
 assert(!verifyReattach || mode === 'reading');
+assert(!verifyReuse || (geometryOnly && mode === 'reading'));
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const under = (directory, target) => {
   const relative = path.relative(directory, target);
@@ -48,7 +51,7 @@ const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { time
 const page = browser.contexts().flatMap(context => context.pages()).find(candidate => candidate.url().startsWith('app://obsidian.md/'));
 assert(page, 'No isolated Obsidian page');
 page.setDefaultTimeout(25000);
-const report = { phase, mode, sidebar, control: sidebar === 'native' ? 'plugin unloaded' : 'display off with plugin loaded', results: [], errors: [], runtime: [] };
+const report = { phase, mode, sidebar, thresholdTiming, control: sidebar === 'native' ? 'plugin unloaded' : 'display off with plugin loaded', results: [], errors: [], runtime: [] };
 const output = path.resolve('artifacts/divider-performance');
 let pluginReady = false;
 let preferences;
@@ -98,7 +101,7 @@ const setNativeControl = active => page.evaluate(async active => {
   if (active) await app.plugins.disablePluginAndSave('margin-link');
   else await app.plugins.enablePluginAndSave('margin-link');
 }, active);
-const installProbe = geometry => page.evaluate(({ geometry, ownerId, verifyRoutes }) => {
+const installProbe = (geometry, reuse) => page.evaluate(({ geometry, ownerId, verifyRoutes, reuse }) => {
   const plugin = app.plugins.plugins['margin-link'];
   const view = app.workspace.getLeafById(ownerId).view;
   const overlay = plugin?.overlays.get(view);
@@ -106,6 +109,8 @@ const installProbe = geometry => page.evaluate(({ geometry, ownerId, verifyRoute
   const editing = view.getMode() === 'source';
   const diagnostics = { renders: 0, measurements: 0, routes: 0, routeSearches: 0, svgWrites: 0, markerWrites: 0, groupRecomputes: 0, work: [] };
   if (overlay) overlay.diagnostics = diagnostics;
+  const originalButtons = reuse ? new Map([...overlay.cards].map(([key, card]) => [key, card.button])) : undefined;
+  const collapsed = new Set();
   const frameTimes = [], widths = [], longTasks = [], renderSpans = [], samples = [], restorers = [];
   let started = 0, ended = 0, lastWidth, frame = 0, saves = 0, widthChanges = 0;
   const state = window.marginDividerProbe = { stop, ownerId, mark: down => {
@@ -144,6 +149,7 @@ const installProbe = geometry => page.evaluate(({ geometry, ownerId, verifyRoute
 
   const checkGeometry = time => {
     if (window.marginDividerProbe !== state || !started) return;
+    if (originalButtons) for (const [key, button] of originalButtons) if (!button.isConnected && !overlay.cards.has(key)) collapsed.add(key);
     const body = host.querySelector(editing ? '.cm-content' : '.markdown-preview-sizer');
     const scroller = host.querySelector(editing ? '.cm-scroller' : '.markdown-preview-view');
     if (!body || !scroller) {
@@ -204,11 +210,16 @@ const installProbe = geometry => page.evaluate(({ geometry, ownerId, verifyRoute
     for (const restore of restorers) restore();
     if (overlay?.diagnostics === diagnostics) overlay.diagnostics = undefined;
     delete window.marginDividerProbe;
+    const restored = originalButtons && [...collapsed].flatMap(key => {
+      const button = overlay.cards.get(key)?.button;
+      return button ? [button === originalButtons.get(key)] : [];
+    });
     return { frameTimes, widths, widthChanges, started, ended, longTasks, renderSpans, samples, diagnostics, saves,
+      reuse: restored && { collapsed: collapsed.size, restored: restored.length, reused: restored.filter(Boolean).length },
       layoutUnchanged: modelBefore === JSON.stringify(plugin?.layouts.snapshot()),
       sourceUnchanged: sourceBefore === (view.getMode() === 'source' ? view.editor.getValue() : view.data) };
   }
-}, { ownerId, geometry, verifyRoutes });
+}, { ownerId, geometry, verifyRoutes, reuse });
 
 try {
   const isolated = await realpath(path.resolve('test-vault/.v03-desktop'));
@@ -344,8 +355,8 @@ try {
     await frames(6);
   }
 
-  const measure = async ({ name, side = 'right', offsets, period, geometry = false }) => {
-    await installProbe(geometry);
+  const measure = async ({ name, side = 'right', offsets, period, geometry = false, reuse = false }) => {
+    await installProbe(geometry, reuse);
     let data;
     try {
       await frames(4);
@@ -371,7 +382,7 @@ try {
       renders: summarize(data.diagnostics.work), counts: { ...data.diagnostics, work: undefined },
       longTasks: summarize(data.longTasks.filter(([time, duration]) => time <= data.ended && time + duration >= data.started).map(([, duration]) => duration)),
       release: { renders: releasePhase(data.renderSpans), longTasks: releasePhase(data.longTasks) },
-      saves: data.saves, layoutUnchanged: data.layoutUnchanged, sourceUnchanged: data.sourceUnchanged,
+      saves: data.saves, layoutUnchanged: data.layoutUnchanged, sourceUnchanged: data.sourceUnchanged, reuse: data.reuse,
       geometry: geometry ? { samples: data.samples.length, minVisible: Math.min(...cardCount), maxVisible: Math.max(...cardCount),
         sameVisibleCards: data.samples.every(sample => sample.cards.map(([key]) => key).sort().join() === firstCardKeys),
         narrowest: narrowest && { width: narrowest.width, leftSpace: narrowest.left, rightSpace: narrowest.right, visibleCards: narrowest.cards.length },
@@ -399,7 +410,8 @@ try {
         await setDivider('right', 1165);
         await frames(8);
         await delay(220);
-        await measure({ name: `timing-${enabled ? 'enabled' : 'off'}-${run}`, offsets: timingOffsets, period: 16 });
+        await measure({ name: `timing-${enabled ? 'enabled' : 'off'}-${run}`,
+          offsets: thresholdTiming ? thresholdOffsets : timingOffsets, period: thresholdTiming ? 23 : 16 });
       }
     }
   }
@@ -409,7 +421,7 @@ try {
     await setDivider('right', 1165);
     await frames(8);
     const normal = await measure({ name: 'geometry-roomy', offsets: timingOffsets, period: 23, geometry: true });
-    const threshold = await measure({ name: 'geometry-threshold', offsets: thresholdOffsets, period: 23, geometry: true });
+    const threshold = await measure({ name: 'geometry-threshold', offsets: thresholdOffsets, period: 23, geometry: true, reuse: verifyReuse });
     for (const trial of [normal, threshold]) {
       assert(trial.geometry.samples > 10);
       assert.equal(trial.geometry.hidden, 0, 'Whole layer disappeared');
@@ -424,6 +436,8 @@ try {
     }
     assert(normal.geometry.minVisible > 0, 'Roomy gesture lost all cards');
     assert(threshold.geometry.narrowest.visibleCards < threshold.geometry.maxVisible, 'Threshold sweep did not reduce visible cards');
+    if (verifyReuse) assert(threshold.reuse.reused > 0 && threshold.reuse.reused === threshold.reuse.restored,
+      'A restored card was replaced during the same divider gesture');
     if (threshold.geometry.shapeSequence) {
       assert.deepEqual(threshold.geometry.shapeSequence, ['square', 'icon', 'hidden', 'icon', 'square']);
     }

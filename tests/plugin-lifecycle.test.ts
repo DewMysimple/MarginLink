@@ -27,8 +27,8 @@ vi.mock('obsidian', () => ({
   },
   MarkdownView: class {}, Modal: class {}, Notice: class {}, FileView: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {}
 }));
-vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} cancelInteractions() {} resetLayout() {} freezeLayout() { return true; } destroy() {} } }));
-vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { clear() {} } }));
+vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} invalidateReadingAnchors() {} cancelInteractions() {} resetLayout() {} freezeLayout() { return true; } destroy() {} } }));
+vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { constructor(_app: unknown, readonly changed: (sourcePath: string) => void) {} clear() {} } }));
 vi.mock('../src/editor/selection-action', () => ({ SelectionAction: class { cancel() {} } }));
 
 function deferred() {
@@ -182,6 +182,19 @@ it('redraws only the emitting source pane for local CodeMirror changes', async (
   bridge.destroy();
   expect(scheduledViews()).toEqual([a, aSplit, b]);
   plugin.onunload();
+});
+
+it('invalidates geometry only for reading panes of the postprocessed source', async () => {
+  const a = note('A.md'), otherA = note('A.md'), aEditor = note('A.md'), b = note('B.md');
+  const { plugin } = fixture([a, otherA, aEditor, b]); await plugin.onload();
+  for (const view of [a, otherA, b]) view.getMode = () => 'preview';
+  const invalidate = vi.spyOn(MarginOverlay.prototype, 'invalidateReadingAnchors');
+  const { changed } = plugin.reading as unknown as { changed: (sourcePath: string) => void };
+  changed('A.md');
+  expect(invalidate.mock.contexts.map(overlay => (overlay as MarginOverlay).view)).toEqual([a, otherA]);
+  plugin.onunload();
+  invalidate.mockClear(); changed('A.md');
+  expect(invalidate).not.toHaveBeenCalled();
 });
 
 it('measures links once in document order across disjoint visible ranges', () => {

@@ -6,11 +6,11 @@
 
 此选项默认关闭。开启后，文件卡跟随当前分栏首次测得的那处引用，与正文一起滚出、滚回。滚到同一文件的另一处引用时，原卡保留位置，远处的引用可通过正文端的配对编号辨认。四种布局的合并卡位都只在当前视图使用。关闭合并后恢复逐处卡片和已保存的位置。未解析的引用各自显示。
 
-**v0.3.2**，最低 Obsidian 桌面版本 **1.10.6**。右键卡片可取消当前文件链接，布局设置支持最多 300 px 正文边缘留白。[本版验证记录](VALIDATION.md)
+**v0.3.3**，最低 Obsidian 桌面版本 **1.10.6**。本版改善长笔记调整分隔线时的响应与阅读分栏的刷新。[本版验证记录](VALIDATION.md)
 
 ## 安装与升级
 
-本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.3.2.zip`。解压，将 `margin-link` 文件夹放到笔记库：
+本机可安装目录为 `dist/margin-link/`，ZIP 为 `dist/margin-link-0.3.3.zip`。解压，将 `margin-link` 文件夹放到笔记库：
 
 ```text
 <Vault>/.obsidian/plugins/margin-link/
