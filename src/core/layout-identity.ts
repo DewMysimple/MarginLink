@@ -46,14 +46,17 @@ export function layoutIdentities(text: string, links: WikilinkOccurrence[]): Map
   }));
 }
 
-export function legacyLayoutAliases(text: string, links: WikilinkOccurrence[]): Map<string, string> {
+export function legacyLayoutAliases(text: string, links: WikilinkOccurrence[],
+  identities?: ReadonlyMap<number, string>): Map<string, string> {
   // The host can normalize a CRLF file before the first overlay confirms it.
   // Its exact CRLF equivalent is the only additional legacy document considered.
   const legacyText = text.includes('\r') ? text : text.replaceAll('\n', '\r\n');
   if (legacyText === text && !text.includes('\r')) return new Map();
+  const canonical = identities ?? layoutIdentities(text, links);
+  if (!canonical.size) return new Map();
   const legacyLinks = legacyText === text ? links : parseWikilinks(legacyText);
   if (legacyLinks.length !== links.length) return new Map();
-  const canonical = layoutIdentities(text, links), legacy = legacyLayoutIdentities(legacyText, legacyLinks);
+  const legacy = legacyLayoutIdentities(legacyText, legacyLinks);
   return new Map(links.flatMap((link, i) => {
     const key = canonical.get(link.start);
     // This maps the same occurrence across a line-ending conversion, not two

@@ -21,7 +21,6 @@ import { TargetPreview, previewSpace, type PreviewTarget } from './target-previe
 import { type PortChoice } from './connector-renderer';
 import { connectorBatch, ConnectorRouteCache, type ConnectorBatch, type BatchRelationInput } from './connector-batch';
 import { applyAppearance } from './appearance';
-import { legacyLayoutAliases } from '../core/layout-identity';
 import { parseWikilinks } from '../core/wikilink-parser';
 import { StableLayout } from './stable-layout';
 import type { CardNavigation, CardVisit } from './card-navigation';
@@ -49,6 +48,18 @@ interface Card extends Relation {
   generation: number;
 }
 const MAX_COLLAPSED_CARDS = 128;
+const RETURN_PIXEL_TOLERANCE = 0.51;
+interface ReturningVisit {
+  visit: CardVisit;
+  scroller: HTMLElement;
+  until: number;
+  firstLayoutDeadline: number;
+  positioned: boolean;
+  rendered: boolean;
+  waitedForPreview: boolean;
+  reusedLayout: boolean;
+  layoutShift: number;
+}
 export interface OverlayHost {
   cardNavigation: CardNavigation;
   fileRecognition: FileRecognition;
@@ -85,11 +96,14 @@ export class MarginOverlay {
   private path = '';
   private mode = '';
   private revision = -1;
+  private observedSource?: string;
   private confirmedSource = '';
+  private confirmedText = '';
   private sourceGeneration = 0;
   private checkingSource = false;
   private sourceRetries = 0;
   private sourceRetryTimer?: number;
+  private legacyLayoutStore?: LayoutStore;
   private legacyLayoutKeys = new Map<string, string>();
   private layoutInput?: LayoutInput;
   private stableLayout = new StableLayout();
@@ -104,12 +118,21 @@ export class MarginOverlay {
   private scrolling = false;
   private scrollIdleTimer?: number;
   private resizing = false;
-  private resizeHoverRoutes = false;
+  private demandHoverRoutes = false;
   private resizeIdleTimer?: number;
   private resizePointer?: number;
   private paneWidth?: number;
-  private returning?: { visit: CardVisit; shift: number; applied: boolean; until: number };
-  private cancelReturn = (): void => { this.returning = undefined; };
+  private returning?: ReturningVisit;
+  private previewReturnTimer?: number;
+  private cancelReturn(): void {
+    this.returning = undefined;
+    this.clearPreviewReturnTimer();
+  }
+  private onReturnInput = (): void => {
+    if (this.returning) this.schedule();
+    this.cancelReturn();
+    this.host.cardNavigation.cancel(this.view);
+  };
   private geometrySignature = '';
   private textGeometry = '';
   private bodyTop?: number;
@@ -151,7 +174,7 @@ export class MarginOverlay {
         this.routePlacements = this.routePlacements.map(c => c.key === key ? p : c);
         this.place(card, p);
         for (const [id, other] of this.cards) if (id !== key) this.place(other, other.placement);
-        const scope = this.resizeRouteScope(this.highlighted);
+        const scope = this.hoverRouteScope(this.highlighted);
         this.paintConnectors(scope);
         this.updateContinuations(scope);
       }
@@ -188,7 +211,7 @@ export class MarginOverlay {
     container.addEventListener('focusin', this.onAnchorFocus);
     container.addEventListener('focusout', this.onAnchorBlur);
     container.addEventListener('keydown', this.onEscape);
-    for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.addEventListener(event, this.cancelReturn, { capture: true, passive: true });
+    for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.addEventListener(event, this.onReturnInput, { capture: true, passive: true });
     this.win.addEventListener('resize', this.schedule);
     this.win.addEventListener('pointerdown', this.onResizePointerDown, true);
     this.win.addEventListener('pointerup', this.onResizePointerEnd, true);
@@ -202,7 +225,7 @@ export class MarginOverlay {
   };
   private trackPaneWidth(width: number): void {
     if (this.paneWidth !== undefined && this.paneWidth !== width) {
-      if (this.host.preferences.lines === 'hover') this.resizeHoverRoutes = true;
+      if (this.host.preferences.lines === 'hover') this.demandHoverRoutes = true;
       this.resizing = true; this.scheduleResizeSettlement();
     }
     this.paneWidth = width;
@@ -234,7 +257,7 @@ export class MarginOverlay {
   private resetResize(): void {
     this.win.clearTimeout(this.resizeIdleTimer); this.resizeIdleTimer = undefined;
     this.clearCollapsedCards();
-    this.resizing = false; this.resizeHoverRoutes = false; this.resizePointer = undefined; this.paneWidth = undefined;
+    this.resizing = false; this.demandHoverRoutes = false; this.resizePointer = undefined; this.paneWidth = undefined;
   }
   private onScroll = (event: Event): void => {
     if (event.target === this.scroller) {
@@ -253,6 +276,16 @@ export class MarginOverlay {
   };
   invalidateReadingAnchors(): void {
     this.measurementsDirty = true; this.textObstacles.invalidate(); this.schedule();
+  }
+  observeSource(): void {
+    const source = this.view.file?.path ?? '';
+    if (this.observedSource === source) return;
+    this.observedSource = source;
+    this.confirmedSource = ''; this.confirmedText = ''; this.sourceGeneration++;
+    this.checkingSource = false; this.sourceRetries = 0;
+    this.legacyLayoutStore = undefined; this.legacyLayoutKeys.clear();
+    this.win.clearTimeout(this.sourceRetryTimer); this.sourceRetryTimer = undefined;
+    this.cancelReturn();
   }
   private flushFrame = (fromResize = false): void => {
     if (this.stopped) return;
@@ -294,13 +327,9 @@ export class MarginOverlay {
   private render(fromResize = false): false | void {
     const container = this.view.contentEl;
     const mode = this.view.getMode();
-    if (this.path !== this.view.file?.path || this.mode !== mode) {
-      if (this.path !== this.view.file?.path) {
-        this.confirmedSource = ''; this.sourceGeneration++; this.checkingSource = false; this.sourceRetries = 0;
-        this.legacyLayoutKeys.clear();
-        this.win.clearTimeout(this.sourceRetryTimer); this.sourceRetryTimer = undefined;
-      }
-      this.path = this.view.file?.path ?? ''; this.mode = mode; this.revision = -1;
+    this.observeSource();
+    if (this.path !== this.observedSource || this.mode !== mode) {
+      this.path = this.observedSource ?? ''; this.mode = mode; this.revision = -1;
       this.cancelInteractions(); this.clearCards();
     }
     const prefs = this.host.preferences, hostRect = container.getBoundingClientRect();
@@ -322,7 +351,7 @@ export class MarginOverlay {
     // MarkdownView.file can already name the next note while CodeMirror still
     // contains the old one. Do not draw or accept a drop until that source's
     // complete loaded text has been confirmed; this never prunes UI records.
-    if ((mode === 'source' && !bridge) || !this.sourceReady()) {
+    if ((mode === 'source' && !bridge) || !this.sourceReady(bridge)) {
       this.cancelInteractions(); this.clearCards(); return;
     }
     if (bridge && this.revision !== bridge.revision) {
@@ -412,24 +441,26 @@ export class MarginOverlay {
       void this.host.cardNavigation.restoreMode(this.view, visit).then(this.schedule, this.schedule);
       return;
     }
-    if (visit && visit.source === source && visit.geometry === geometryKey && visit.merged === prefs.mergeReferences) {
-      this.contentAnchors = new Map(visit.anchors); this.stableLayout = visit.layout.copy();
-      this.groups?.destroy(); this.groups = undefined;
-      this.returning = { visit, shift: 0, applied: false, until: performance.now() + 3000 };
+    if (visit && visit.source === source) {
+      const now = performance.now();
+      this.returning = { visit, scroller, positioned: false, rendered: false, waitedForPreview: false,
+        reusedLayout: false, layoutShift: 0, until: now + 3000, firstLayoutDeadline: now + 250 };
+      if (prefs.lines === 'hover') this.demandHoverRoutes = true;
       this.measurementsDirty = true; this.textObstacles.invalidate();
     }
+    if (this.returning && (this.returning.until < performance.now() || this.returning.visit.source !== source ||
+      this.returning.scroller !== scroller)) this.cancelReturn();
     const returning = this.returning;
-    if (returning) {
-      if (returning.until < performance.now() || returning.visit.source !== source || returning.visit.geometry !== geometryKey) this.cancelReturn();
-      else if (!returning.applied) {
-        // Reading view can exist a frame before its virtual sizer has any
-        // content. A pixel write at that point is silently clamped to zero.
-        if (returning.visit.top > 0 && scroller.scrollHeight <= scroller.clientHeight) return;
-        returning.applied = true;
-        if (bridge && returning.visit.reference) this.view.currentMode.applyScroll(returning.visit.line);
-        else scroller.scrollTo(returning.visit.left, returning.visit.top);
-        this.schedule(); return;
-      }
+    if (returning && bridge && !returning.rendered && !returning.visit.sourceMode && this.waitForLivePreview(returning, bridge, !!livePreview)) return;
+    const deferCards = returning?.waitedForPreview;
+    if (returning) returning.waitedForPreview = false;
+    const layoutMatches = returning?.visit.geometry === geometryKey && returning.visit.merged === prefs.mergeReferences;
+    if (returning && !layoutMatches) returning.reusedLayout = false;
+    if (returning && layoutMatches && (!returning.reusedLayout || textChanged)) {
+      this.contentAnchors = new Map(returning.visit.anchors); this.stableLayout = returning.visit.layout.copy();
+      this.groups?.destroy(); this.groups = undefined;
+      returning.reusedLayout = true; returning.layoutShift = 0;
+      this.measurementsDirty = true; this.textObstacles.invalidate();
     }
     if (this.pendingReadingLocate && mode === 'preview') {
       const element = this.host.reading.elementFor(this.view, this.pendingReadingLocate);
@@ -439,11 +470,10 @@ export class MarginOverlay {
         this.measurementsDirty = true; this.schedule();
       }
     }
-    const scrolling = !!this.returning || this.scrolling || this.scrollTop !== scrollTop;
+    const scrolling = !!returning || this.scrolling || this.scrollTop !== scrollTop;
     this.scrollTop = scrollTop;
-    // With both lanes too narrow for an icon, no card or line can use a text
-    // measurement. Keep the coverage dirty so reopening a lane uses fresh DOM.
-    const measure = hasCardLanes && (this.measurementsDirty || viewport.top + scrollTop < this.measuredTop || viewport.bottom + scrollTop > this.measuredBottom);
+    // A returning pane can still use the native text anchor with no card lanes.
+    const measure = (hasCardLanes || returning) && (this.measurementsDirty || viewport.top + scrollTop < this.measuredTop || viewport.bottom + scrollTop > this.measuredBottom);
     if (measure) {
       const overscan = Math.max(160, viewport.bottom - viewport.top);
       this.measuredTop = viewport.top + scrollTop - overscan; this.measuredBottom = viewport.bottom + scrollTop + overscan;
@@ -459,30 +489,63 @@ export class MarginOverlay {
       // CM and Reading view may rebuild virtual spacers at different heights.
       // Restore the native text's screen position and translate every old slot
       // by that same document-origin change, including unmounted references.
-      const restore = this.returning;
-      if (restore?.visit.reference) {
-        const previous = restore.visit.anchors.get(restore.visit.reference)!;
-        const current = measured.find(a => a.key === previous.key);
-        if (current) {
+      if (returning) {
+        const saved = returning.visit;
+        const previous = saved.reference === undefined ? undefined : saved.anchors.get(saved.reference);
+        const current = previous && measured.find(a => a.key === previous.key && a.occurrence.raw === previous.occurrence.raw);
+        let top = saved.top;
+        if (previous && current) {
           const shift = current.rect.top - hostRect.top + scrollTop - previous.rect.top;
-          const delta = shift - restore.shift;
-          if (delta) {
+          const delta = shift - returning.layoutShift;
+          if (returning.reusedLayout && delta) {
             const move = (box: Box) => ({ ...box, top: box.top + delta, bottom: box.bottom + delta });
             for (const [key, a] of this.contentAnchors) this.contentAnchors.set(key, { ...a, rect: move(a.rect), fragments: a.fragments.map(move) });
-            this.stableLayout.translateY(delta); restore.shift = shift;
+            this.stableLayout.translateY(delta); returning.layoutShift = shift;
           }
-          const top = restore.visit.top + shift;
-          if (Math.abs(scroller.scrollTop - top) > 0.51) {
-            scroller.scrollTo(restore.visit.left, top);
-            if (scroller.scrollTop !== scrollTop) { this.measurementsDirty = true; this.schedule(); return; }
+          top = saved.referenceOffset === undefined ? saved.top + shift
+            : scrollTop + current.rect.top - client.top - saved.referenceOffset;
+        }
+        const maxTop = scroller.scrollHeight - scroller.clientHeight;
+        if (!returning.positioned && !current && !bridge && (maxTop > 0 || saved.top === 0)) {
+          // Reading can report the right scrollTop before its visible sections
+          // are attached. Give the native sizer a frame before mounting cards.
+          returning.positioned = true;
+          scroller.scrollTo({ left: saved.left, top: saved.top, behavior: 'instant' });
+          this.measurementsDirty = true; this.schedule(); return;
+        }
+        if (!bridge && !returning.rendered && previous && !current && this.waitForReturnLayout(returning.firstLayoutDeadline)) {
+          this.measurementsDirty = true; return;
+        }
+        if (!returning.positioned && !current && bridge && saved.editorScroll &&
+          (previous || Math.abs(scrollTop - top) > RETURN_PIXEL_TOLERANCE)) {
+          returning.positioned = true;
+          bridge.cm.dispatch({ effects: saved.editorScroll });
+          this.measurementsDirty = true; this.schedule(); return;
+        }
+        if (current || (!returning.positioned && (maxTop > 0 || saved.top === 0))) {
+          top = Math.max(0, Math.min(maxTop, top));
+          const left = returning.positioned ? scrollLeft : saved.left;
+          returning.positioned = true;
+          if (Math.abs(scrollTop - top) > RETURN_PIXEL_TOLERANCE || scrollLeft !== left) {
+            scroller.scrollTo({ left, top, behavior: 'instant' });
+            if (scroller.scrollTop !== scrollTop || scroller.scrollLeft !== scrollLeft) {
+              this.measurementsDirty = true; this.schedule(); return;
+            }
           }
         }
       }
+      if (returning) this.clearPreviewReturnTimer();
       if (prefs.mergeReferences) measured.sort((a, b) => a.occurrence.start - b.occurrence.start);
       for (const anchor of measured) {
         if (this.validOccurrences.get(anchor.key) !== anchor.occurrence.raw) continue;
         this.contentAnchors.set(anchor.key, { ...anchor, rect: contentBox(anchor.rect), fragments: anchor.fragments.map(contentBox) });
       }
+    }
+    if (deferCards) {
+      // Correct the native viewport as soon as its text is formatted. Give
+      // CodeMirror one more measurement before overlaying cards on that text.
+      this.measurementsDirty = true;
+      this.schedule(); return;
     }
     const screenBox = (r: Box): Box => ({ left: r.left + hostRect.left, right: r.right + hostRect.left,
       top: r.top + hostRect.top - scrollTop, bottom: r.bottom + hostRect.top - scrollTop });
@@ -490,7 +553,7 @@ export class MarginOverlay {
     // When a resize has made hover routing demand-driven, a dormant pane only
     // needs anchor geometry. Leave obstacles invalidated until a route needs
     // them. Prepare an active route before mounting or changing decoration DOM.
-    if (hasCardLanes && (prefs.lines === 'always' || (prefs.lines === 'hover' && (!this.resizeHoverRoutes || this.focusCandidate() !== undefined)))) {
+    if (hasCardLanes && (prefs.lines === 'always' || (prefs.lines === 'hover' && (!this.demandHoverRoutes || this.focusCandidate() !== undefined)))) {
       this.measureTextObstacles(hostRect, viewport);
     }
     const sizerHeight = this.decorations.mount(bodyEl, rect, hostRect, scrollTop, client);
@@ -530,7 +593,7 @@ export class MarginOverlay {
         preferred: bridge?.preferred(a.occurrence.start, a.occurrence.target), manual: prefs.mergeReferences ? undefined : this.host.layouts.get(this.path, a.layoutKey, this.legacyLayoutKeys.get(a.layoutKey ?? '')) }))
     };
     if (prefs.groupMode !== 'none') {
-      const saved = !this.groups ? this.returning?.visit.groups : undefined;
+      const saved = !this.groups ? returning?.visit.groups : undefined;
       this.groups ??= new GroupControls(this.view, () => {
         this.cancelInteractions();
         if (this.highlighted && !this.groups?.visible(this.highlighted)) this.clearFocus();
@@ -633,11 +696,12 @@ export class MarginOverlay {
     }
     if (this.referenceList?.owner && !this.referenceList?.owner.isConnected) this.referenceList?.close();
     this.referenceList?.position(this.hostRect, viewport);
-    const focus = this.focusKey(), scope = this.resizeRouteScope(focus);
+    const focus = this.focusKey(), scope = this.hoverRouteScope(focus);
     this.paintConnectors(scope);
     this.updateContinuations(scope);
     this.highlight(focus, true);
     this.drag.update(this.cardDrag.dragging ? undefined : bridge, hostRect, viewport, body);
+    if (returning) returning.rendered = true;
     // First stable display is the initial UI placement, not an invitation to
     // rebalance on the next visit. A gesture only writes on its final commit.
     if (prefs.placementMode !== 'auto' && !this.resizing) this.freezeLayout(false);
@@ -759,8 +823,11 @@ export class MarginOverlay {
       menu.showAtMouseEvent(event);
     });
   }
-  private sourceReady(): boolean {
-    if (this.confirmedSource === this.path) return true;
+  private sourceReady(bridge?: EditorBridge): boolean {
+    if (this.confirmedSource === this.path) {
+      if (this.legacyLayoutStore !== this.host.layouts) this.migrateLegacyLayouts(this.confirmedText, bridge);
+      return true;
+    }
     const file = this.view.file;
     if (!file || this.checkingSource) return false;
     const source = this.path, generation = this.sourceGeneration;
@@ -768,14 +835,14 @@ export class MarginOverlay {
     void this.host.app.vault.cachedRead(file).then(text => {
       if (this.stopped || generation !== this.sourceGeneration) return;
       this.checkingSource = false;
-      const currentText = this.view.getMode() === 'source' ? this.bridge()?.text : this.view.data;
+      const editor = this.view.getMode() === 'source' ? this.bridge() : undefined;
+      const currentText = this.view.getMode() === 'source' ? editor?.text : this.view.data;
       // CodeMirror normalizes line endings even when the Vault file uses CRLF.
       const normalize = (value: string) => value.replace(/\r\n?/g, '\n');
       if (this.view.file?.path === source && currentText !== undefined && normalize(currentText) === normalize(text)) {
         this.win.clearTimeout(this.sourceRetryTimer); this.sourceRetryTimer = undefined;
-        this.legacyLayoutKeys = legacyLayoutAliases(text, parseWikilinks(text));
-        this.host.layouts.migrateAliases(source, this.legacyLayoutKeys);
-        this.confirmedSource = source; this.schedule();
+        this.migrateLegacyLayouts(text, editor);
+        this.confirmedText = text; this.confirmedSource = source; this.schedule();
       } else if (this.sourceRetries < 6 && this.sourceRetryTimer === undefined) {
         // The last editor update can occur while this read is pending. Retry
         // a few times without turning loading/unsaved text into an rAF read loop.
@@ -785,6 +852,32 @@ export class MarginOverlay {
       }
     }).catch(() => { if (generation === this.sourceGeneration) this.checkingSource = false; });
     return false;
+  }
+  private waitForLivePreview(returning: ReturningVisit, bridge: EditorBridge, livePreview: boolean): boolean {
+    // Early Live Preview can expose raw link tokens and wrap the same
+    // paragraph differently. Don't restore coordinates from that layout.
+    const early = !livePreview || returning.visit.formattedLinks?.some(link => bridge.linkSyntaxVisible(link));
+    if (early && this.waitForReturnLayout(returning.firstLayoutDeadline)) {
+      returning.waitedForPreview = true;
+      return true;
+    }
+    this.clearPreviewReturnTimer();
+    return false;
+  }
+  private waitForReturnLayout(deadline: number): boolean {
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) return false;
+    this.previewReturnTimer ??= this.win.setTimeout(() => { this.previewReturnTimer = undefined; this.schedule(); }, remaining);
+    return true;
+  }
+  private clearPreviewReturnTimer(): void {
+    if (this.previewReturnTimer !== undefined) this.win.clearTimeout(this.previewReturnTimer);
+    this.previewReturnTimer = undefined;
+  }
+  private migrateLegacyLayouts(text: string, bridge?: EditorBridge): void {
+    const store = this.host.layouts;
+    this.legacyLayoutKeys = store.migrateLegacyLayouts(this.path, text, bridge);
+    this.legacyLayoutStore = store;
   }
   private place(card: Card, p: Placement): void {
     const rect = this.hostRect;
@@ -802,8 +895,8 @@ export class MarginOverlay {
       this.geometryRevision++;
     }
   }
-  private resizeRouteScope(focus?: string): ReadonlySet<string> | undefined {
-    if (!this.resizeHoverRoutes || this.host.preferences.lines !== 'hover') return undefined;
+  private hoverRouteScope(focus?: string): ReadonlySet<string> | undefined {
+    if (!this.demandHoverRoutes || this.host.preferences.lines !== 'hover') return undefined;
     if (focus === undefined) return new Set();
     if (!this.visibleRelations || !this.cards.has(focus)) return new Set([focus]);
     return new Set([...this.visibleRelations].filter(([, relation]) => relation.placement.key === focus).map(([key]) => key));
@@ -1046,18 +1139,25 @@ export class MarginOverlay {
     if (!resolved.file) { new Notice('未找到该文件。请核对链接路径，以及设置中的“Obsidian 能识别的文件类型”。'); return; }
     if (!this.host.fileRecognition.canOpen(resolved.file.extension) && !canOpenInObsidian(this.host.app, resolved.file.extension)) { new Notice('文件已被 Vault 识别，但无法通过公开 API 确认此类型的打开能力。请先用相应文件类型插件打开一个该类型文件并保留其标签，再点击卡片；也可使用正文原生双链。'); return; }
     try {
-      const newTab = event.ctrlKey || event.metaKey;
+      const newTab = event.ctrlKey || event.metaKey, scroller = this.scroller;
       const leaf = newTab ? this.host.app.workspace.getLeaf('tab') : this.view.leaf;
       const file = resolved.file;
       const navigate = () => leaf.openFile(file, { eState: !group && resolved.subpath ? { subpath: resolved.subpath } : undefined });
-      if (newTab || file === this.view.file || !this.scroller) await navigate();
+      if (newTab || file === this.view.file || !scroller) await navigate();
       else {
-        const viewport = this.scroller.getBoundingClientRect();
-        const reference = this.anchors.find(a => a.rect.top >= viewport.top && a.rect.bottom <= viewport.bottom);
+        const viewportTop = scroller.getBoundingClientRect().top + scroller.clientTop;
+        const top = scroller.scrollTop, pendingScroll = top - this.scrollTop;
+        const reference = this.anchors.find(a => a.rect.top - pendingScroll >= viewportTop &&
+          a.rect.bottom - pendingScroll <= viewportTop + scroller.clientHeight);
+        const bridge = this.mode === 'source' ? this.bridge() : undefined;
+        const sourceMode = !!this.view.getState().source;
+        const formattedLinks = bridge && !sourceMode ? (reference && reference.key !== anchor.key ? [reference, anchor] : [anchor])
+          .map(item => item.occurrence).filter(link => !bridge.linkSyntaxVisible(link)) : undefined;
         await this.host.cardNavigation.open(this.view, file.path, {
           path: this.path, source: this.layoutSource, mode: this.mode, geometry: this.layoutGeometry, merged: !!this.visibleRelations,
-          top: this.scroller.scrollTop, left: this.scroller.scrollLeft, line: this.view.currentMode.getScroll(),
-          reference: reference?.key, sourceMode: !!this.view.getState().source, layout: this.stableLayout.copy(),
+          top, left: scroller.scrollLeft, line: this.view.currentMode.getScroll(), reference: reference?.key,
+          referenceOffset: reference && reference.rect.top - pendingScroll - viewportTop,
+          formattedLinks, editorScroll: bridge?.cm.scrollSnapshot?.(), sourceMode, layout: this.stableLayout.copy(),
           groups: this.groups && { mode: this.host.preferences.groupMode, folded: this.groups.snapshot() },
           anchors: new Map(Array.from(this.contentAnchors, ([id, a]) => [id, { ...a, element: undefined }]))
         }, navigate);
@@ -1114,7 +1214,7 @@ export class MarginOverlay {
   }
   private refreshFocus(redraw = false): void {
     const key = this.focusKey();
-    const scope = key === this.highlighted ? undefined : this.resizeRouteScope(key);
+    const scope = key === this.highlighted ? undefined : this.hoverRouteScope(key);
     if (scope) {
       if (scope.size && this.measurementsDirty) this.schedule();
       else { this.paintConnectors(scope); this.updateContinuations(scope); }
@@ -1160,7 +1260,7 @@ export class MarginOverlay {
     this.anchorInk?.splice(fragments.length).forEach(el => el.remove());
   }
   private clearCards(): void {
-    this.returning = undefined;
+    this.cancelReturn();
     this.resetResize();
     this.win.clearTimeout(this.scrollIdleTimer); this.scrollIdleTimer = undefined; this.scrolling = false;
     this.referenceList?.close(); this.clearLocated(); this.referenceIndex = undefined;
@@ -1179,7 +1279,7 @@ export class MarginOverlay {
     this.stopped = true; this.win.cancelAnimationFrame(this.frame); this.win.clearTimeout(this.sourceRetryTimer); this.resize.disconnect(); this.mutation.disconnect();
     for (const menu of [...this.menus]) menu.hide(); this.menus.clear();
     const container = this.view.contentEl;
-    for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.removeEventListener(event, this.cancelReturn, true);
+    for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) container.removeEventListener(event, this.onReturnInput, true);
     container.removeEventListener('focusin', this.onAnchorFocus);
     container.removeEventListener('focusout', this.onAnchorBlur);
     container.removeEventListener('keydown', this.onEscape);

@@ -34,7 +34,7 @@ describe('navigation while the old editor is still mounted', () => {
     const schedule = vi.fn(), fullText = 'A context\n[[Target]]';
     const overlay = Object.assign(Object.create(MarginOverlay.prototype) as object, {
       view: { file: { path: 'A.md' }, getMode: () => 'source' },
-      host: { app: { vault: { cachedRead: async () => fullText.replaceAll('\n', '\r\n') } }, layouts: { migrateAliases: vi.fn() } },
+      host: { app: { vault: { cachedRead: async () => fullText.replaceAll('\n', '\r\n') } }, layouts: { migrateLegacyLayouts: vi.fn(() => new Map()) } },
       bridge: () => ({ text }), path: 'A.md', sourceGeneration: 0, checkingSource: false, sourceRetries: 0, schedule,
       win: { setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout }
     }) as unknown as { sourceReady(): boolean; confirmedSource: string; sourceGeneration: number; path: string };
@@ -54,5 +54,24 @@ describe('navigation while the old editor is still mounted', () => {
     await Promise.resolve();
     expect(overlay.confirmedSource).toBe(''); expect(schedule).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
+  });
+
+  it('invalidates an obsolete read even when A returns before the next draw', async () => {
+    let finishRead!: (text: string) => void;
+    const reading = new Promise<string>(resolve => { finishRead = resolve; });
+    const schedule = vi.fn(), view = { file: { path: 'A.md' }, getMode: () => 'source' };
+    const overlay = Object.assign(Object.create(MarginOverlay.prototype) as object, {
+      view, host: { app: { vault: { cachedRead: () => reading } } },
+      bridge: () => ({ text: 'original text' }), path: 'A.md', sourceGeneration: 0, schedule,
+      legacyLayoutKeys: new Map(), win: { clearTimeout: vi.fn() }
+    }) as unknown as { observeSource(): void; sourceReady(): boolean; confirmedSource: string };
+    overlay.observeSource();
+    expect(overlay.sourceReady()).toBe(false);
+    view.file = { path: 'B.md' }; overlay.observeSource();
+    view.file = { path: 'A.md' }; overlay.observeSource();
+    finishRead('original text');
+    await reading;
+    expect(overlay.confirmedSource).toBe('');
+    expect(schedule).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MarkdownView } from 'obsidian';
 import { MarginOverlay, type OverlayHost } from '../src/view/margin-overlay';
 import type { LayoutInput } from '../src/view/layout-engine';
-import type { StableLayout } from '../src/view/stable-layout';
+import { StableLayout } from '../src/view/stable-layout';
+import type { CardVisit } from '../src/view/card-navigation';
 import { TextObstacles } from '../src/view/text-obstacles';
 import { DEFAULT_PREFERENCES, type Anchor, type LineMode } from '../src/types';
 import { parseWikilinks } from '../src/core/wikilink-parser';
@@ -25,6 +26,11 @@ class ElementStub extends EventTarget {
   box = { left: 0, top: 0, width: 1000, height: 800 };
   scrollTop = 0;
   scrollLeft = 0;
+  scrollHeight = 4000;
+  scrollTo = vi.fn(({ top, left }: ScrollToOptions) => {
+    if (top !== undefined) this.scrollTop = top;
+    if (left !== undefined) this.scrollLeft = left;
+  });
   clientLeft = 0;
   clientTop = 0;
   get clientWidth() { return this.box.width; }
@@ -98,17 +104,19 @@ function fixture(lines: LineMode = 'numbers') {
   });
   const view = { contentEl: container, getMode: () => 'preview', file: data, data: source, previewMode: { containerEl: preview } };
   const anchors = vi.fn<() => Anchor[]>(() => []);
+  const take = vi.fn<() => CardVisit | undefined>(), cancel = vi.fn();
+  const layouts = { get: () => undefined, migrateLegacyLayouts: () => new Map() };
   const overlay = new MarginOverlay(view as unknown as MarkdownView, {
-    preferences: { ...DEFAULT_PREFERENCES, lines }, reading: { anchors }, layouts: { get: () => undefined },
-    app: { metadataCache: { getFirstLinkpathDest: () => null } }, cardNavigation: { take: () => undefined }
+    preferences: { ...DEFAULT_PREFERENCES, lines }, reading: { anchors }, layouts,
+    app: { metadataCache: { getFirstLinkpathDest: () => null } }, cardNavigation: { take, cancel }
   } as unknown as OverlayHost);
-  Object.assign(overlay, { confirmedSource: data.path, path: data.path, mode: 'preview' });
+  Object.assign(overlay, { confirmedSource: data.path, observedSource: data.path, path: data.path, mode: 'preview', legacyLayoutStore: layouts });
   live.push(overlay);
   const probe = overlay as unknown as ActivityProbe;
   probe.scroller = scroller;
   const schedule = vi.spyOn(overlay, 'schedule').mockImplementation(() => {});
   const scroll = (target = scroller) => probe.onScroll({ target } as unknown as Event);
-  return { overlay, probe, schedule, scroll, scroller, nested, container, body, replaceBody, view, win, anchors };
+  return { overlay, probe, schedule, scroll, scroller, nested, container, body, replaceBody, view, win, anchors, take, cancel };
 }
 
 beforeEach(() => {
@@ -196,6 +204,86 @@ describe('per-view native scroll activity lifecycle', () => {
     expect(remove).toHaveBeenCalledWith('scroll', f.probe.onScroll, true);
     expect(vi.getTimerCount()).toBe(0); vi.advanceTimersByTime(1000);
     expect(f.schedule).not.toHaveBeenCalled();
+  });
+});
+
+describe('card return restores the native viewport separately from card placement', () => {
+  function returningNote() {
+    const f = fixture('hover');
+    const occurrence = parseWikilinks(f.view.data)[0];
+    const anchorAt = (top: number): Anchor => {
+      const rect = { top, bottom: top + 15, left: 350, right: 400 };
+      return { key: String(occurrence.start), occurrence, rect, fragments: [rect] };
+    };
+    const oldAnchor = anchorAt(1360);
+    const visit: CardVisit = { path: f.view.file.path, source: f.view.data, mode: 'preview', geometry: 'old width',
+      sourceMode: false, merged: false, top: 1200, left: 0, line: 30, reference: oldAnchor.key, referenceOffset: 160,
+      anchors: new Map([[oldAnchor.key, oldAnchor]]), layout: new StableLayout() };
+    f.take.mockReturnValueOnce(visit);
+    f.anchors.mockImplementation(() => [anchorAt(1340 - f.scroller.scrollTop)]);
+    const render = () => f.win.requestAnimationFrame.mock.calls[0][0](0);
+    return { ...f, render, visit };
+  }
+
+  it('corrects the same paragraph after a change in pane geometry, even with no card lanes', () => {
+    const f = returningNote();
+    f.body.box.left = 0;
+    f.body.box.width = f.container.box.width;
+    f.scroller.scrollTop = 1000;
+    f.render();
+    expect(f.scroller.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 1180, left: 0, behavior: 'instant' });
+    f.render();
+    expect(f.scroller.scrollTo).toHaveBeenCalledOnce();
+    expect(f.probe.cards.size).toBe(0);
+  });
+
+  it('leaves a correctly positioned native viewport alone and yields to the first wheel', () => {
+    const f = returningNote();
+    f.scroller.scrollTop = 1180;
+    f.render();
+    expect(f.scroller.scrollTo).not.toHaveBeenCalled();
+    f.container.dispatchEvent(new Event('wheel'));
+    f.scroller.scrollTop = 1300;
+    f.overlay.invalidateReadingAnchors();
+    f.render();
+    expect(f.cancel).toHaveBeenCalledExactlyOnceWith(f.view);
+    expect(f.scroller.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('gives an unmounted reading section a turn before projecting saved cards', () => {
+    const f = returningNote();
+    f.scroller.scrollTop = f.visit.top;
+    f.anchors.mockReturnValueOnce([]);
+    f.render();
+    expect(f.scroller.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: f.visit.top, left: 0, behavior: 'instant' });
+    expect(f.probe.cards.size).toBe(0);
+    f.render();
+    expect(f.anchors).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits through the clicked link’s raw Live Preview frame before measuring', () => {
+    const f = returningNote();
+    f.scroller.scrollTop = 1000;
+    const clickLink = parseWikilinks('[[First]] and [[Target]]')[1];
+    const firstLink = [...f.visit.anchors.values()][0].occurrence;
+    let raw = true;
+    const bridge = { text: f.view.data, parsed: { links: [firstLink] }, revision: 0, anchors: f.anchors, preferred: () => undefined,
+      linkSyntaxVisible: (link: typeof clickLink) => raw && link === clickLink,
+      cm: { dom: { closest: () => ({ classList: { contains: () => true } }) }, contentDOM: f.body, scrollDOM: f.scroller,
+        state: { selection: { main: { from: 0, to: 0, empty: true } } } } };
+    Object.assign(f.view, { getMode: () => 'source', getState: () => ({ source: false }) });
+    Object.assign(f.overlay, { mode: 'source', bridge: () => bridge });
+    f.take.mockReset().mockReturnValueOnce({ ...f.visit, mode: 'source', formattedLinks: [firstLink, clickLink] });
+    f.render();
+    expect(f.anchors).not.toHaveBeenCalled();
+    raw = false;
+    f.render();
+    expect(f.anchors).toHaveBeenCalledOnce();
+    expect(f.scroller.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 1180, left: 0, behavior: 'instant' });
+    expect(f.probe.cards.size).toBe(0);
+    f.render();
+    expect(f.anchors).toHaveBeenCalledTimes(2);
+    expect(f.scroller.scrollTo).toHaveBeenCalledOnce();
   });
 });
 

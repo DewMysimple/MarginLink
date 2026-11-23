@@ -103,7 +103,7 @@ describe('actual overlay shared-path drawing', () => {
   });
   it('draws only the current hover or pin after a pane resize', () => {
     const f = fixture(); f.host.preferences.lines = 'hover';
-    Object.assign(f.overlay, { resizeHoverRoutes: true });
+    Object.assign(f.overlay, { demandHoverRoutes: true });
     const markers = vi.spyOn(f.overlay, 'updateContinuations').mockImplementation(() => {});
     f.overlay.hover('ship');
     expect([...f.overlay.batch!.relations.keys()]).toEqual(['ship']);
@@ -128,7 +128,7 @@ describe('actual overlay shared-path drawing', () => {
       textObstacles.revision++;
       return [{ left: 0, top: 0, right: 1000, bottom: 600 }];
     }) };
-    Object.assign(f.overlay, { resizeHoverRoutes: true, textObstacles, observedBody: new ElementStub() });
+    Object.assign(f.overlay, { demandHoverRoutes: true, textObstacles, observedBody: new ElementStub() });
     vi.spyOn(f.overlay, 'updateContinuations').mockImplementation(() => {});
 
     f.overlay.paintConnectors(new Set());

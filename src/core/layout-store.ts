@@ -1,11 +1,16 @@
 import { readPreferences, type PersistedLayout, type RelativePosition, type StoredData } from '../types';
 import { layoutIdentities, legacyLayoutAliases, legacyLayoutIdentities } from './layout-identity';
-import { parseWikilinks } from './wikilink-parser';
+import { parseWikilinks, type ParsedDocument } from './wikilink-parser';
 
 export const MAX_LAYOUTS = 500;
 export const MAX_NOTE_LAYOUTS = 100;
 export const MAX_LAYOUT_AGE = 90 * 24 * 60 * 60 * 1000;
 export interface LayoutPosition { key: string; position: RelativePosition; legacyKey?: string; origin?: PersistedLayout['origin'] }
+interface LayoutSourceSnapshot {
+  text: string;
+  parsed: Pick<ParsedDocument, 'links'>;
+  identities: ReadonlyMap<number, string>;
+}
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export function readLayouts(value: unknown, now = Date.now()): PersistedLayout[] {
   if (!Array.isArray(value)) return [];
@@ -129,6 +134,20 @@ export class LayoutStore {
     this.records = readLayouts(this.records.map(e => e.source === source && canonical.has(e.key) ? { ...e, key: canonical.get(e.key)! } : e));
     this.changed();
   }
+  // Call with a confirmed full document. Exact source text is required to
+  // reuse offsets because an LF editor and a CRLF file can share identities.
+  migrateLegacyLayouts(source: string, text: string, snapshot?: LayoutSourceSnapshot): Map<string, string> {
+    const saved = this.records.filter(record => record.source === source);
+    if (!saved.length) return new Map();
+    const exact = snapshot?.text === text ? snapshot : undefined;
+    const links = exact?.parsed.links ?? parseWikilinks(text);
+    const identities = exact?.identities ?? layoutIdentities(text, links);
+    const canonical = new Set(identities.values());
+    if (saved.every(record => canonical.has(record.key))) return new Map();
+    const aliases = legacyLayoutAliases(text, links, identities);
+    this.migrateAliases(source, aliases);
+    return aliases;
+  }
   reconcile(source: string, valid: Set<string>): void {
     const next = this.records.flatMap(e => {
       if (e.source !== source || valid.has(e.key)) return [e];
@@ -143,8 +162,9 @@ export class LayoutStore {
   reconcileDocument(source: string, text: string): void {
     if (!this.records.some(e => e.source === source)) return;
     const links = parseWikilinks(text);
-    this.migrateAliases(source, legacyLayoutAliases(text, links));
-    const keys = new Set(layoutIdentities(text, links).values());
+    const identities = layoutIdentities(text, links);
+    this.migrateLegacyLayouts(source, text, { text, parsed: { links }, identities });
+    const keys = new Set(identities.values());
     // Keep both historical raw preview keys and CodeMirror's LF-normalized keys.
     // These still come only from real occurrences in this complete document.
     if (text.includes('\r')) for (const key of legacyLayoutIdentities(text, links).values()) keys.add(key);

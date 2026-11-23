@@ -124,6 +124,7 @@ export default class MarginLinkPlugin extends Plugin {
             view.containerEl.removeEventListener('focusin', remember, capture);
           });
         }
+        this.overlays.get(view)?.observeSource();
       }
     });
     this.cardNavigation.retain(leaves);

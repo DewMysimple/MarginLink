@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { layoutIdentities, legacyLayoutAliases, legacyLayoutIdentities } from '../src/core/layout-identity';
-import { parseWikilinks } from '../src/core/wikilink-parser';
+import * as parser from '../src/core/wikilink-parser';
 import { LayoutStore } from '../src/core/layout-store';
+
+const { parseWikilinks } = parser;
+afterEach(() => vi.restoreAllMocks());
 
 describe('layout identity across reading and editing line endings', () => {
   it('uses the same keys with raw reading offsets and LF editor offsets', () => {
@@ -69,5 +72,31 @@ describe('layout identity across reading and editing line endings', () => {
     store.reconcileDocument('A.md', lf);
     expect(store.snapshot()).toEqual([{ source: 'A.md', key: canonical, ...position, updated }]);
     expect(store.get('A.md', canonical)).toEqual(position);
+  });
+  it('skips legacy parsing for notes without layouts and exact snapshots with only canonical keys', () => {
+    const text = 'Before\n[[Target|shared]]\nAfter', links = parseWikilinks(text);
+    const identities = layoutIdentities(text, links), key = identities.get(links[0].start)!;
+    const position = { side: 'left' as const, xNormalized: 0.5, yOffset: 3 };
+    const onChange = vi.fn();
+    const store = new LayoutStore([{ source: 'Saved.md', key, ...position, updated: Date.now() }], onChange);
+    const parse = vi.spyOn(parser, 'parseWikilinks');
+    expect(store.migrateLegacyLayouts('No layouts.md', text)).toEqual(new Map());
+    expect(store.migrateLegacyLayouts('Saved.md', text, { text, parsed: { links }, identities })).toEqual(new Map());
+    expect(store.get('Saved.md', key)).toEqual(position);
+    expect(parse).not.toHaveBeenCalled(); expect(onChange).not.toHaveBeenCalled();
+  });
+  it.each(['already LF', 'still CRLF'])('migrates an unmatched raw record when the confirmed file is %s', ending => {
+    const lf = 'Before\n[[Target|shared]]\nAfter', crlf = lf.replaceAll('\n', '\r\n');
+    const links = parseWikilinks(lf), identities = layoutIdentities(lf, links), key = identities.get(links[0].start)!;
+    const raw = [...legacyLayoutIdentities(crlf, parseWikilinks(crlf)).values()][0];
+    const position = { side: 'right' as const, xNormalized: 0.5, yOffset: 3 }, updated = Date.now();
+    const store = new LayoutStore([{ source: 'A.md', key: raw, ...position, updated }], () => {});
+    const parse = vi.spyOn(parser, 'parseWikilinks');
+    const confirmed = ending === 'already LF' ? lf : crlf;
+    const aliases = store.migrateLegacyLayouts('A.md', confirmed, { text: lf, parsed: { links }, identities });
+    // LF reuses the primary parse, CRLF rejects the editor's different offsets.
+    expect(parse.mock.calls).toEqual([[crlf]]);
+    expect(aliases.get(key)).toBe(raw);
+    expect(store.snapshot()).toEqual([{ source: 'A.md', key, ...position, updated }]);
   });
 });

@@ -1,7 +1,7 @@
 import { ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { parseDocument, type ParsedDocument } from '../core/wikilink-parser';
 import { textFragments } from '../view/text-fragments';
-import type { Anchor } from '../types';
+import type { Anchor, WikilinkOccurrence } from '../types';
 import { layoutIdentities } from '../core/layout-identity';
 
 export interface EditorHost {
@@ -51,6 +51,10 @@ export class EditorBridge {
       range.setEnd(end.node, end.offset);
       return range;
     } catch { return; }
+  }
+  linkSyntaxVisible(occurrence: WikilinkOccurrence): boolean {
+    const range = this.range(occurrence.start, occurrence.start + 2);
+    return !!range && range.toString() === '[[' && Array.from(range.getClientRects()).some(rect => rect.width > 0.5 && rect.height > 0.5);
   }
   rangeRects(from: number, to: number): DOMRect[] {
     try {

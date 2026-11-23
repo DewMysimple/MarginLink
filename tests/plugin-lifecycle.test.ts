@@ -27,7 +27,7 @@ vi.mock('obsidian', () => ({
   },
   MarkdownView: class {}, Modal: class {}, Notice: class {}, FileView: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {}
 }));
-vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} invalidateReadingAnchors() {} cancelInteractions() {} resetLayout() {} freezeLayout() { return true; } destroy() {} } }));
+vi.mock('../src/view/margin-overlay', () => ({ MarginOverlay: class { constructor(readonly view: unknown) {} schedule() {} observeSource() {} invalidateReadingAnchors() {} cancelInteractions() {} resetLayout() {} freezeLayout() { return true; } destroy() {} } }));
 vi.mock('../src/reading/reading-anchors', () => ({ ReadingAnchors: class { constructor(_app: unknown, readonly changed: (sourcePath: string) => void) {} clear() {} } }));
 vi.mock('../src/editor/selection-action', () => ({ SelectionAction: class { cancel() {} } }));
 
